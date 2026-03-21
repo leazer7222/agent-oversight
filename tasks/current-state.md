@@ -7,33 +7,41 @@
 Personal control plane for monitoring and coordinating all AI agents across ReformAI, AfterGlow, and Personal projects. Agents report lifecycle events (run_started, run_completed, run_failed) with token/cost telemetry to a central Supabase database via the /api/ingest endpoint.
 
 ## Where we are right now
-Phase 1 complete. The ingest pipeline is wired up:
-- Supabase schema already deployed (project: hdhovyrlnfojtkqbcegh)
+Phase 1 fully complete and validated in production.
+
+- Supabase project: `hdhovyrlnfojtkqbcegh`
 - `@supabase/ssr` + `@supabase/supabase-js` installed
-- Browser client (`src/lib/supabase/client.ts`) and server client + service role client (`src/lib/supabase/server.ts`) created
-- Shared adapter types (`src/lib/adapters/types.ts`) define Agent, AgentRun, IngestPayload
-- POST /api/ingest route validates `x-agent-secret`, verifies agent exists + is active, upserts run records
+- Browser client (`src/lib/supabase/client.ts`) and server/service role clients (`src/lib/supabase/server.ts`) created
+- Shared adapter types (`src/lib/adapters/types.ts`) — Agent, AgentRun, IngestPayload
+- `POST /api/ingest` route live at `agent-oversight.vercel.app/api/ingest` — validated with real curl
 - Python SDK (`python-sdk/oversight.py`) with `OversightClient` and `run()` context manager
-- `.env.local` scaffolded — **Supabase anon key and service role key still need to be filled in**
+- `.env.local` fully populated with all real keys (no placeholders)
+- All 7 env vars set in Vercel: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, INNGEST_SIGNING_KEY, INNGEST_EVENT_KEY, RESEND_API_KEY, INGEST_SECRET
+- `runs` table created manually in Supabase (was missing from initial migration)
+- Test agent inserted: `7ea87edd-03b9-4eae-9bd4-17e49fea5c32` (name: test-agent, company: Personal)
+- Test run confirmed written to `runs` table: run_id `a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d`
 
 ## Stack / Key decisions locked in
-- Next.js 16 App Router, TypeScript strict mode
+- Next.js App Router, TypeScript strict mode
 - Supabase SSR client pattern (async cookies)
 - Service role key used for ingest writes (bypasses RLS)
-- Zod validation on ingest payload
+- Zod v4 validation on ingest payload
 - Python SDK supports both `httpx` (preferred) and stdlib `urllib` as fallback
-- `INGEST_SECRET=agent-oversight-secret-2026-secure-key`
+- INGEST_SECRET: `ChArles-Clint0n-Leazer-Jr.-1s-the-B3st` (no special chars — @ removed)
+- `runs` table has service_role RLS policy (all operations allowed for service role)
 
 ## Active work
-Phase 1 just completed. Branch: `claude/affectionate-goldstine` — needs to be merged to main.
+Nothing in flight. Phase 1 closed. Ready to start Phase 2.
 
 ## What's next
-1. Fill in `.env.local` with real Supabase anon + service role keys (from dashboard → Project Settings → API)
-2. Also add these env vars to Vercel dashboard for production
-3. Push branch → merge to main → Vercel auto-deploy
-4. Test: `POST /api/ingest` with header `x-agent-secret: agent-oversight-secret-2026-secure-key` and a valid `agent_id`
-5. Phase 2: dashboard UI (runs list, agent status, cost tracking)
+1. Phase 2: dashboard UI
+   - Runs list page (paginated, filterable by agent/status)
+   - Agent status page (active/paused/error)
+   - Cost + token usage charts
+2. Wire up Inngest for durable agent triggers (deferred from Phase 1)
+3. Resend email alerts on `run_failed` events
 
 ## Known issues / blockers
-- `.env.local` has placeholder values for `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` — must be set before running locally or deploying
-- TypeScript check requires `next build` or `next typegen` to generate the `RouteContext` types; tsc --noEmit should pass with skipLibCheck
+- `runs` table was NOT in the original migration file (`001_initial_schema.sql`) — it was created manually via SQL Editor. Need to add it to the migration file so it's reproducible.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` uses new Supabase publishable key format (`sb_publishable_...`) — this is the correct format for new projects.
+- Trailing spaces in `.env.local` values will cause silent auth failures — always trim before saving.

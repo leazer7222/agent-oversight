@@ -10,3 +10,4 @@
 [2026-03-21] | If a task can be done by Claude, do it — don't hand it back to Chuck | If a required CLI tool is missing, suggest it, install it, then complete the task without asking Chuck to do the steps
 [2026-03-21] | When asking Chuck to run a command, always specify WHERE | Say explicitly "run this in your terminal" vs "I'll run this here" — never leave it ambiguous
 [2026-03-21] | Claude CAN run commands in Chuck's terminal via the Bash tool | Use Bash tool for all commands that don't require interactive input (browser auth, password prompts). For interactive commands like `gh auth login`, clearly explain why Chuck must run it himself
+[2026-03-21] | gh CLI is installed at /c/Program Files/GitHub CLI/gh.exe — not on PATH in bash shell | Always call it as "/c/Program Files/GitHub CLI/gh.exe" in Bash tool commands

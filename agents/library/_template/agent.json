@@ -1,0 +1,8 @@
+{
+  "agent_id": "REPLACE-WITH-GENERATED-UUID",
+  "name": "agent_name",
+  "description": "One sentence describing what this agent does.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "mcp_dependencies": []
+}

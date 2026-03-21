@@ -3,3 +3,26 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
+
+---
+
+# Agent Standards — Mandatory Checklist
+
+Every agent in this system MUST satisfy all of the following before it is considered real.
+Full specification: `/docs/agent-standards.md`
+Template to copy from: `/agents/library/_template/`
+
+## Required to exist
+- [ ] Registered in Supabase `agents` table with a stable UUID `agent_id`
+- [ ] `README.md` — what it does, what tools/MCPs it uses, who owns it
+- [ ] `agent.json` — machine-readable identity manifest (see template)
+
+## Required at runtime
+- [ ] Emits `run_started` to `/api/ingest` at the beginning of every run
+- [ ] Emits `run_completed` to `/api/ingest` at the end of every run
+- [ ] Each run has a unique `run_id` (UUID generated per invocation)
+
+## Strongly recommended
+- [ ] Reports `tokens_in`, `tokens_out`, `cost_usd` on `run_completed`
+- [ ] Declares MCP dependencies in `agent.json`
+- [ ] Includes a `LESSONS.md` for per-agent standing rules

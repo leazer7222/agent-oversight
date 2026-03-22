@@ -22,6 +22,11 @@ Template to copy from: `/agents/library/_template/`
     - Purpose: Retrieves project context from Google Drive.
     - Status: Active
     - Owner: `reformai`
+- **marketing-agent** ([library](file:///c:/Users/cjlea/AgentProjects/agent-oversight/agents/library/marketing-agent/))
+    - Purpose: Strategic marketing executive; produces UI-ready blueprints.
+    - Status: Active
+    - Owner: `reformai`
+
 
 ## Required at runtime
 

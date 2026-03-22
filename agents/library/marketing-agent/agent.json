@@ -1,0 +1,8 @@
+{
+  "agent_id": "8482d8c3-1811-4712-881b-537449339e31",
+  "name": "marketing-agent",
+  "description": "Senior Marketing Strategy Executive Agent for ReformAI. Produces landing page blueprints.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "mcp_dependencies": ["gdrive"]
+}

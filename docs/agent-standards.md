@@ -38,6 +38,8 @@ Before an agent can run, it must be registered in Supabase.
 | Agent | Owner | agent_id | Location |
 |---|---|---|---|
 | `context-agent` | `reformai` | `40b5e259-5b28-44fd-9c5b-e758093e5d3d` | `/agents/library/context-agent/` |
+| `marketing-agent` | `reformai` | `761c56f6-4de8-4859-974a-43d964de62f0` | `/agents/library/marketing-agent/` |
+
 
 
 ---

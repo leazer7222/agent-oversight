@@ -1,0 +1,11 @@
+{
+  "name": "context-agent",
+  "display_name": "Context Agent",
+  "version": "1.0.0",
+  "description": "Retrieves project documentation and context from Google Drive.",
+  "agent_type": "sub_agent",
+  "instance_type": "per_company",
+  "capability_tags": ["documentation", "search", "context"],
+  "platform": "python",
+  "mcp_dependencies": ["gdrive"]
+}

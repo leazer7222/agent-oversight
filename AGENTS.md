@@ -17,7 +17,14 @@ Template to copy from: `/agents/library/_template/`
 - [ ] `README.md` — what it does, what tools/MCPs it uses, who owns it
 - [ ] `agent.json` — machine-readable identity manifest (see template)
 
+## Registered Agents (Library)
+- **context-agent** ([library](file:///c:/Users/cjlea/AgentProjects/agent-oversight/agents/library/context-agent/))
+    - Purpose: Retrieves project context from Google Drive.
+    - Status: Active
+    - Owner: `reformai`
+
 ## Required at runtime
+
 - [ ] Emits `run_started` to `/api/ingest` at the beginning of every run
 - [ ] Emits `run_completed` to `/api/ingest` at the end of every run
 - [ ] Each run has a unique `run_id` (UUID generated per invocation)

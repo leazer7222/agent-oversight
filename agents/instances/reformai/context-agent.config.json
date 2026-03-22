@@ -1,0 +1,14 @@
+{
+  "agent_id": "40b5e259-5b28-44fd-9c5b-e758093e5d3d",
+  "definition": "context-agent",
+  "definition_version": "1.0.0",
+  "name": "reformai.context-agent",
+  "company_id": "1021c018-fe0e-4ae8-a972-7487521cc3d9",
+  "agent_type": "worker",
+  "status": "active",
+  "config": {
+    "gdrive_folder_id": "1dVzlTU8QUq__8YefaE_m7Ue8cNkTjRz0"
+  }
+
+}
+

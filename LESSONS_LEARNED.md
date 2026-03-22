@@ -46,9 +46,38 @@ Add new lessons at the end of each session.
 
 ---
 
+## Google Service Account
+
+- A ReformAI service account is available for Google API access (no OAuth browser flow needed).
+- Email: `reformai-catalog-agent@reformai-agent.iam.gserviceaccount.com`
+- GCP project: `reformai-agent`
+- Key file: `C:\Users\cjlea\Key\reformai-agent-dd4d7e12c73f.json`
+- Use `GOOGLE_SERVICE_ACCOUNT_KEY` env var (path to the key file) for MCPs that support it.
+- For Google Drive: share the target Drive/folder with the service account email so it has access.
+
+---
+
 ## Debugging Approach
 
 - When an issue recurs across restarts, stop guessing and **read the source** — find the actual config/env var the package uses before changing anything.
 - For persistent auth errors: test the API call directly via Python/curl before touching config files.
 - Stale server logs will show old errors even after they are fixed — check browser console logs separately.
-- Screenshot tool can time out — use `preview_snapshot` as a reliable fallback for verifying page content.
+---
+ 
+ ## Agent Foundation & Supabase Schema
+ 
+ ### Database Naming Conventions
+ - The production Supabase schema (project `hdhovyrlnfojtkqbcegh`) uses `id` as the primary key for most tables (`companies`, `agents`, `agent_definitions`).
+ - The `agents` table uses `definition_id` as the foreign key to `agent_definitions.id` (contrary to some early planning docs that suggested `agent_definition_id`).
+ - Always verify column names via the OpenAPI spec (`/rest/v1/`) or a browser query before writing registration scripts.
+ 
+ ### Agent Registration
+ - **Instance Type**: Default value is `stateless` in the primary schema.
+ - **Agent Type**: Default value is `worker` for sub-agents; `orchestrator` is used for master agents.
+ - **Required Headers**: Direct REST API calls to Supabase MUST include both `apikey` and `Authorization: Bearer [apikey]` headers.
+ 
+ ### Python SDK (`oversight.py`)
+ - The SDK is used for reporting run status and steps. 
+ - Use `client.run()` as a context manager to ensure `run_completed` is emitted even if the script fails.
+ - Add the `python-sdk` directory to `sys.path` to import `oversight` if the agent is in a deep subdirectory.
+

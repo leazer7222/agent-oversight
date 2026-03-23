@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST https://agent-oversight.vercel.app/api/ingest -H \"x-agent-secret: ChArles-Clint0n-Leazer-Jr.-1s-the-B3st\" -H \"Content-Type: application/json\" -d \"{\"\"agent_id\"\": \"\"7ea87edd-03b9-4eae-9bd4-17e49fea5c32\"\", \"\"event\"\": \"\"run_started\"\", \"\"run_id\"\": \"\"00000000-0000-0000-0000-000000000001\"\"}\")",
+      "Bash(curl -s -X POST https://agent-oversight.vercel.app/api/ingest -H \"x-agent-secret: ChArles-Clint0n-Leazer-Jr.-1s-the-B3st\" -H \"Content-Type: application/json\" -d \"{\"\"agent_id\"\": \"\"7ea87edd-03b9-4eae-9bd4-17e49fea5c32\"\", \"\"event\"\": \"\"run_started\"\", \"\"run_id\"\": \"\"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\"\"}\")",
+      "Bash(npx skills:*)",
+      "Bash(gh pr:*)",
+      "Bash(\"/c/Program Files/GitHub:*)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" pr merge 3 --merge --delete-branch)",
+      "Bash(python3 -c \":*)",
+      "Read(//c/Users/cjlea/AgentProjects//**)",
+      "Read(//c/Users/cjlea//**)",
+      "Bash(find /c/Users/cjlea/.claude -maxdepth 6 -iname *reform*)",
+      "Bash(find /c/Users/cjlea/OneDrive/Desktop/ReformAI_UIDesignAgents -name *.md)",
+      "Bash(find /c/Users/cjlea/OneDrive/Desktop/Anti-Gravity_ReformAI -name *.md)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

@@ -87,3 +87,5 @@ Add new lessons at the end of each session.
  - Use `client.run()` as a context manager to ensure `run_completed` is emitted even if the script fails.
  - Add the `python-sdk` directory to `sys.path` to import `oversight` if the agent is in a deep subdirectory.
 
+ ### Agent Prompt Management
+ - Agent system prompts and instructions (e.g. Elite v4 prompt) should be stored directly alongside the agent's code in its library folder (e.g. `agents/library/marketing-agent/prompt.md`) instead of keeping them in external directories like Downloads. This keeps context tightly coupled to the agent logic.

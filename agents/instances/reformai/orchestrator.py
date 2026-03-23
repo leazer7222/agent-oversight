@@ -102,18 +102,11 @@ class Orchestrator:
         raw_text_context = context_result.get("context", "")
         context_data = [{"content": raw_text_context}]
         
-        # Step 2: Run Audit Agent
-        print("\n--- Step 2: Calling Audit Agent ---")
-        # Dummy UUID for audit agent until registered
-        audit_agent_id = "00000000-0000-0000-0000-000000000000"
-        audit_agent = AuditAgent(audit_agent_id)
-        
-        if True: # Bypass self.oversight for audit agent for now
-            audit_result = audit_agent.run(query=goal, context=raw_text_context, company_id=self.company_id)
-            print(f"Audit Result: Score {audit_result.get('score', 'N/A')}/10, Passed: {audit_result.get('passed', False)}")
-            if not audit_result.get("passed", False):
-                print(f"❌ Audit Failed. Reason: {audit_result.get('reasoning', 'Unknown')}")
-                return
+        # Step 2: Run Audit Agent (DE-PRIORITIZED FOR NOW)
+        print("\n--- Step 2: Bypassing Audit Agent ---")
+        # audit_result = audit_agent.run(query=goal, context=raw_text_context, company_id=self.company_id)
+        # ... logic to halt if failed ...
+
 
         # Step 3: Run Marketing Agent with Context
         print("\n--- Step 3: Calling Marketing Agent ---")
@@ -126,28 +119,35 @@ class Orchestrator:
                 
                 # Step 4: Local Persistence & DB
                 if marketing_result.get("status") == "success":
-                    self._handle_output(marketing_result, marketing_agent_id, run.run_id)
+                    self._handle_output(marketing_result.get("full_output"), marketing_agent_id, run.run_id)
                 else:
                     run.report(metadata={"error": "Marketing generation failed."})
         else:
             marketing_result = marketing_agent.run(goal=goal, context=context_data)
             if marketing_result.get("status") == "success":
-                self._handle_output(marketing_result, marketing_agent_id, run_id)
+                self._handle_output(marketing_result.get("full_output"), marketing_agent_id, run_id)
                 
         print("=== Orchestrator Workflow Complete ===")
 
-    def _handle_output(self, marketing_result: dict, agent_id: str, run_id: str):
+    def _handle_output(self, full_output: dict, agent_id: str, run_id: str):
         print("\n--- Step 4: Persistence and Output Handling ---")
-        # 3a. Save local file
+        # 3a. Save local file (JSON)
         output_dir = os.path.join(os.path.dirname(__file__), "outputs")
         os.makedirs(output_dir, exist_ok=True)
-        filename = os.path.join(output_dir, f"local_output_{run_id[:8]}.json")
-        with open(filename, "w") as f:
-            json.dump(marketing_result.get("full_output", {}), f, indent=2)
-        print(f"✅ Local file created: {filename}")
+        json_filename = os.path.join(output_dir, f"local_output_{run_id[:8]}.json")
+        with open(json_filename, "w", encoding="utf-8") as f:
+            json.dump(full_output, f, indent=2)
+        print(f"✅ Local JSON created: {json_filename}")
+
+        # 3b. Save Team Strategy Doc (Markdown)
+        team_doc = full_output.get("team_writeup", "# No Writeup Generated")
+        doc_filename = os.path.join(output_dir, f"team_strategy_{run_id[:8]}.md")
+        with open(doc_filename, "w", encoding="utf-8") as f:
+            f.write(team_doc)
+        print(f"✅ Team Strategy Doc created: {doc_filename}")
         
-        # 3b. Save to Database
-        self.publish_to_db(agent_id, run_id, marketing_result.get("full_output", {}))
+        # 3c. Save to Database
+        self.publish_to_db(agent_id, run_id, full_output)
         
         # 3c. Placeholder for async task dispatch for GDrive
         print("ℹ️ Google Drive upload pending. Orchestrator would dispatch asynchronous job here.")

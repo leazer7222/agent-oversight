@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); servers=d.get\\(''''mcpServers'''',{}\\); print\\(json.dumps\\(servers, indent=2\\)\\)\")",
+      "Bash(CLOUDSDK_CONFIG=C:/Users/cjlea/.stitch-mcp/config GOOGLE_CLOUD_PROJECT=reformai-stitch 'PATH=/c/Users/cjlea/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin:$PATH' npx -y @_davideast/stitch-mcp proxy)",
+      "Bash(python3 -c \":*)"
+    ]
+  }
+}

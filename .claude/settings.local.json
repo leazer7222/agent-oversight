@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__gdrive__list_files",
+      "mcp__gdrive__search_files",
+      "mcp__gdrive__get_file",
+      "Bash(npx -y mcp-google-drive --help)",
+      "Bash(find /c/Users/cjlea/AppData -name *.js -path *mcp-google-drive*)",
+      "Bash(mkdir -p \"C:/Users/cjlea/.config/mcp-gdrive\")",
+      "Bash(cp \"C:/Users/cjlea/Key/gdrive-token.json\" \"C:/Users/cjlea/.config/mcp-gdrive/token.json\")",
+      "Bash(node -e \":*)"
+    ]
+  }
+}

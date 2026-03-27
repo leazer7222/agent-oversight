@@ -26,6 +26,10 @@ Template to copy from: `/agents/library/_template/`
     - Purpose: Strategic marketing executive; produces UI-ready blueprints.
     - Status: Active
     - Owner: `reformai`
+- **engineering-review-agent** ([library](file:///c:/Users/cjlea/AgentProjects/agent-oversight/agents/library/engineering-review-agent/))
+    - Purpose: Connects user feedback to code-level root causes; produces prioritized engineering recommendations.
+    - Status: Active
+    - Owner: `reformai`
 
 
 ## Required at runtime

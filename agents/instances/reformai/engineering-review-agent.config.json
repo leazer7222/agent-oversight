@@ -1,0 +1,14 @@
+{
+  "agent_id": "e6229606-78b9-4fd7-9424-6a62eb574255",
+  "definition": "engineering-review-agent",
+  "definition_version": "1.0.0",
+  "name": "reformai.engineering-review-agent",
+  "company_id": "1021c018-fe0e-4ae8-a972-7487521cc3d9",
+  "agent_type": "worker",
+  "status": "active",
+  "config": {
+    "github_repo": "leazer7222/reformai_visualization_agenettest",
+    "github_scope": "",
+    "feedback_folder_id": "1dQqaXId3_RiR7Nq8xakI-XPxVzxAhosK"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "agent_id": "e6229606-78b9-4fd7-9424-6a62eb574255",
+  "name": "engineering-review-agent",
+  "display_name": "Engineering Review Agent",
+  "description": "Staff-level engineering review agent that connects user feedback to code-level root causes and produces prioritized, evidence-based improvement recommendations.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "agent_type": "worker",
+  "instance_type": "stateless",
+  "capability_tags": ["code-review", "engineering", "quality", "user-feedback", "analysis"],
+  "platform": "python",
+  "mcp_dependencies": ["gdrive"]
+}

@@ -1,6 +1,8 @@
 # Agent Oversight System — Todo
 
 ## Active
+- [ ] Fund Gemini or OpenAI API key and run engineering review to completion
+- [ ] Review engineering review output, iterate on prompt if needed
 - [ ] Add `runs` and `project_state` tables to `001_initial_schema.sql` migration file
 - [ ] Phase 2: dashboard UI — runs list, agent status page, cost/token charts
 - [ ] Inngest integration for durable agent triggers
@@ -24,6 +26,10 @@
 - [x] Install gh CLI, authenticate — 2026-03-21
 - [x] Register all 5 Claude session agents in agents table — 2026-03-21
 - [x] Update session-logger skill to use API instead of local files — 2026-03-21
+- [x] Build Engineering Review Agent (agent.py, prompt.md, README, agent.json, LESSONS) — 2026-03-27
+- [x] Register engineering-review-agent in Supabase (agent_definitions + agents) — 2026-03-27
+- [x] Validate GDrive feedback fetch (3 docs, 44k chars) — 2026-03-27
+- [x] Validate GitHub code fetch (16 files from reformai_visualization_agenettest) — 2026-03-27
 
 ## Parking Lot
 - QA rubric/constraints JSON per agent — deferred until first agent is built

@@ -132,6 +132,20 @@ def _read_py_files(agent_dir: Path) -> str:
     return "\n\n".join(parts)
 
 
+def _oversight_delegated(agent_dir: Path) -> Optional[str]:
+    """Return delegation reason if agent.json declares oversight_delegated=true, else None."""
+    json_path = agent_dir / "agent.json"
+    if not json_path.exists():
+        return None
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+        if data.get("oversight_delegated"):
+            return data.get("oversight_delegated_reason", "Oversight delegated to orchestrator.")
+    except Exception:
+        pass
+    return None
+
+
 def _check_code(agent_dir: Path, is_self: bool = False) -> List[Dict]:
     issues = []
     source = _read_py_files(agent_dir)
@@ -139,12 +153,20 @@ def _check_code(agent_dir: Path, is_self: bool = False) -> List[Dict]:
         return issues
 
     # Oversight integration
+    delegation_reason = _oversight_delegated(agent_dir)
     if "OversightClient" not in source:
-        issues.append({
-            "severity": "critical",
-            "check": "no_oversight_client",
-            "detail": "OversightClient is never imported or used — agent emits no lifecycle events",
-        })
+        if delegation_reason:
+            issues.append({
+                "severity": "info",
+                "check": "oversight_delegated",
+                "detail": f"No OversightClient (intentional): {delegation_reason}",
+            })
+        else:
+            issues.append({
+                "severity": "critical",
+                "check": "no_oversight_client",
+                "detail": "OversightClient is never imported or used — agent emits no lifecycle events",
+            })
     else:
         if "run_started" not in source and "client.run(" not in source and ".run(" not in source:
             issues.append({
@@ -240,6 +262,7 @@ def scan_agent(agent_dir: Path) -> Dict:
 
     critical = sum(1 for i in issues if i["severity"] == "critical")
     warning = sum(1 for i in issues if i["severity"] == "warning")
+    info = sum(1 for i in issues if i["severity"] == "info")
 
     overall = "critical" if critical > 0 else ("warning" if warning > 0 else "ok")
 
@@ -250,6 +273,7 @@ def scan_agent(agent_dir: Path) -> Dict:
         "overall": overall,
         "critical": critical,
         "warning": warning,
+        "info": info,
         "issues": issues,
     }
 

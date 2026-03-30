@@ -4,5 +4,7 @@
   "description": "Senior Marketing Strategy Executive Agent for ReformAI. Produces landing page blueprints.",
   "owner": "reformai",
   "version": "1.0.0",
-  "mcp_dependencies": ["gdrive"]
+  "mcp_dependencies": ["gdrive"],
+  "oversight_delegated": true,
+  "oversight_delegated_reason": "Lifecycle telemetry (run_started/run_completed) is owned by the orchestrator. Marketing agent is a pure compute node; it does not manage its own run context."
 }

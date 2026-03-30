@@ -26,6 +26,10 @@ Template to copy from: `/agents/library/_template/`
     - Purpose: Strategic marketing executive; produces UI-ready blueprints.
     - Status: Active
     - Owner: `reformai`
+- **audit-agent** ([library](file:///c:/Users/cjlea/AgentProjects/agent-oversight/agents/library/audit-agent/))
+    - Purpose: Quality gate; evaluates context relevance against a goal via LLM scoring.
+    - Status: Active (bypassed in orchestrator pending re-enable)
+    - Owner: `reformai`
 - **optimization-agent** ([library](file:///c:/Users/cjlea/AgentProjects/agent-oversight/agents/library/optimization-agent/))
     - Purpose: Scans agent library for standards compliance, code issues, and gaps; synthesizes improvement report.
     - Status: Active

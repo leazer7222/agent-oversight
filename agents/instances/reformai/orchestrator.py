@@ -83,7 +83,7 @@ class Orchestrator:
         # We assign an orchestrator 'run' conceptually. 
         # But we will specifically trace the marketing agent.
         marketing_agent_id = "761c56f6-4de8-4859-974a-43d964de62f0"
-        context_agent_id = "a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6"
+        context_agent_id = "40b5e259-5b28-44fd-9c5b-e758093e5d3d"
         
         print("\n=== Orchestrator Workflow Started ===")
         print(f"Goal: {goal}")

@@ -20,7 +20,7 @@ class AuditAgent:
     def __init__(self, agent_id: str):
         self.agent_id = agent_id
         self.client = OversightClient(
-            url=os.environ.get("OVERSIGHT_URL", "http://localhost:3000/api/agents/ingest"),
+            url=os.environ.get("OVERSIGHT_URL", "http://localhost:3000"),
             secret=os.environ.get("OVERSIGHT_SECRET")
         )
 

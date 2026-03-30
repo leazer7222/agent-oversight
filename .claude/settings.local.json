@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import uuid; print\\(uuid.uuid4\\(\\)\\)\")",
+      "Bash(powershell -Command \"Set-Location ''C:\\\\Users\\\\cjlea\\\\AgentProjects\\\\agent-oversight''; node .claude/worktrees/vigorous-shtern/register_optimization_agent.js\")",
+      "Read(//c/Users/cjlea/AgentProjects/agent-oversight/**)",
+      "Bash(python -c \":*)"
+    ]
+  }
+}

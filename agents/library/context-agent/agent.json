@@ -1,11 +1,10 @@
 {
+  "agent_id": "40b5e259-5b28-44fd-9c5b-e758093e5d3d",
   "name": "context-agent",
   "display_name": "Context Agent",
-  "version": "1.0.0",
   "description": "Retrieves project documentation and context from Google Drive.",
-  "agent_type": "sub_agent",
-  "instance_type": "per_company",
+  "owner": "reformai",
+  "version": "1.0.0",
   "capability_tags": ["documentation", "search", "context"],
-  "platform": "python",
   "mcp_dependencies": ["gdrive"]
 }

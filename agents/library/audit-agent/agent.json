@@ -1,0 +1,8 @@
+{
+  "agent_id": "5fdd7a16-153c-4e54-ac61-7ebe642a0dca",
+  "name": "audit-agent",
+  "description": "Evaluates context quality against a goal using LLM scoring; passes or fails based on relevance.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "mcp_dependencies": []
+}

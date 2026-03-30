@@ -1,0 +1,8 @@
+{
+  "agent_id": "1ba970fb-caba-4c4d-9e91-0f07135c1a70",
+  "name": "optimization_agent",
+  "description": "Scans the agent library for standards compliance, code quality issues, and structural gaps, then synthesizes an improvement report via LLM.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "mcp_dependencies": []
+}

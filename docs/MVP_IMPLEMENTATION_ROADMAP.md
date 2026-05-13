@@ -18,6 +18,31 @@ Why this matters:
 
 This document therefore sequences core infrastructure before advanced AI behavior by design.
 
+# Document Role
+Source of truth for:
+- phased MVP sequencing and implementation strategy
+- operational maturity roadmap from prototype to control plane
+- what to build now vs what to defer
+
+Should live here:
+- phase-by-phase goals, deliverables, and success criteria
+- sequencing rationale, risks, and tradeoffs
+- explicit non-goals and deferrals for MVP scope discipline
+
+Should NOT live here:
+- active execution/session state
+- tactical debugging logs
+- deep retrospective architecture essays
+
+Related documents:
+- Operational continuity checkpoints: `docs/HANDOFF_PROTOCOL.md`
+- Strategic architecture/tradeoff retrospectives: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- Agent inventory/status: `docs/AGENTS.md`
+- Agent implementation/runtime standards: `docs/agent-standards.md`
+- Repo-wide engineering standards: `docs/repo-standards.md`
+- Concise chronological lessons: `docs/LESSONS_LEARNED.md`
+- Project entrypoint: `docs/README.md`
+
 # MVP Definition
 ## What the MVP actually is
 The MVP is an operational control plane where an operator can:
@@ -525,4 +550,3 @@ Its strategic value is the disciplined creation of:
 - systems-thinking depth
 
 For both engineering and product leadership, this roadmap treats operational coherence as the core product. That is the right foundation for scaling capability without losing reliability, safety, or decision quality.
-

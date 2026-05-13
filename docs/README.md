@@ -26,6 +26,29 @@ Personal control plane for monitoring, controlling, and coordinating all AI agen
 
 Personal control plane for monitoring, controlling, and coordinating all AI agents across ReformAI, AfterGlow, and Personal projects.
 
+# Document Role
+Source of truth for:
+- concise docs entrypoint and high-level orientation
+- navigation links to canonical documents
+
+Should live here:
+- short project overview
+- where to find standards, strategy, operations, roadmap, and lessons docs
+
+Should NOT live here:
+- duplicated deep architecture analysis
+- detailed implementation standards
+- active operational run-state/checkpoint logs
+
+Canonical documentation map:
+- Agent inventory/status: `docs/AGENTS.md`
+- Agent implementation/runtime standards: `docs/agent-standards.md`
+- Repo-wide engineering standards: `docs/repo-standards.md`
+- Strategic architecture/tradeoffs/interview framing: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- Operational continuity and checkpointing: `docs/HANDOFF_PROTOCOL.md`
+- Phased MVP implementation roadmap: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Concise chronological lesson log: `docs/LESSONS_LEARNED.md`
+
 ## Stack
 - **Database**: Supabase (Postgres + Realtime)
 - **Event queue**: Inngest (durable execution)

@@ -6,6 +6,30 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
+# Document Role
+Source of truth for:
+- agent inventory in this repository
+- agent operational status snapshots (active/paused/deprecated intent)
+- agent ownership and quick compliance checklist visibility
+
+Should live here:
+- registered agent list and ownership
+- high-level runtime/compliance checklist references
+- links to where each agent lives
+
+Should NOT live here:
+- deep implementation/runtime contract specifications
+- strategic architecture evolution and roadmap reasoning
+
+Related documents:
+- Agent implementation contract: `docs/agent-standards.md`
+- Repo-wide standards: `docs/repo-standards.md`
+- Strategic architecture/tradeoffs: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- Operational continuity state: `docs/HANDOFF_PROTOCOL.md`
+- MVP sequencing roadmap: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Concise chronological lessons: `docs/LESSONS_LEARNED.md`
+- Project entrypoint: `docs/README.md`
+
 # Agent Standards — Mandatory Checklist
 
 Every agent in this system MUST satisfy all of the following before it is considered real.

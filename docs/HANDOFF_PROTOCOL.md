@@ -27,6 +27,31 @@ This mirrors distributed systems patterns:
 - handoff entries are transaction checkpoints
 - session boundaries are failure/restart boundaries
 
+# Document Role
+Source of truth for:
+- operational continuity checkpoints across LLM/tools
+- active work state, blockers, and immediate next actions
+- token-risk handoff state
+
+Should live here:
+- session start/checkpoint/end entries
+- tactical execution continuity notes
+- current operational blockers and recovery steps
+
+Should NOT live here:
+- deep strategic architecture retrospectives
+- phased implementation strategy details
+- agent implementation standards
+
+Related documents:
+- Strategic architecture/tradeoffs: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- MVP sequencing roadmap: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Agent inventory/status: `docs/AGENTS.md`
+- Agent implementation standards: `docs/agent-standards.md`
+- Repo-wide standards: `docs/repo-standards.md`
+- Concise dated lessons: `docs/LESSONS_LEARNED.md`
+- Project entrypoint: `docs/README.md`
+
 # Core Operating Principle
 **LLM context is ephemeral. Repository state must become the durable source of truth.**
 
@@ -281,3 +306,35 @@ Conversational context is temporary and should never be treated as the primary s
   1. Complete docs-only commit locally.
   2. Attempt real push and capture exact failure details.
   3. Switch/authenticate as repo writer account before Phase 1 work.
+
+## Session Start
+- date/time: 2026-05-12 21:23:00 -05:00
+- model/tool: ChatGPT / Codex
+- current objective: Lightweight documentation hygiene pass to clarify source-of-truth ownership boundaries and cross-document responsibilities.
+- expected scope: Minimal doc governance edits only (no rewrite, no code changes).
+- intended files to inspect:
+  - docs/AGENTS.md
+  - docs/agent-standards.md
+  - docs/repo-standards.md
+  - docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md
+  - docs/HANDOFF_PROTOCOL.md
+  - docs/MVP_IMPLEMENTATION_ROADMAP.md
+  - docs/LESSONS_LEARNED.md
+  - docs/README.md
+
+## Session End
+- final work completed:
+  - Added `Document Role` ownership sections to docs governance/strategy/operations standards documents.
+  - Added explicit cross-links between standards, state, strategy, roadmap, and lessons layers.
+  - Appended corresponding milestone/lesson updates.
+- architecture impact:
+  - Documentation architecture boundaries are now explicit; no application/runtime code changes.
+- operational lessons learned:
+  - Minimal governance clarifications can materially reduce future multi-LLM duplication drift.
+- PM/system-thinking lessons:
+  - Ownership clarity in documentation functions as coordination infrastructure and lowers execution ambiguity.
+- risks introduced:
+  - None significant; risk reduced: documentation boundary ambiguity.
+- next priorities:
+  1. Restore GitHub push permissions for the active identity before Phase 1 execution.
+  2. Begin Phase 1 schema reconciliation using clarified document ownership.

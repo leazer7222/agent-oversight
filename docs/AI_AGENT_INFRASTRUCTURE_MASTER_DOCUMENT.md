@@ -6,6 +6,32 @@ This document is the persistent master record for the AI agent infrastructure pr
 - a PM learning document
 - an interview preparation resource
 
+# Document Role
+Source of truth for:
+- architecture evolution over time
+- strategic tradeoff analysis and system-level reasoning
+- cumulative operational lessons with PM interpretation
+- interview-preparation framing grounded in real project decisions
+
+Should live here:
+- architectural retrospectives and maturity analysis
+- strategic implications of technical decisions
+- cumulative tradeoff history and milestone learnings
+
+Should NOT live here:
+- tactical session-by-session execution state
+- live agent inventory snapshots
+- per-agent implementation contract details
+
+Related documents:
+- Operational continuity checkpoints: `docs/HANDOFF_PROTOCOL.md`
+- Phased MVP implementation sequencing: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Agent inventory/status: `docs/AGENTS.md`
+- Agent implementation/runtime standards: `docs/agent-standards.md`
+- Repo-wide engineering standards: `docs/repo-standards.md`
+- Concise chronological lesson log: `docs/LESSONS_LEARNED.md`
+- Project entrypoint: `docs/README.md`
+
 This is intentionally a living document, not a one-time audit artifact. It captures architecture decisions, tradeoffs, failures, assumptions, product implications, and lessons as the platform evolves from prototype into a production-grade agent control plane.
 
 # How To Update This Document
@@ -560,6 +586,21 @@ Operational interpretation:
 
 Lesson reinforced:
 - Operational continuity depends on both durable repository state and correct identity/permission context.
+
+## Milestone Entry: Documentation Ownership Hygiene (Lightweight Governance Pass)
+Date: 2026-05-12
+
+`Confirmed:`
+- Added concise `Document Role` sections to core docs to clarify source-of-truth boundaries.
+- Added explicit cross-document references to reduce future duplication drift.
+- Preserved existing content and standards while improving navigation and governance clarity.
+
+Why this matters:
+- Multi-LLM collaboration increases duplication risk when ownership boundaries are implicit.
+- Clear documentation layering (inventory, standards, strategy, operations, roadmap, lessons) improves operational coherence and onboarding speed.
+
+PM/system-thinking implication:
+- Documentation architecture is platform architecture; weak ownership boundaries create hidden coordination debt.
  
 # Milestone Update Template
 Use this template for every major milestone update:

@@ -4,6 +4,30 @@
 > Every agent, script, output, and config MUST conform to this structure.
 > The `optimization-agent` enforces these rules automatically on each run.
 
+# Document Role
+Source of truth for:
+- repository-wide engineering and organization standards
+- repo conventions and file-placement rules
+- cross-repo hygiene and process expectations
+
+Should live here:
+- canonical repo structure and naming conventions
+- rules for scripts/outputs/docs placement
+- repository governance conventions that apply to all contributors/tools
+
+Should NOT live here:
+- strategic architecture evolution narratives
+- active operational run-state/checkpoint logs
+
+Related documents:
+- Agent inventory/status snapshots: `docs/AGENTS.md`
+- Agent implementation/runtime standards: `docs/agent-standards.md`
+- Strategic architecture/tradeoffs: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- Operational continuity state: `docs/HANDOFF_PROTOCOL.md`
+- MVP implementation sequencing: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Concise chronological lessons: `docs/LESSONS_LEARNED.md`
+- Project entrypoint: `docs/README.md`
+
 ---
 
 ## 1. Canonical Directory Structure

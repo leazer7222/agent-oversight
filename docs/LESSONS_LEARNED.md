@@ -3,6 +3,29 @@
 Read this file at the start of every session and apply these rules throughout.
 Add new lessons at the end of each session.
 
+# Document Role
+Source of truth for:
+- concise chronological lesson log
+- dated operational discoveries and practical corrections
+
+Should live here:
+- short, direct lessons tied to real incidents/decisions
+- actionable rules derived from debugging and execution experience
+
+Should NOT live here:
+- deep architecture strategy essays
+- phased roadmap sequencing details
+- tactical current-session checkpoint state
+
+Related documents:
+- Strategic architecture and deep tradeoffs: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- Operational continuity checkpoints: `docs/HANDOFF_PROTOCOL.md`
+- MVP sequencing roadmap: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Agent inventory/status: `docs/AGENTS.md`
+- Agent implementation/runtime standards: `docs/agent-standards.md`
+- Repo-wide engineering standards: `docs/repo-standards.md`
+- Project entrypoint: `docs/README.md`
+
 ---
 
 ## Next.js / React
@@ -137,3 +160,9 @@ Add new lessons at the end of each session.
 - **Single session log dir**: Use `session-logs/YYYY-MM-DD_<project>.md`. Do not create a separate `sessions/` directory.
 - **No __init__.py in agent dirs**: Agents are run as scripts, not imported as packages. `__init__.py` in `agents/` and `agents/library/` serves no purpose and should not exist.
 - **optimization-agent is the enforcement mechanism**: Run `python agents/library/optimization-agent/agent.py` any time structural changes are made to verify compliance.
+
+## Documentation Governance (2026-05-12)
+
+- Assign clear source-of-truth ownership per document type to reduce duplication drift.
+- Keep strategic reasoning in `AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`; keep this file concise and chronological.
+- Keep tactical continuity and active blockers in `HANDOFF_PROTOCOL.md`, not in standards documents.

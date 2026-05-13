@@ -3,6 +3,31 @@
 This document defines the standards every agent in the system must meet.
 These rules apply to all agents across all companies (ReformAI, AfterGlow, Personal).
 
+# Document Role
+Source of truth for:
+- individual agent implementation standards
+- runtime contract requirements
+- telemetry emission requirements
+- agent lifecycle expectations
+
+Should live here:
+- required agent files/schema/contract rules
+- run lifecycle event requirements
+- agent-level naming and runtime conventions
+
+Should NOT live here:
+- live agent inventory/status tracking
+- phased platform strategy and roadmap decisions
+
+Related documents:
+- Agent inventory/status snapshots: `docs/AGENTS.md`
+- Repo-wide engineering standards: `docs/repo-standards.md`
+- Strategic architecture/tradeoffs: `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+- Operational continuity checkpointing: `docs/HANDOFF_PROTOCOL.md`
+- MVP sequencing roadmap: `docs/MVP_IMPLEMENTATION_ROADMAP.md`
+- Concise chronological lessons: `docs/LESSONS_LEARNED.md`
+- Project entrypoint: `docs/README.md`
+
 ---
 
 ## 1. Identity

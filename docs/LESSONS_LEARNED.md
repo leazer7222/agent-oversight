@@ -233,3 +233,11 @@ Related documents:
 - **Windows stdout emoji crash**: Unicode characters in `print()` crash on Windows cp1252. Add `sys.stdout.reconfigure(encoding='utf-8', errors='replace')` as the first statement in every agent script.
 - **run_step event bypasses runs table**: `run_step` events write only to `agent_events`. The ingest route returns early after the insert without touching the `runs` table. This is intentional — steps are traces, not lifecycle state transitions.
 - **Pagination helper pattern**: `parsePagination(url)` extracts `limit` (capped at 200) and `offset` from URL query params. `paginationMeta({limit, offset}, returnedCount)` computes `has_more`. Both live in `src/lib/api/pagination.ts`.
+
+## Agent Backfill + Dev Environment Fix (2026-05-13, continued)
+
+- **Never use HTTP round-trips from server components to own API routes.** `apiFetch` calls `localhost:PORT` — if the port is wrong (auto-assigned by preview tool, not matching the `BASE` constant), all server component pages silently return empty data. Solution: call Supabase directly from server components, or set `PORT` in `.env.local` to match the fixed dev port.
+- **`PORT` env var fixes `apiFetch` fallback.** `apiFetch` falls back to `http://localhost:${process.env.PORT ?? 3000}`. Set `PORT=3002` in `.env.local` and use port 3002 in `launch.json` so dev always binds to the same port.
+- **`.env.local` corruption pattern.** Multiple append operations without newlines produce a single-line file that Next.js cannot parse. All env vars become undefined. Symptom: all Supabase queries fail silently, dashboard shows zeros. Rewrite the file with one key=value per line.
+- **Verify schema columns before writing queries.** The `agents` table has no `display_name` column — only `name`. Always run `SELECT column_name FROM information_schema.columns WHERE table_name = '...'` before writing a SELECT with assumed columns.
+- **Inspect run history before deleting duplicate agent rows.** Keep the row with real run history even if its UUID looks manually generated. Delete the one with zero runs.

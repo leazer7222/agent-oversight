@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "nano-banana-2": {
+      "command": "npx",
+      "args": ["-y", "nano-banana-2-mcp"],
+      "env": {
+        "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY_HERE",
+        "NANO_BANANA_MODEL": "gemini-2.0-flash-exp"
+      }
+    },
+    "gdrive": {
+      "command": "npx",
+      "args": ["-y", "mcp-google-drive"],
+      "env": {
+        "GOOGLE_CLIENT_ID": "YOUR_GOOGLE_CLIENT_ID_HERE",
+        "GOOGLE_CLIENT_SECRET": "YOUR_GOOGLE_CLIENT_SECRET_HERE",
+        "GOOGLE_REDIRECT_URI": "http://localhost:3000/auth/google/callback",
+        "GDRIVE_CREDS_DIR": "C:\\Users\\YOUR_USERNAME\\.config\\mcp-gdrive"
+      }
+    },
+    "stitch": {
+      "command": "npx",
+      "args": ["-y", "@_davideast/stitch-mcp", "proxy"],
+      "env": {
+        "GOOGLE_CLOUD_PROJECT": "your-gcp-project-id",
+        "STITCH_ACCESS_TOKEN": "YOUR_SHORT_LIVED_ACCESS_TOKEN_HERE",
+        "PATH": "C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Google\\Cloud SDK\\google-cloud-sdk\\bin;C:\\Program Files\\nodejs;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Users\\YOUR_USERNAME\\AppData\\Roaming\\npm"
+      }
+    }
+  }
+}

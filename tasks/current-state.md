@@ -1,48 +1,50 @@
-# Agent Oversight System — Current State
+# Agent Oversight System - Current State
 
-**Last updated:** 2026-03-21
-**Status:** Active
+Last updated: 2026-05-13
+Status: Active (Phase 1 analysis complete, reconciliation implementation pending)
 
-## What this project is
-Personal control plane for monitoring and coordinating all AI agents across ReformAI, AfterGlow, and Personal projects. Agents report lifecycle events (run_started, run_completed, run_failed) with token/cost telemetry to a central Supabase database. Claude sessions are treated as first-class agents in the system.
+## Current Objective State
+Phase 1 (Canonical Schema Stabilization) analysis is complete.
+No Phase 2 implementation was started.
 
-## Where we are right now
-Phase 1 fully complete and validated in production. The full memory loop is wired up.
+## What Was Completed This Session
+- Synced repo to latest `main`.
+- Performed required doc intake and continuity review.
+- Audited schema contracts across migrations, API routes, runtime SDK/orchestrator, and registration scripts.
+- Produced canonical Phase 1 audit artifact:
+  - `docs/PHASE_1_SCHEMA_STABILIZATION_AUDIT.md`
+- Updated continuity and architecture records:
+  - `docs/HANDOFF_PROTOCOL.md`
+  - `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`
+  - `docs/LESSONS_LEARNED.md`
 
-- Supabase project: `hdhovyrlnfojtkqbcegh`
-- `POST /api/ingest` live and validated at `agent-oversight.vercel.app`
-- `PUT /api/project-state` and `GET /api/project-state/[tag]` live and validated
-- `project_state` table seeded with all 5 project tags — `master-agentic-flow` has real content
-- All 5 Claude session agents registered in `agents` table (one per project tag)
-- `runs` and `project_state` tables created (note: `runs` missing from migration file)
-- `supabase/agent-skills` (Postgres best practices) installed in `.claude/skills`
-- `gh` CLI installed at `/c/Program Files/GitHub CLI/gh.exe` — Claude handles all PRs
-- Session-logger skill updated — reads/writes state via API, emits run events, Supabase is source of truth
-- All 7 env vars set in Vercel and `.env.local`
+## Confirmed Critical Drift
+1. `runs` mismatch between migration and ingest/type expectations.
+2. `project_state` mismatch between migration (`tag/state`) and API (`project_tag/current_state/todo/lessons`).
+3. `agent_outputs.output_type` mismatch (`ui_components` emitted by runtime but not allowed in migration constraint).
+4. Invalid UUID literals in `companies` seed rows inside `001_initial_schema.sql`.
 
-## Stack / Key decisions locked in
-- Next.js App Router, TypeScript strict mode
-- Supabase SSR client pattern (async cookies)
-- Service role key used for all API writes (bypasses RLS)
-- Zod v4 validation on ingest payload
-- Python SDK supports both `httpx` and stdlib `urllib` as fallback
-- INGEST_SECRET: `ChArles-Clint0n-Leazer-Jr.-1s-the-B3st` (no special chars)
-- `gh` CLI path: `/c/Program Files/GitHub CLI/gh.exe`
-- Supabase is source of truth for session state — local files are backup only
+## Canonical Source-of-Truth Decision
+- Operational truth: live schema + documented API/runtime contracts.
+- Reproducibility truth: forward-only migrations aligned to operational truth.
+- A schema change is incomplete unless both are updated and verified.
 
-## Active work
-Nothing in flight. Phase 1 fully closed including memory loop.
+## In Progress
+- No code/schema migration changes applied yet.
+- Awaiting implementation pass for migration reconciliation and contract test hardening.
 
-## What's next
-1. Start ReformAI session — session-logger will auto read/write state via API
-2. Phase 2: dashboard UI
-   - Runs list page (paginated, filterable by agent/status)
-   - Agent status page (active/paused/error)
-   - Cost + token usage charts
-3. Add `runs` and `project_state` tables to `001_initial_schema.sql` migration file
-4. Inngest integration for durable agent triggers
-5. Resend email alerts on `run_failed` events
+## Blockers / Risks
+- Live DB was not re-queried in this session, so some live-only table inventory remains inferred from prior records.
+- Contract ambiguity in `runs` and `project_state` can undermine dashboard trust if Phase 2 starts before reconciliation.
 
-## Known issues / blockers
-- `runs` and `project_state` tables were created manually — not in migration file yet
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` uses new publishable key format (`sb_publishable_...`) — correct for new Supabase projects
+## Exact Next Priority
+Execute a reconciliation pass that updates migrations and API/runtime mappings to one contract for:
+1. `runs`
+2. `project_state`
+3. `agent_outputs` taxonomy + lineage
+
+## Explicit Non-Work This Session
+- No frontend build work.
+- No queue/worker implementation.
+- No orchestration refactor.
+- No advanced autonomy/memory expansions.

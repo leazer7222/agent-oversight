@@ -166,3 +166,11 @@ Related documents:
 - Assign clear source-of-truth ownership per document type to reduce duplication drift.
 - Keep strategic reasoning in `AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`; keep this file concise and chronological.
 - Keep tactical continuity and active blockers in `HANDOFF_PROTOCOL.md`, not in standards documents.
+
+## Schema Contract Stabilization (2026-05-13)
+
+- Ingest/API code can become a hidden schema contract; migrations must be reconciled immediately when API column assumptions diverge.
+- Treat `runs` as lifecycle summary records and `agent_events` as append-only traces; blending the two semantics causes observability ambiguity.
+- `project_state` must have one explicit contract shape (typed columns vs JSON envelope); dual assumptions create guaranteed drift.
+- Output taxonomies (`agent_outputs.output_type`) need governance; runtime-emitted values must be represented in DB constraints before adoption.
+- Source-of-truth ambiguity is an infrastructure risk category and should block Phase 2 feature expansion until resolved.

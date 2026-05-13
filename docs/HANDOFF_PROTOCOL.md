@@ -338,3 +338,71 @@ Conversational context is temporary and should never be treated as the primary s
 - next priorities:
   1. Restore GitHub push permissions for the active identity before Phase 1 execution.
   2. Begin Phase 1 schema reconciliation using clarified document ownership.
+
+## Session Start
+- date/time: 2026-05-13 09:10:00 -05:00
+- model/tool: ChatGPT / Codex
+- current objective: Phase 1 - Canonical Schema Stabilization (schema audit + contract definitions only).
+- expected scope: Reconcile migrations, runtime, and API schema expectations; document canonical ownership, drift, contracts, and Phase 2 prerequisites.
+- intended files to inspect:
+  - supabase/migrations/*
+  - src/app/api/*
+  - python-sdk/oversight.py
+  - agents/instances/reformai/orchestrator.py
+  - scripts/register_*.js
+  - docs/* phase/architecture/lessons files
+
+## Progress Checkpoint
+- work completed:
+  - Pulled latest `main` and resolved local Git safe-directory precondition.
+  - Completed required document intake (`README`, `AGENTS`, standards, master, handoff, roadmap, lessons) plus latest session log.
+  - Audited repository schema surface in migrations and runtime/API code paths.
+  - Identified concrete schema contract drift in `runs`, `project_state`, and `agent_outputs` write expectations.
+- files inspected:
+  - supabase/migrations/001_initial_schema.sql
+  - supabase/migrations/002_agent_outputs.sql
+  - src/app/api/ingest/route.ts
+  - src/app/api/project-state/route.ts
+  - src/app/api/project-state/[tag]/route.ts
+  - src/lib/adapters/types.ts
+  - python-sdk/oversight.py
+  - agents/instances/reformai/orchestrator.py
+  - scripts/register_marketing_agent.js
+  - scripts/register_ui_agent.js
+- files changed:
+  - docs/HANDOFF_PROTOCOL.md (this checkpoint)
+- architectural discoveries:
+  - `runs` semantics are ambiguous in migration (both `id` and `run_id`) while API treats `id` as canonical run id.
+  - `project_state` migration shape (`tag`, `state`) conflicts with API contract (`project_tag`, `current_state`, `todo`, `lessons`).
+  - `agent_outputs.run_id` FK targets `runs.id`, while orchestrator writes a generated UUID that can bypass/violate lifecycle linkage.
+- blockers encountered:
+  - No direct live-Supabase query session was executed in this pass, so live-vs-repo discrepancies are documented as inferred unless backed by code/docs evidence.
+- open questions:
+  - Should `runs.run_id` remain as external id or be removed in favor of `id` as canonical lifecycle id?
+  - Should project state remain typed columns or revert to generic JSON state envelope?
+- next recommended action:
+  - Finalize Phase 1 audit doc, append architecture/lesson updates, update session/tasks state, and hand off with explicit Phase 2 prerequisites.
+
+## Session End
+- date/time: 2026-05-13 10:05:00 -05:00
+- model/tool: ChatGPT / Codex
+- final work completed:
+  - Completed Phase 1 canonical schema stabilization analysis (documentation/audit only).
+  - Added `docs/PHASE_1_SCHEMA_STABILIZATION_AUDIT.md` with source-of-truth decision, table contracts, mismatch inventory, migration gaps, and Phase 2 prerequisites.
+  - Updated continuity and architecture docs with milestone/checkpoints and operational decisions.
+  - Rewrote `tasks/current-state.md`, updated `tasks/todo.md`, appended lessons in `tasks/lessons.md` and `docs/LESSONS_LEARNED.md`.
+- architecture impact:
+  - Contract boundaries clarified: `runs` summary, `agent_events` trace, `agent_outputs` artifacts.
+  - Explicit gating established: do not begin Phase 2 dashboard/control work before schema reconciliation for `runs` + `project_state` + output taxonomy lineage.
+- operational lessons learned:
+  - API/migration drift can silently become production contract debt.
+  - Source-of-truth ambiguity is a first-class reliability risk.
+- PM/system-thinking lessons:
+  - Visibility quality depends on contract integrity; dashboard progress without schema reconciliation would create false trust.
+- risks introduced:
+  - None; existing risks were surfaced and documented.
+- next priorities:
+  1. Reconcile migration/API/runtime contracts for `runs`.
+  2. Reconcile `project_state` table contract to one canonical shape.
+  3. Align `agent_outputs` taxonomy with runtime emitted values.
+  4. Confirm/backfill migration coverage for inferred live governance/telemetry entities.

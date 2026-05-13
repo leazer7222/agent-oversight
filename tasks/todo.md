@@ -1,29 +1,19 @@
-# Agent Oversight System — Todo
+# Agent Oversight System - Todo
 
 ## Active
-- [ ] Add `runs` and `project_state` tables to `001_initial_schema.sql` migration file
-- [ ] Phase 2: dashboard UI — runs list, agent status page, cost/token charts
-- [ ] Inngest integration for durable agent triggers
-- [ ] Resend email alerts for run_failed events
+- [ ] Reconcile `runs` schema contract across migration, ingest API, and runtime/types.
+- [ ] Reconcile `project_state` contract to a single canonical shape (typed columns vs JSON envelope decision).
+- [ ] Reconcile `agent_outputs.output_type` taxonomy with runtime values (include `ui_components` or change runtime emission).
+- [ ] Repair invalid UUID seed values in `supabase/migrations/001_initial_schema.sql`.
+- [ ] Add/confirm migration coverage for inferred live control-plane tables (`agent_events`, `projects`, `policies`, `audit_log`, telemetry/eval views as applicable).
+- [ ] Add schema contract tests for `/api/ingest` and `/api/project-state*` against canonical table definitions.
 
 ## Completed
-- [x] Install @supabase/ssr + @supabase/supabase-js — 2026-03-21
-- [x] Create src/lib/supabase/client.ts — 2026-03-21
-- [x] Create src/lib/supabase/server.ts (SSR + service role clients) — 2026-03-21
-- [x] Create src/lib/adapters/types.ts — 2026-03-21
-- [x] Create src/app/api/ingest/route.ts — 2026-03-21
-- [x] Create python-sdk/oversight.py — 2026-03-21
-- [x] Push Phase 1 to main — 2026-03-21
-- [x] Set all env vars in Vercel — 2026-03-21
-- [x] Create runs table in Supabase — 2026-03-21
-- [x] Validate POST /api/ingest end-to-end in production — 2026-03-21
-- [x] Create project_state table and seed all 5 project tags — 2026-03-21
-- [x] PUT /api/project-state and GET /api/project-state/[tag] endpoints live — 2026-03-21
-- [x] Seed master-agentic-flow state into Supabase — 2026-03-21
-- [x] Install supabase/agent-skills — 2026-03-21
-- [x] Install gh CLI, authenticate — 2026-03-21
-- [x] Register all 5 Claude session agents in agents table — 2026-03-21
-- [x] Update session-logger skill to use API instead of local files — 2026-03-21
+- [x] Phase 1 schema stabilization analysis and contract audit docs created - 2026-05-13
+- [x] Handoff + architecture + lessons documentation updated for Phase 1 findings - 2026-05-13
+- [x] Git/GitHub persistence and multi-model handoff governance foundation validated (pre-Phase 1) - 2026-05-12
 
-## Parking Lot
-- QA rubric/constraints JSON per agent — deferred until first agent is built
+## Deferred (intentional)
+- [ ] Phase 2 dashboard implementation (blocked on Phase 1 reconciliation).
+- [ ] Execution queue/worker model implementation (later phase).
+- [ ] Orchestrator refactor for durable async flow (later phase).

@@ -601,6 +601,39 @@ Why this matters:
 
 PM/system-thinking implication:
 - Documentation architecture is platform architecture; weak ownership boundaries create hidden coordination debt.
+
+## Milestone Entry: Phase 1 Canonical Schema Stabilization Audit
+Date: 2026-05-13
+
+`Confirmed:`
+- Completed a repository-wide schema contract audit across migrations, Next.js API routes, Python runtime integrations, and registration scripts.
+- Identified hard schema drift in operationally critical paths:
+  - `runs` contract mismatch (`event`/`run_id` required in migration, omitted by ingest write path; `error` used by API/types but absent in migration).
+  - `project_state` contract mismatch (`tag/state` in migration vs `project_tag/current_state/todo/lessons` in API).
+  - `agent_outputs.output_type` mismatch (`ui_components` produced by runtime but not permitted by migration check constraint).
+- Published Phase 1 audit artifact documenting source-of-truth policy, table contracts, observability requirements, mismatch inventory, migration gaps, and Phase 2 prerequisites.
+
+Architecture decisions:
+1. Canonical operational truth is the **live schema + documented runtime/API contracts**, while migrations are the reproducibility mechanism that must be reconciled to that truth.
+2. `runs` must be treated as execution summary rows; `agent_events` (append-only trace) and `agent_outputs` (artifacts) are separate but linked contracts.
+3. Phase 2 work should be gated on contract reconciliation for `runs`, `project_state`, and output/event lineage, not on dashboard implementation speed.
+
+Tradeoffs:
+- Accepted temporary delivery slowdown to reduce long-term reliability risk from ambiguous contracts.
+- Deferred schema perfection/normalization in favor of explicit MVP-operational semantics and observability completeness.
+
+Operational lessons:
+- API/routes can silently become the de facto schema if migration discipline lags.
+- Run visibility trust depends on explicit summary-vs-event contract boundaries, not just telemetry field presence.
+- Source-of-truth ambiguity is itself infrastructure risk and must be tracked as an architectural issue.
+
+PM/system-thinking implications:
+- Contract stabilization is product work because it defines measurable operator truth.
+- Visibility-first sequencing was validated: unresolved schema ambiguity would make Phase 2 dashboards misleading.
+
+Interview-story opportunities:
+- Contract-first stabilization under active schema drift.
+- Converting architecture ambiguity into explicit operational gating criteria before feature scaling.
  
 # Milestone Update Template
 Use this template for every major milestone update:

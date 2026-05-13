@@ -127,10 +127,11 @@ class Orchestrator:
                 # Step: LLM synthesis
                 with run.timer() as t:
                     marketing_result = marketing_agent.run(goal=goal, context=context_data)
+                model_name = marketing_result.get("model") or "unknown"
                 run.step("llm_synthesis",
-                    message=f"Marketing strategy generated via {marketing_result.get('model', 'unknown')}",
+                    message=f"Marketing strategy generated via {model_name}",
                     duration_ms=t.ms,
-                    payload={"model": marketing_result.get("model"), "status": marketing_result.get("status")})
+                    payload={"model": model_name, "status": marketing_result.get("status")})
 
                 # Report token/cost usage captured from the LLM response
                 run.report(

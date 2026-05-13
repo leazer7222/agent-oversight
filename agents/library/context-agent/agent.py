@@ -21,8 +21,8 @@ class ContextAgent:
     def __init__(self, agent_id: str):
         self.agent_id = agent_id
         self.client = OversightClient(
-            url=os.environ.get("OVERSIGHT_URL", "http://localhost:3000/api/agents/ingest"),
-            secret=os.environ.get("OVERSIGHT_SECRET")
+            url=os.environ.get("OVERSIGHT_URL", "http://localhost:3000"),  # SDK appends /api/ingest
+            secret=os.environ.get("OVERSIGHT_SECRET") or os.environ.get("INGEST_SECRET")
         )
         
         # Initialize Google Drive Service

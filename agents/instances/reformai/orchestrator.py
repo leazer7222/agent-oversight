@@ -113,10 +113,17 @@ class Orchestrator:
         marketing_agent = MarketingAgent(marketing_agent_id)
         
         if self.oversight:
-            # We track the generation run
             with self.oversight.run(agent_id=marketing_agent_id, metadata={"goal": goal}) as run:
                 marketing_result = marketing_agent.run(goal=goal, context=context_data)
-                
+
+                # Report token/cost usage captured from the LLM response
+                run.report(
+                    tokens_in=marketing_result.get("tokens_in"),
+                    tokens_out=marketing_result.get("tokens_out"),
+                    cost_usd=marketing_result.get("cost_usd"),
+                    metadata={"model": marketing_result.get("model")},
+                )
+
                 # Step 4: Local Persistence & DB
                 if marketing_result.get("status") == "success":
                     self._handle_output(marketing_result.get("full_output"), marketing_agent_id, run.run_id)

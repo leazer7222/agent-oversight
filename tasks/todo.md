@@ -2,7 +2,7 @@
 
 ## Completed
 
-### Phase 4 — Dashboard MVP ✅ (2026-05-13, commit 4f73813)
+### Phase 4 — Dashboard MVP ✅ (2026-05-13)
 - [x] `/dashboard` — overview KPIs, agents table, recent failures, recent runs
 - [x] `/dashboard/runs` — paginated list, status filter bar
 - [x] `/dashboard/runs/[id]` — stats, error block, event timeline, outputs
@@ -13,16 +13,23 @@
 - [x] shadcn/ui + Tailwind v4 dark mode
 - [x] `apiFetch` server-side helper
 
-## Next Up (Phase 5)
+### Phase 5 — Agents Page + Deploy ✅ (2026-05-13)
+- [x] `/dashboard/agents` list page with status filter + full stats
+- [x] Sidebar Agents link + active state fix
+- [x] Netlify config (`netlify.toml` + `@netlify/plugin-nextjs`)
+- [x] Fix git worktree gitlinks blocking Netlify build
+- [x] Root redirect `/` → `/dashboard`
+- [x] OAuth2 client recreated + `.mcp.json` updated
+- [x] Deployed: https://agentoversight.netlify.app
 
-### Immediate blockers
-- [ ] Merge `claude/suspicious-beaver-226b36` → main
-- [ ] Recreate GCP OAuth2 client (project `1060125879836`), update `.mcp.json`
-- [ ] Enable LLM billing for real token/cost data
+## Next Up (Phase 6)
+
+### Immediate
+- [ ] Add `NEXT_PUBLIC_SITE_URL=https://agentoversight.netlify.app` in Netlify → redeploy
+- [ ] Enable LLM billing
+- [ ] Fire a real agent run → verify live data in dashboard
 
 ### Polish
 - [ ] Generate Supabase TypeScript types → `src/lib/supabase/types.ts`
-- [ ] Set `NEXT_PUBLIC_SITE_URL` in Vercel env vars
-- [ ] Deploy to Vercel / hosting
-- [ ] Add agents page (`/dashboard/agents` list view)
-- [ ] Real-time refresh (polling or SSE) on overview page
+- [ ] Real-time refresh (polling) on overview page
+- [ ] Error alerting — notify on agent failure (email / Slack)

@@ -132,3 +132,13 @@ Add new lessons at the end of each session.
 - `categorize_error(exc)` in the SDK returns one of: `quota_exceeded`, `auth_error`, `network_error`, `llm_error`, `validation_error`.
 - Errors are stored on `runs.error` as `[category] original message`.
 - `GET /api/errors` uses regex `^\[([^\]]+)\]` to extract the category for grouping/filtering.
+
+---
+
+## Netlify Deployment (Next.js)
+
+- Next.js server components and API routes require `@netlify/plugin-nextjs` — without it the site deploys as static and API routes return 404.
+- Add `[[plugins]] package = "@netlify/plugin-nextjs"` to `netlify.toml` and install the package as a dev dependency.
+- `NEXT_PUBLIC_SITE_URL` must be set in Netlify env vars after the first deploy — the URL is only known after Netlify assigns it.
+- Git worktrees in `.claude/worktrees/` are tracked as gitlinks (mode 160000) if accidentally staged — Netlify treats them as submodules and fails checkout. Fix: `git rm --cached .claude/worktrees/*` and add `.claude/worktrees/` to `.gitignore`.
+- shadcn/ui dependencies (`@base-ui/react`, `class-variance-authority`, `clsx`, `tailwind-merge`) must be installed in the main project root — worktree node_modules junctions don't carry over to CI builds.

@@ -509,3 +509,79 @@ Conversational context is temporary and should never be treated as the primary s
   2. Reconcile `project_state` table contract to one canonical shape.
   3. Align `agent_outputs` taxonomy with runtime emitted values.
   4. Confirm/backfill migration coverage for inferred live governance/telemetry entities.
+
+## Session Start
+- date/time: 2026-05-13 (Claude implementation planning session)
+- model/tool: Claude (claude-sonnet-4-6)
+- current objective: Update PHASE_1_RECONCILIATION_STRATEGY.md with live-verified corrections; create PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md with full migration sequence, API/runtime alignment, and Phase 2 gate criteria.
+- expected scope: Documentation and planning only. No migrations applied. No application code changed.
+- intended files to inspect: PHASE_1_RECONCILIATION_STRATEGY.md, LIVE_SUPABASE_SCHEMA_INVENTORY.md, ingest/route.ts, types.ts, oversight.py
+
+## Progress Checkpoint
+- work completed:
+  - Rewrote `docs/PHASE_1_RECONCILIATION_STRATEGY.md` with corrections from live verification:
+    - `agent_events` canonical contract corrected to verified 17-column live schema (occurred_at not event_time, run_id nullable, adds severity/depth/message/company_id/orchestrator fields)
+    - `project_state` corrected to uuid PK + project_tag UNIQUE (not project_tag as PK)
+    - `runs` canonical contract adds created_at
+    - Removed sequence race risk (no sequence in live); added ingest field mapping complexity risk
+    - Revised migration sequence to 7 files (001–007)
+    - Marked cost views as unreliable (all zero, underlying data is null)
+  - Created `docs/PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md` with:
+    - Verified starting point (11 tables, 3 views, only `002_agent_outputs.sql` committed)
+    - Per-migration plan for all 6 migration files: purpose, objects, SQL, dependency, risk level, verification query, rollback
+    - API alignment plan (ingest route: expand agent SELECT, add agent_events write, set timeout_at, set cost_reported)
+    - Runtime alignment plan (Agent TypeScript interface field corrections, SDK cost reporting discipline)
+    - Contract test plan (11 specific tests to pass before Phase 1 complete)
+    - Rollback/safety strategy
+    - SQL editor checks table (8 items blocked until Supabase SQL editor access)
+    - Phase 1 completion criteria checklist (13 items)
+    - Risks before Phase 2 (6 risks)
+    - Recommended next execution step
+- files inspected: PHASE_1_RECONCILIATION_STRATEGY.md, LIVE_SUPABASE_SCHEMA_INVENTORY.md, ingest/route.ts, types.ts, oversight.py
+- files changed: PHASE_1_RECONCILIATION_STRATEGY.md (rewrite), PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md (new), HANDOFF_PROTOCOL.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, LESSONS_LEARNED.md
+- architectural discoveries:
+  - `005_add_cost_views.sql` cannot be written without SQL editor access — view SQL bodies are opaque to PostgREST
+  - `agent_events` ingest write must conditionally guard on `company_id` being non-null (some agents may lack company_id)
+  - TypeScript `Agent` interface has 5 wrong field names vs live DB — any UI consuming agent data is currently broken
+  - Agent discipline problem (not SDK bug) explains zero cost observability: agents never call `ctx.report()`
+- blockers encountered:
+  - `005_add_cost_views.sql` blocked until Supabase SQL editor access obtained
+  - `001_initial_schema.sql` completion blocked on SQL editor for policies, budgets, and view bodies
+- open questions:
+  - What exact columns do `policies` and `budgets` tables have?
+  - Are RLS policies on `runs` and `agent_events` correctly configured for service role bypass?
+  - Do cost views correctly aggregate over `agent_outputs` or `runs`?
+- next recommended action:
+  - Obtain Supabase SQL editor access and run the 8 SQL editor checks in the implementation plan
+  - Then apply `006_fix_agent_outputs_constraint.sql` (most urgent operational fix)
+  - Then deploy `route.ts` changes to activate agent_events write path
+
+## Session End
+- date/time: 2026-05-13 (Claude implementation planning session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed:
+  - Corrected PHASE_1_RECONCILIATION_STRATEGY.md (agent_events schema, project_state PK, cost view reliability, migration sequence)
+  - Created PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md — full execution-ready implementation plan
+  - Updated HANDOFF_PROTOCOL.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, LESSONS_LEARNED.md
+- architecture impact:
+  - Planning phase complete. Execution phase can begin with concrete migration SQL, API change specs, and TypeScript interface corrections.
+  - `005_add_cost_views.sql` remains a documented blocker until SQL editor access is obtained.
+- operational lessons learned:
+  - Live verification can invalidate architecture assumptions; reconciliation strategy must follow verified operational reality while migrations remain governance source of truth.
+  - Cost views require SQL editor access to reverse-engineer — PostgREST introspection has a hard ceiling.
+- PM/system-thinking lessons:
+  - An implementation plan that cannot be executed without external access (SQL editor) must document that dependency explicitly rather than hoping it resolves itself.
+  - The distinction between "table exists" and "write path exists" is operationally critical and often missed in architecture reviews.
+- risks introduced:
+  - None. Documentation and planning only.
+- next priorities:
+  1. Obtain Supabase SQL editor access → run 8 SQL editor checks in implementation plan.
+  2. Apply `006_fix_agent_outputs_constraint.sql` to live DB.
+  3. Apply `007_runs_reconciliation.sql` to live DB.
+  4. Deploy `route.ts` changes (expand agent SELECT + agent_events write + cost_reported).
+  5. Fix `src/lib/adapters/types.ts` Agent interface.
+  6. Create `001_initial_schema.sql` from verified live schema.
+  7. Apply `003_add_agent_events.sql` and `004_add_governance_tables.sql`.
+  8. Obtain and write `005_add_cost_views.sql`.
+  9. Run all 11 contract tests.
+  10. Verify Phase 1 completion criteria checklist.

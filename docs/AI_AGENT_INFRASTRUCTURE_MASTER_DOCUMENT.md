@@ -667,6 +667,47 @@ Interview-story opportunities:
 - `cost_reported` sentinel pattern: distinguishing unreported from zero cost in observability design.
 - Append-only `agent_events` contract: event traces vs run summaries as distinct architectural primitives.
 
+## Milestone Entry: Phase 1 Reconciliation Implementation Planning
+Date: 2026-05-13
+
+`Confirmed:`
+- Corrected `docs/PHASE_1_RECONCILIATION_STRATEGY.md` using live-verified schema data:
+  - `agent_events` canonical contract corrected from proposed 7-column schema to verified 17-column live schema. Field name `occurred_at` (not `event_time`), `run_id` is nullable, schema adds `severity`, `depth`, `message`, `company_id`, `orchestrator_run_id`, `platform_run_id`.
+  - `project_state` corrected from `project_tag` as PK to `id UUID` PK + `project_tag UNIQUE`.
+  - `runs` canonical contract adds `created_at` (verified live column).
+  - Cost views marked as unreliable — all 51 live runs have null `cost_usd`, so views show zero regardless of query logic.
+- Created `docs/PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md` — execution-ready plan with:
+  - 6-migration backfill sequence with per-migration SQL, dependency graph, risk level, verification query, and rollback instructions.
+  - API alignment plan for `route.ts`: expand agent SELECT, add `agent_events` write path, set `timeout_at`, set `cost_reported` sentinel.
+  - Runtime alignment plan: corrected TypeScript `Agent` interface (5 wrong field names vs live DB); Python SDK cost reporting discipline requirement.
+  - 11-point contract test plan.
+  - 8 SQL editor checks still blocked (view SQL bodies, RLS policies, CHECK constraint names, full column specs for policies/budgets).
+  - 13-item Phase 1 completion criteria checklist.
+  - 6 risks to resolve before Phase 2.
+
+Architecture decisions:
+1. `005_add_cost_views.sql` is formally blocked — view SQL bodies are opaque to PostgREST; Supabase SQL editor access is a prerequisite.
+2. `agent_events` ingest write must guard on `company_id` non-null — some agents lack company association.
+3. TypeScript `Agent` interface must be corrected before any UI dashboard work — current field names do not match live DB.
+4. Zero cost observability is an agent discipline problem (agents never call `ctx.report()`), not a schema or SDK bug.
+
+Tradeoffs:
+- Implementation plan explicitly scopes `005` as blocked rather than writing a speculative migration — favors accuracy over completion appearance.
+- `001_initial_schema.sql` is documented as reverse-engineered/governance-only, not to be applied to live DB — preserves migration forward-only discipline.
+
+Operational lessons:
+- Live verification + reconciliation planning together surface a third class of blockers: items that require privileged DB access (SQL editor) that neither PostgREST introspection nor code reading can substitute.
+- An implementation plan without execution prerequisites is incomplete — dependency on SQL editor access must be surfaced, not assumed.
+
+PM/system-thinking implications:
+- "Table exists in live DB" ≠ "table is production-observable" — the `agent_events` gap is a product trust risk, not only a technical debt item.
+- Planning quality determines execution quality; a precise per-migration plan with rollback instructions reduces execution risk during schema changes.
+
+Interview-story opportunities:
+- Demonstrating multi-session architecture discipline: live verification invalidated the original reconciliation strategy; corrected it before writing an implementation plan based on wrong assumptions.
+- `agent_events` write path gap: explains why a system can have an observability schema and zero operational observability simultaneously.
+- Implementation plan structure: per-migration dependency graph + risk level + verification query + rollback is PM-level infrastructure ownership.
+
 # Milestone Update Template
 Use this template for every major milestone update:
 

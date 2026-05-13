@@ -185,6 +185,14 @@ Related documents:
 - `runs.id` is already the canonical identifier in the ingest route — no dual-identifier issue exists at the runtime level; the confusion was introduced by an inferred migration file.
 - Zombie runs (stuck in `started` forever) are a silent reliability risk; `timeout_at` field on `runs` is required to support future detection/cleanup.
 
+## Reconciliation Implementation Planning (2026-05-13)
+
+- Live verification can invalidate architecture assumptions; reconciliation strategy must follow verified operational reality while migrations remain the governance source of truth.
+- PostgREST introspection has a hard ceiling: view SQL bodies, CHECK constraint expressions, and RLS policies require Supabase SQL editor access — document this dependency before writing a migration plan.
+- Zero cost observability despite schema support is an agent discipline problem; agents must explicitly call `ctx.report()` after LLM calls for cost data to appear in runs rows.
+- TypeScript interface mismatches with live DB column names are a silent UI correctness risk — validate interface field names against live OpenAPI spec before beginning dashboard work.
+- `agent_events` ingest write must guard on `company_id` non-null; agents without company association must be handled as a conditional, not an error.
+
 ## Schema Contract Stabilization (2026-05-13)
 
 - Ingest/API code can become a hidden schema contract; migrations must be reconciled immediately when API column assumptions diverge.

@@ -1,521 +1,482 @@
 # Phase 1 — Reconciliation Strategy (2026-05-12)
+**Status: UPDATED after live schema verification (2026-05-12)**
 
 ## Document Purpose
-This document defines the architectural reconciliation strategy that must be executed before Phase 2 work begins. It is the output of a critical review of Codex's Phase 1 schema stabilization audit.
+This document defines the architectural reconciliation strategy that must be executed before Phase 2 work begins. It evolved through three analytical passes:
+1. Codex's Phase 1 schema stabilization audit (inferred from missing migration file)
+2. Claude's reconciliation review (challenged Codex assumptions from code reading)
+3. **This version: corrected from live Supabase schema verification via PostgREST API**
 
-It contains:
-- validated and refined architectural decisions
-- challenges to Codex assumptions where warranted
-- canonical data model semantics
-- reconciliation sequencing and migration plan
-- governance recommendations
-- identified operational risks
-- unresolved open questions
+Live verification invalidated several assumptions in the previous version. All corrections are noted explicitly.
 
----
-
-## Critical New Finding: `001_initial_schema.sql` Does Not Exist
-
-The Codex audit referenced reading `supabase/migrations/001_initial_schema.sql` during analysis. This file does **not** exist in the repository. A glob of `supabase/migrations/*.sql` returns only `002_agent_outputs.sql`.
-
-This means:
-- Foundational tables (`companies`, `agents`, `agent_definitions`, `runs`, `project_state`) have no migration documentation in-repo.
-- Codex's schema drift analysis for `runs` and `project_state` was comparing against an inferred or synthesized schema, not a committed file.
-- The reconciliation scope is **larger** than the Codex audit assumed.
-- **Creating `001_initial_schema.sql` is the first deliverable of the reconciliation pass.**
-
-Operational implication: if someone ran `supabase db reset` today, they would get only `agent_outputs` — no base tables. The platform cannot be reproduced from repo state alone.
+Related documents:
+- `docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md` — authoritative live schema facts
+- `docs/PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md` — step-by-step execution plan
+- `docs/PHASE_1_SCHEMA_STABILIZATION_AUDIT.md` — Codex's original findings (reference only)
 
 ---
 
-## Part 1: Challenging Codex Assumptions
+## Part 1: Validated Findings and Corrections
 
-### 1.1 Source-of-Truth Reversal
+### 1.1 Source-of-Truth Governance (Unchanged)
 
-**Codex said**: "Canonical ownership for operational contracts = live Supabase schema + API/runtime behavior contracts."
+**Confirmed position**:
+- **Canonical intent**: migrations + documented API/runtime contracts (what the system *should* be).
+- **Operational reality**: live DB (what the system *is*).
+- After reconciliation, migrations must reproduce live schema exactly. Any live change requires a migration.
 
-**Challenge**: This inverts the governance model. Treating live DB as canonical creates a governance trap where any ad-hoc live change becomes "truth." The live DB is *operational reality*, not the *canonical contract source*.
+**Status**: ✅ Confirmed correct.
 
-**Corrected position**:
-- **Canonical**: migrations + documented API/runtime contracts (what the system *should* be).
-- **Operational reality**: live DB (what the system *is today*).
-- Reconciliation closes the gap from operational reality toward canonical intent.
-- After reconciliation, migrations ARE the canonical contract layer — not the live DB.
+### 1.2 `001_initial_schema.sql` Is Missing (Confirmed)
 
-Practical implication: when live DB and migrations disagree after reconciliation, write a migration. Never let ad-hoc live changes become canonical without a migration.
+**Status**: ✅ Confirmed by live verification. Only `002_agent_outputs.sql` exists. All foundational tables are uncovered by migrations. Creating `001_initial_schema.sql` is the highest-priority deliverable.
 
-### 1.2 Phase 2 Prerequisites Should Include Contract Tests in Phase 1
+### 1.3 `agent_events` Write Path Is Absent (Confirmed)
 
-**Codex said**: "Validate API handlers against reconciled schema with contract tests" as a Phase 2 prerequisite.
+**Status**: ✅ Confirmed by live verification. `agent_events` table exists with 0 rows. The ingest route has never written to it. Event observability is zero.
 
-**Challenge**: Contract tests are the verification mechanism for Phase 1 completion — they should be written *during* reconciliation, not deferred to Phase 2. Without them, "reconciliation is complete" is an untestable claim.
+**New finding**: The ingest-to-agent_events mapping is non-trivial. The live `agent_events` schema requires fields the current SDK does not emit (`severity`, `depth`, `message`, `company_id`). The ingest route must derive these from context. See §2.2.
 
-**Corrected position**: Contract tests for `/api/ingest` and `/api/project-state*` are Phase 1 deliverables, not Phase 2 prerequisites.
+### 1.4 Dual Run Identifier Concern (Resolved)
 
-### 1.3 `agent_events` Observability Is Purely Theoretical
+**Codex finding**: Concern about `id` vs `run_id` columns in `runs`.
 
-**Codex said**: "`agent_events` (inferred/live): append-only lifecycle trace" — treating this as partially operational.
+**Status**: ✅ Resolved by live verification. Live `runs` table has only `id` (the canonical identifier). No `run_id` column and no `event` column exist in live DB. The ingest route correctly uses `id: run_id` at insert and `.eq('id', run_id)` at update.
 
-**Challenge**: The ingest route (`/api/ingest/route.ts`) writes nothing to `agent_events`. Even if the table exists live, it receives zero event writes from the current execution path. The observability function of `agent_events` is entirely absent from the runtime.
+### 1.5 Corrections to Previous Version of This Document
 
-**Corrected position**: `agent_events` has no operational value until the ingest route writes to it. Adding the write path is a required Phase 1 reconciliation deliverable, not a Phase 2 enhancement.
+The previous version (before live verification) contained schema proposals that do not match live DB. The following are the confirmed corrections:
 
-### 1.4 Zombie Run Risk Underestimated
-
-**Codex analysis** did not explicitly model the risk of runs that emit `run_started` but never receive a terminal event.
-
-**Finding**: If an agent crashes, is killed, or loses network connectivity after emitting `run_started`, the run stays in `started` status indefinitely. There is no timeout mechanism, no cleanup job, and no dashboard signal distinguishing an active run from a zombie run. This creates:
-- Inflated "in-progress" counts.
-- Inaccurate success rate metrics (`completed / total` is wrong if zombies inflate `total`).
-- Operator confusion when the run list shows perpetually `started` runs.
-
-**Required addition**: A `timeout_at TIMESTAMPTZ` field on `runs`, populated at `run_started` time. A cleanup job (Phase 5+) can mark timed-out runs as `failed` with `error = 'run_timeout'`.
+| Proposal | Verified live reality | Correction |
+|---|---|---|
+| `agent_events.run_id` REQUIRED | `run_id` is **NULLABLE** | Events can exist without a run |
+| `agent_events.event_time` column | Column is `occurred_at` | Use `occurred_at` |
+| `agent_events.sequence` column | Does NOT exist in live | Remove from contract |
+| Simple 7-column `agent_events` | 17-column schema with severity, depth, message, company_id, orchestrator/platform run IDs | Match live schema |
+| `project_state` PK = `project_tag` | PK = `id` (UUID); `project_tag` is UNIQUE only | Use uuid PK consistent with all other tables |
+| `runs` canonical schema (no `created_at`) | Live `runs` HAS `created_at` REQUIRED | Add `created_at` to contract |
 
 ---
 
-## Part 2: Canonical Contract Definitions
+## Part 2: Canonical Contract Definitions (Post-Verification)
 
 ### 2.1 `runs` — Canonical Contract
 
 **Semantics**: One durable execution summary row per run lifecycle. Created at `run_started`, updated at `run_completed` or `run_failed`. Monotonic status transitions only.
 
-**Canonical identifier**: `runs.id` is the single canonical run identifier. The `run_id` from ingest payloads maps directly to `runs.id` at insert time. There is no separate `run_id` column in `runs`.
+**Canonical identifier**: `runs.id` is the single canonical identifier. No `run_id` column exists.
 
-This is already correct in the live ingest route:
-```typescript
-// route.ts: insert with id: run_id
-await supabase.from('runs').insert({ id: run_id, ... })
-// update by .eq('id', run_id)
-await supabase.from('runs').update(update).eq('id', run_id)
-```
-The Codex confusion about dual-identifiers came from an inferred old migration. The runtime contract is unambiguous.
+**Canonical status values** (confirmed from live data): `started`, `completed`, `failed`.
 
-**Canonical status lifecycle**:
-```
-started → completed  (terminal success)
-started → failed     (terminal failure)
-```
+**Additional status values to add via migration** (for Phase 5 queue model readiness): `cancelled`, `timed_out`.
 
-For Phase 5 (queue model), extend to:
-```
-pending → queued → running → completed
-                            → failed
-                            → cancelled
-                            → timed_out
-```
-
-For MVP: `started | completed | failed` is sufficient. Add `cancelled` and `timed_out` as nullable/check-constraint-safe additions now to avoid a breaking migration later.
-
-**Canonical schema** (target — to be written as migration):
+**Canonical schema — verified live columns plus proposed additions**:
 ```sql
+-- LIVE COLUMNS (document in 001_initial_schema.sql exactly as-is):
 create table runs (
-  id              uuid        primary key,               -- = run_id from payload
+  id              uuid        primary key,
   agent_id        uuid        not null references agents(id),
-  status          text        not null
-                              check (status in (
-                                'started', 'completed', 'failed',
-                                'cancelled', 'timed_out'
-                              )),
-  started_at      timestamptz not null default now(),
+  status          text        not null,              -- check constraint: confirm exact values from SQL editor
+  started_at      timestamptz not null,
   completed_at    timestamptz,
-  timeout_at      timestamptz,                           -- set at run_started; enables zombie detection
   tokens_in       int,
   tokens_out      int,
-  cost_usd        numeric(12,6),
-  cost_reported   boolean     not null default false,    -- distinguishes null-cost from unreported-cost
-  error           text,                                  -- terminal error summary
-  parent_run_id   uuid        references runs(id),       -- for retry chains (null = first attempt)
-  metadata        jsonb       not null default '{}'
+  cost_usd        numeric,                           -- precision: confirm from SQL editor
+  error           text,
+  metadata        jsonb,
+  created_at      timestamptz not null default now() -- REQUIRED in live, was missing from prior proposal
 );
+
+-- ADDITIONS via 007_runs_enhancements.sql:
+alter table runs add column if not exists timeout_at    timestamptz;
+alter table runs add column if not exists cost_reported boolean not null default false;
+alter table runs add column if not exists parent_run_id uuid references runs(id);
 ```
 
-**Immutability rule**:
-- `status` transitions are monotonic (no reverting to earlier states).
-- `tokens_in`, `tokens_out`, `cost_usd`, `error`, `metadata` may be patched by privileged actors with `updated_at` tracking.
-- No row deletions. Logical deletion only if ever needed.
+**`cost_reported` field semantics**: `cost_usd = null` is ambiguous — it could mean "never reported" or "genuinely zero cost." When `cost_reported = true`, cost fields are authoritative even if zero. When false, cost data is absent. This is a **required sentinel** for reliable financial dashboards.
 
-**`cost_reported` field**: Addresses the risk that `null cost_usd` is indistinguishable from "genuinely zero cost" vs "agent never reported cost." When `cost_reported = true`, the cost fields are authoritative (even if zero). When false, cost data is not yet available.
+**`timeout_at` field semantics**: Set at `run_started` insert time (e.g., now() + 1 hour as default). Enables a future cleanup job to mark stale `started` runs as `failed`. Live DB has 2+ zombie runs from March 2026 with no cleanup.
+
+**`parent_run_id` semantics**: Links retry attempts to the original run. Null for first attempts. The orchestrator has no retry logic today — this field will remain null until Phase 5.
+
+**Immutability rule**: Status transitions are monotonic. Cost/token/error/metadata fields are patchable by privileged actors but never deleted.
+
+**LIVE COST DATA STATUS**: All 51 live run rows have `cost_usd = null`, `tokens_in = null`, `tokens_out = null`. The cost aggregation views (`agent_cost_summary`, etc.) consequently show zero for all agents. **Cost views must be treated as unreliable until agents begin reporting cost data.**
 
 ### 2.2 `agent_events` — Canonical Contract
 
-**Semantics**: Append-only event trace for a run. Never updated or deleted. Every lifecycle signal from any agent in a run produces an event row. Events provide debugging granularity beyond what summary rows carry.
+**Semantics**: Append-only operational event trace. Never updated or deleted.
 
-**Relationship to `runs`**: `agent_events` traces derive from the same signals that update `runs`. For each ingest event received, the route should: (1) upsert the `runs` summary, and (2) append an `agent_events` row. These are two writes from one ingested signal.
-
-**Canonical event taxonomy**:
-
-Operationally required:
-- `run_started` — anchors run timeline
-- `run_completed` — terminal success
-- `run_failed` — terminal failure with error context
-- `run_cancelled` — operator-initiated stop
-
-Strongly recommended:
-- `step_started` / `step_completed` — for multi-step agents
-- `tool_called` / `tool_returned` — for tool-using agents
-- `output_produced` — when an artifact is written to `agent_outputs`
-- `cost_reported` — when cost data is updated (allows audit of cost reporting timing)
-
-Future (Phase 8):
-- `approval_requested` / `approval_granted` / `approval_denied` — HITL flows
-
-**Canonical schema**:
+**Live schema** (17 columns — confirmed from PostgREST OpenAPI):
 ```sql
+-- Document in 003_add_agent_events.sql matching live schema:
 create table agent_events (
-  id              uuid        primary key default gen_random_uuid(),
-  run_id          uuid        not null references runs(id),
-  agent_id        uuid        not null references agents(id),
-  event_type      text        not null
-                              check (event_type in (
-                                'run_started', 'run_completed', 'run_failed',
-                                'run_cancelled', 'step_started', 'step_completed',
-                                'tool_called', 'tool_returned', 'output_produced',
-                                'cost_reported', 'checkpoint'
-                              )),
-  event_time      timestamptz not null default now(),
-  sequence        int         not null,                  -- monotonic within run_id; assigned at insert
-  payload         jsonb       not null default '{}'
+  id                      uuid        primary key default gen_random_uuid(),
+  agent_id                uuid        not null references agents(id),
+  company_id              uuid        not null references companies(id),
+  project_id              uuid        references projects(id),
+  run_id                  uuid,                          -- NULLABLE: events can exist without a run
+  event_type              text        not null,          -- check constraint: confirm allowed values
+  occurred_at             timestamptz not null default now(),
+  message                 text        not null,          -- human-readable event description
+  payload                 jsonb       not null default '{}',
+  severity                text        not null,          -- e.g., 'info', 'warn', 'error'
+  depth                   int         not null,          -- agent hierarchy depth
+  duration_ms             int,
+  cost_usd                numeric,
+  tokens_in               int,
+  tokens_out              int,
+  orchestrator_run_id     text,                          -- cross-system run correlation
+  platform_run_id         text,                          -- platform-level run correlation
+  triggered_by_agent_id   uuid        references agents(id)
 );
--- No UPDATE or DELETE policies. Append-only enforced by policy.
 ```
 
-**Append-only enforcement**: Row-level security policies should allow INSERT only (no UPDATE/DELETE) for all event rows. This is a governance property, not just a convention.
+**Key design differences from prior proposal**:
+- `run_id` is **nullable**: system-level events (startup, policy evaluation) can exist without a run context.
+- `occurred_at` (not `event_time`): match live column name.
+- `sequence` does not exist: events ordered by `occurred_at` only. Sub-millisecond ordering is not guaranteed under concurrent writes.
+- `message` is required: every event must have a human-readable description.
+- `severity` is required: `info` / `warn` / `error` taxonomy (exact allowed values to confirm via SQL editor).
+- `depth` is required: derived from the agent's hierarchy depth at the time of the event.
+- `company_id` is required: events are always scoped to a company.
+- `triggered_by_agent_id`: actor agent (orchestrator that triggered the event, if applicable).
+- `orchestrator_run_id` / `platform_run_id`: cross-system run correlation for multi-platform environments.
 
-**Ingest route write path (required addition)**:
-For every event received at `/api/ingest`:
-1. Update `runs` (current behavior — retain).
-2. INSERT a corresponding row into `agent_events` (new behavior — must add).
+**Append-only enforcement**: RLS policy — INSERT allowed (service role), SELECT allowed (authenticated), UPDATE/DELETE blocked for all roles.
 
-The `sequence` value should be computed as `SELECT COALESCE(MAX(sequence), 0) + 1 FROM agent_events WHERE run_id = $run_id`. This is slightly racy under concurrent writes but acceptable for current scale. For Phase 5+, consider a dedicated sequence mechanism.
+**Ingest route write path — required field mapping**:
+
+The current ingest route receives:
+```
+{ agent_id, event, run_id, timestamp, tokens_in, tokens_out, cost_usd, error, metadata }
+```
+
+To write to `agent_events`, the route must:
+1. Expand `agents` select to include `company_id` and `depth`:
+   ```typescript
+   .select('id, status, company_id, depth')
+   ```
+2. Map fields:
+   | SDK field | agent_events column | Derivation |
+   |---|---|---|
+   | `agent_id` | `agent_id` | Direct |
+   | (from agents row) | `company_id` | From agent record |
+   | (from agents row) | `depth` | From agent record |
+   | `run_id` | `run_id` | Direct (nullable) |
+   | `event` | `event_type` | Direct rename |
+   | `timestamp` or now() | `occurred_at` | Direct or default |
+   | (derived) | `message` | Derive from event_type: "Run started", "Run completed", "Run failed" |
+   | (derived) | `severity` | Map: run_started/completed → 'info'; run_failed → 'error' |
+   | `metadata` | `payload` | Map + merge with error field |
+
+3. Write the event row after the `runs` upsert succeeds.
+
+**Open question**: Should the ingest route fail (5xx) if the `agent_events` write fails, or silently continue? Recommendation: log the failure and return success — event trace writes should be best-effort to avoid blocking agents on observability failures. Mark as tech debt.
+
+**Event taxonomy** (what `event_type` values to allow in CHECK constraint):
+
+Operationally required (map from current SDK):
+- `run_started`
+- `run_completed`
+- `run_failed`
+
+Recommended additions (for future SDK expansion):
+- `run_cancelled`
+- `step_started` / `step_completed`
+- `tool_called` / `tool_returned`
+- `output_produced`
+- `checkpoint`
+
+Note: the exact live CHECK constraint expression for `event_type` is **unconfirmed** (requires Supabase SQL editor). The migration file should define these values explicitly and reconcile with live constraint.
 
 ### 2.3 `agent_outputs` — Canonical Contract
 
-**Semantics**: Durable artifact produced by a run. Immutable after creation. New version = new row with `version + 1`. Links to the run that produced it via `run_id`.
+**Semantics**: Durable artifact produced by a run. Immutable after creation.
 
-**Artifact vs Event distinction**:
-- **Event**: a point-in-time lifecycle occurrence (something that happened).
-- **Artifact**: a durable object produced as output (something that was created and persisted).
+**Live schema** (confirmed from rows + OpenAPI):
+```sql
+-- Already in 002_agent_outputs.sql (keep as-is for 001/002):
+id, agent_id, run_id, company_id, output_type, content, gdrive_file_id, gdrive_url, version, created_at
+```
 
-**Output taxonomy — reconciled** (add `ui_components` and `code_artifact`):
+**CHECK constraint — current (from migration 002)**:
 ```sql
 check (output_type in (
-  'marketing_brief',
-  'lp_blueprint',
-  'strategy_summary',
-  'context_snapshot',
-  'ui_components',       -- ADD: emitted by orchestrator currently
-  'code_artifact',       -- ADD: for code generation outputs
-  'research_report',     -- ADD: for research agent outputs
-  'eval_result',         -- ADD: for evaluation agent outputs
-  'other'                -- RETAIN: fallback, but discourage in production
+  'marketing_brief', 'lp_blueprint', 'strategy_summary', 'context_snapshot', 'other'
 ))
 ```
+`ui_components` is NOT allowed, which is why orchestrator writes for it fail silently.
 
-**Governance rule**: `other` is acceptable for prototyping only. Before any new `output_type` is used in a production agent, it must be added to the check constraint via a migration.
+**Live data reality**: All 19 live rows are `lp_blueprint`. `ui_components` has never successfully been written.
 
-**Immutability rule**: No updates to existing output rows. If content changes, insert a new row with `version = previous_version + 1`. The `(run_id, output_type, version)` combination should be unique.
-
-**Lineage**: `run_id` FK is the primary lineage link. Optional `event_id UUID REFERENCES agent_events(id)` provides sub-run lineage when an output is produced by a specific step event.
-
-**`gdrive_file_id` and `gdrive_url`**: These are useful for GDrive integration but should not be the primary content store. `content JSONB` holds the authoritative artifact. GDrive pointers are supplementary.
-
-### 2.4 `project_state` — Canonical Contract
-
-**Decision**: Typed columns (Option A). The live API already implements this correctly.
-
-**Rationale**:
-- The three fields (`current_state`, `todo`, `lessons`) are universal operational concepts applicable to every project type.
-- The API already implements Option A and it works.
-- Flexibility is covered by the `project_tag` enum being extensible.
-- JSON envelope (Option B) would add parsing complexity for no gain at current scale.
-- Hybrid (Option C) creates "where does state go" ambiguity.
-
-**Canonical schema**:
+**Taxonomy expansion (via `006_fix_agent_outputs_constraint.sql`)**:
 ```sql
-create table project_state (
-  project_tag     text        primary key
-                              check (project_tag in (
-                                'master-agentic-flow',
-                                'reformai',
-                                'notion-personal-os',
-                                'resume-career',
-                                'global'
-                              )),
-  current_state   text        not null default '',
-  todo            text        not null default '',
-  lessons         text        not null default '',
-  updated_at      timestamptz not null default now()
-);
-```
-
-The `project_tag` check constraint mirrors the Zod enum in the API route. Both must be updated together when a new project is added.
-
-**Extension path**: If project-specific structured state is needed later, add `metadata JSONB DEFAULT '{}'` to this table. Do not switch to a JSON envelope model.
-
----
-
-## Part 3: Schema Governance Strategy
-
-### 3.1 Canonical Source-of-Truth Hierarchy
-
-1. **Canonical intent**: migrations + documented API/runtime contracts in this repo.
-2. **Operational reality**: live Supabase schema.
-3. **During reconciliation**: live DB may diverge from migrations. Reconciliation migrations close the gap.
-4. **After reconciliation**: migrations must exactly reproduce live schema. Any live change requires a migration.
-
-### 3.2 Schema Change Lifecycle
-
-Every schema change must complete ALL steps before being considered done:
-
-```
-1. PROPOSE  → document the change rationale (PR description)
-2. VALIDATE → check API/runtime impact (column names, types, constraints)
-3. MIGRATE  → write forward-only SQL migration in supabase/migrations/NNN_description.sql
-4. APPLY    → run migration against live DB
-5. ALIGN    → update API routes and runtime code atomically
-6. VERIFY   → run contract tests confirming new schema shape
-7. DOCUMENT → update HANDOFF_PROTOCOL.md and AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md
-```
-
-A schema change is incomplete if any step is skipped.
-
-### 3.3 Migration Discipline
-
-- **Forward-only**: no down migrations. Rollback means a follow-on migration.
-- **Sequential**: `001_`, `002_`, `003_` — no gaps, no out-of-order applies.
-- **Self-contained**: each migration is safe to run in isolation.
-- **No invalid seed data**: fix the UUID seed errors in `companies` (invalid characters `g`, `h`) before the next migration apply.
-- **Idempotent where possible**: use `IF NOT EXISTS` for table/column additions.
-
-### 3.4 API Contract Validation
-
-- Zod schemas in API routes are the contract validators for incoming payloads.
-- Contract tests should POST known-good and known-bad payloads and assert response codes and body shapes.
-- Add contract tests for: `/api/ingest`, `PUT /api/project-state`, `GET /api/project-state/[tag]`.
-- Long-term: `/api/v1/ingest` versioned path for breaking changes without breaking agents in the field.
-
-### 3.5 Runtime Contract Validation
-
-- Python SDK `emit()` already validates event type at Zod level (via API).
-- Add an allowed-event-type list to `OversightClient.emit()` for client-side early validation.
-- Orchestrator should validate `output_type` against a known-good list before writing to Supabase.
-- Add output type validation as a shared utility in the Python SDK or agent library.
-
----
-
-## Part 4: Operational Risks Inventory
-
-### 4.1 Zombie Run Risk (HIGH)
-**Description**: Runs that emit `run_started` but never receive a terminal event (`run_completed` or `run_failed`) stay in `started` status indefinitely. No mechanism exists to detect or close them.
-**Impact**: Inflated in-progress counts; inaccurate success rate metrics; operator confusion.
-**Mitigation**: Add `timeout_at` to `runs` at insert time. Build a cleanup job (Phase 5+) to mark timed-out runs as `failed`.
-
-### 4.2 `agent_events` Write Path Missing (HIGH)
-**Description**: The ingest route never writes to `agent_events`, even though the table likely exists live. All observability from event traces is absent.
-**Impact**: Run detail pages will have no event timeline. Debugging is limited to summary fields only.
-**Mitigation**: Add `agent_events` INSERT to ingest route as part of Phase 1 reconciliation.
-
-### 4.3 `001_initial_schema.sql` Missing (HIGH)
-**Description**: The foundational migration file for `companies`, `agents`, `agent_definitions`, `runs`, `project_state` does not exist in the repo.
-**Impact**: The platform cannot be reproduced from migrations alone. Any reset destroys foundational tables.
-**Mitigation**: Create `001_initial_schema.sql` as the first reconciliation deliverable.
-
-### 4.4 Cost Null Ambiguity (MEDIUM)
-**Description**: `cost_usd = null` is indistinguishable from "agent never reported cost" vs "genuinely zero cost." Cost dashboards will aggregate with silent holes.
-**Impact**: Cost reporting is unreliable as an operational metric.
-**Mitigation**: Add `cost_reported BOOLEAN DEFAULT false` to `runs`. Agents set `cost_reported = true` when they report cost, even if zero.
-
-### 4.5 FK Violation on Output Write (MEDIUM)
-**Description**: If the `run_started` ingest call fails (network error, auth failure), the `runs` row is never created. If the orchestrator then writes an `agent_outputs` row with that `run_id`, the FK constraint triggers a violation.
-**Impact**: Output artifacts lost or write fails silently; lineage broken.
-**Mitigation**: Orchestrator should verify ingest success before proceeding. OversightClient should raise (not swallow) ingest failures in critical paths. Add retry logic to SDK emit().
-
-### 4.6 Token/Cost Data Loss on Agent Crash (MEDIUM)
-**Description**: The Python SDK accumulates `tokens_in`, `tokens_out`, `cost_usd` in-memory via `RunContext.report()`. If the agent process crashes before emitting `run_completed`, all accumulated data is lost.
-**Impact**: Runs show null cost/token fields even when work was performed.
-**Mitigation (Phase 2)**: Add a `step_cost_reported` event type to `agent_events` so step-level cost data is persisted incrementally. `runs` aggregate cost can be recalculated from events if needed.
-
-### 4.7 AI-Generated Output Type Drift (LOW-MEDIUM)
-**Description**: When LLMs write new agent code, they may introduce new `output_type` values not in the check constraint. The Supabase insert silently fails (or raises an error that the agent ignores).
-**Impact**: Artifact writes fail without clear operator visibility.
-**Mitigation**: Add `output_type` validation to the Python SDK or agent base class before the Supabase write. Log failed writes with clear error context.
-
-### 4.8 Event Taxonomy Drift (LOW)
-**Description**: New event types emitted by agents will fail Zod validation at the ingest route (`event` field is an enum). Agents will receive 422 errors.
-**Impact**: New agent behaviors can't report new event types without API changes.
-**Mitigation**: Design the ingest schema to accept a broader `event` type (text + server-side allowlist) rather than a strict Zod enum. This allows new types to be added without API version bumps.
-
-### 4.9 Sequence Race Condition in `agent_events` (LOW)
-**Description**: The proposed sequence number strategy (`MAX(sequence) + 1`) is slightly racy under concurrent writes for the same `run_id`.
-**Impact**: Sequence numbers may not be strictly monotonic under concurrent multi-agent runs.
-**Mitigation (Phase 1)**: Accept this for now — concurrent writes to the same run are rare in the current synchronous execution model. Phase 5 introduces a proper sequence mechanism.
-
----
-
-## Part 5: Reconciliation Implementation Plan
-
-### Priority 1: Foundation Migration (BLOCKING everything else)
-
-**Create `001_initial_schema.sql`** — foundational tables matching live DB.
-
-The live schema must be inspected (via Supabase PostgREST `/rest/v1/` OpenAPI or direct query) before writing this file. The migration must reflect actual live column names and types, not inferred ones.
-
-Tables to include:
-- `companies` (fix invalid UUID seeds)
-- `agent_definitions`
-- `agents` (with all columns from LESSONS_LEARNED, including `parent_agent_id`, `depth`, `cost_limit_usd`, etc.)
-- `runs` (with canonical schema from §2.1)
-- `project_state` (with canonical schema from §2.4)
-
-**Safest approach**: Query live DB first. Write migration to match. Do not guess column types or constraints.
-
-### Priority 2: Reconcile `runs` Contract
-
-**Create `003_reconcile_runs.sql`** — alter `runs` to canonical contract.
-
-Changes needed (based on ingest route analysis):
-- Add `completed_at TIMESTAMPTZ` if missing.
-- Add `tokens_in INT`, `tokens_out INT`, `cost_usd NUMERIC(12,6)` if missing.
-- Add `error TEXT` if missing.
-- Add `timeout_at TIMESTAMPTZ` (new field for zombie detection).
-- Add `cost_reported BOOLEAN NOT NULL DEFAULT false`.
-- Add `parent_run_id UUID REFERENCES runs(id)` (nullable, for retry chains).
-- Ensure status check constraint includes `cancelled` and `timed_out`.
-- Remove any ambiguous `run_id` or `event` columns if they exist in old migration (not needed — `id` is canonical).
-
-### Priority 3: Reconcile `project_state` Contract
-
-**Create `004_reconcile_project_state.sql`** — align to typed column schema.
-
-If migration `001` creates the table correctly, this may be a no-op. Validate live schema first.
-
-Changes needed:
-- Rename `tag` → `project_tag` if old column name is `tag`.
-- Rename `state` → flatten into `current_state`, `todo`, `lessons` if old column is generic JSON.
-- Add `check` constraint on `project_tag` values.
-
-### Priority 4: `agent_outputs` Taxonomy Update
-
-**Create `005_agent_outputs_taxonomy.sql`** — add missing output types.
-
-```sql
--- Drop and recreate check constraint with expanded taxonomy
-ALTER TABLE agent_outputs DROP CONSTRAINT IF EXISTS agent_outputs_output_type_check;
-ALTER TABLE agent_outputs ADD CONSTRAINT agent_outputs_output_type_check
-  CHECK (output_type IN (
+alter table agent_outputs drop constraint if exists agent_outputs_output_type_check;
+alter table agent_outputs add constraint agent_outputs_output_type_check
+  check (output_type in (
     'marketing_brief', 'lp_blueprint', 'strategy_summary', 'context_snapshot',
-    'ui_components', 'code_artifact', 'research_report', 'eval_result', 'other'
+    'ui_components',    -- add: emitted by orchestrator
+    'code_artifact',    -- add: for code generation
+    'research_report',  -- add: for research outputs
+    'eval_result',      -- add: for evaluation outputs
+    'other'             -- retain: fallback (discourage in production)
   ));
 ```
 
-Also add:
-- `event_id UUID REFERENCES agent_events(id)` (nullable) — sub-run lineage.
-- Unique constraint on `(run_id, output_type, version)`.
+**`event_id` linkage**: The prior proposal suggested adding `event_id UUID REFERENCES agent_events(id)` for sub-run lineage. This column does NOT exist in live. Decision: defer to Phase 7. `run_id` FK is sufficient for MVP observability.
 
-### Priority 5: `agent_events` Table
+**Unique constraint**: Defer `UNIQUE(run_id, output_type, version)` to Phase 7. Not blocking for Phase 1.
 
-**Create `006_agent_events.sql`** — append-only event trace table.
+### 2.4 `project_state` — Canonical Contract
 
-Use schema from §2.2. Include:
-- RLS policy: INSERT allowed for service role; SELECT allowed for authenticated; UPDATE and DELETE blocked for all.
+**Decision**: Typed columns. Live API already implements this correctly.
 
-### Priority 6: Ingest Route Update
+**Correction from previous version**: Live DB has `id UUID PRIMARY KEY` (auto-generated), not `project_tag TEXT PRIMARY KEY`.
 
-**Update `src/app/api/ingest/route.ts`** — add `agent_events` write path.
-
-For each validated ingest event:
-1. Compute `sequence` via subquery.
-2. INSERT into `agent_events`.
-3. Return error if event insert fails (don't silently drop).
-
-Also expand the Zod `event` enum to allow step/tool events for forward compatibility:
-```typescript
-event: z.enum([
-  'run_started', 'run_completed', 'run_failed',
-  'step_started', 'step_completed',
-  'tool_called', 'tool_returned',
-  'output_produced', 'checkpoint'
-])
+**Live schema** (confirmed from rows):
+```sql
+-- In 001_initial_schema.sql:
+create table project_state (
+  id            uuid        primary key default gen_random_uuid(),
+  project_tag   text        not null unique,          -- unique constraint, not PK
+  current_state text        not null default '',
+  todo          text        not null default '',
+  lessons       text        not null default '',
+  updated_at    timestamptz not null default now()
+);
 ```
 
-### Priority 7: Contract Tests
+**CHECK constraint on `project_tag`**: Not confirmed from PostgREST (requires SQL editor). The live data shows 5 project_tag values: `notion-personal-os`, `resume-career`, `global`, `master-agentic-flow`, `reformai`. The API Zod enum enforces these at the application layer. Decision: **do not add a CHECK constraint in the migration** — use only the UNIQUE constraint. Allowed tags are governed by the Zod enum in the API, which is easier to evolve than a DB constraint.
 
-**Add contract tests** for:
-- `POST /api/ingest` with `run_started` → verify `runs` row created and `agent_events` row created.
-- `POST /api/ingest` with `run_completed` → verify `runs` updated and event appended.
-- `PUT /api/project-state` with valid/invalid payloads.
-- `GET /api/project-state/[tag]` with known tag.
+Rationale: a DB CHECK constraint on project_tag would require a migration every time a new project is added. The Zod enum in the API route is sufficient governance for this field at current scale.
 
-### Implementation Order Summary
-
-```
-1. Inspect live DB (Supabase) to confirm actual column names/types
-2. Create 001_initial_schema.sql
-3. Create 003_reconcile_runs.sql
-4. Create 004_reconcile_project_state.sql
-5. Create 005_agent_outputs_taxonomy.sql
-6. Create 006_agent_events.sql
-7. Apply migrations to live DB (in order)
-8. Update ingest route to write agent_events
-9. Write and run contract tests
-10. Update docs to reflect reconciled state
-```
-
-### Rollback Considerations
-- All migrations are forward-only. No down migrations.
-- If a migration fails: assess damage, write a follow-on corrective migration.
-- Never drop columns with live data without confirming data is backed up.
-- `agent_events` additions are purely additive — safe to roll forward if issues arise.
+**API compatibility**: The API's `.upsert({project_tag, ...}, {onConflict: 'project_tag'})` is correct. `id` auto-generates on new inserts; existing rows are updated on project_tag conflict. ✅
 
 ---
 
-## Part 6: Roadmap Impact Assessment
+## Part 3: Schema Governance Strategy (Unchanged from previous version)
 
-### Phase 1 scope expands — does this change phase sequencing?
+### 3.1 Canonical Source-of-Truth Hierarchy
+1. **Canonical intent**: migrations + documented API/runtime contracts.
+2. **Operational reality**: live Supabase schema.
+3. **During reconciliation**: live DB may diverge. Reconciliation migrations close the gap.
+4. **After reconciliation**: migrations must exactly reproduce live. Any live change requires a migration.
 
-No major resequencing needed. The additional work (primarily creating `001_initial_schema.sql` and adding the `agent_events` write path) belongs in Phase 1 scope. The MVP roadmap phases remain valid.
+### 3.2 Schema Change Lifecycle
+```
+1. PROPOSE  → document rationale
+2. VALIDATE → check API/runtime impact
+3. MIGRATE  → write forward-only SQL migration
+4. APPLY    → run against live DB
+5. ALIGN    → update API/runtime code atomically
+6. VERIFY   → run contract tests
+7. DOCUMENT → update HANDOFF_PROTOCOL.md + AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md
+```
 
-**What changes**: Phase 1 completion criteria now explicitly include:
-- `001_initial_schema.sql` exists and matches live DB.
-- `agent_events` write path is active in the ingest route.
-- Contract tests verify the reconciled schema.
+### 3.3 Migration Discipline
+- **Forward-only**: no down migrations.
+- **Sequential**: 001_, 002_, 003_ — no gaps.
+- **Self-contained**: each migration runs safely in isolation.
+- **Idempotent**: use `IF NOT EXISTS` / `IF NOT EXISTS` for additive changes.
+- **No invalid seed data**: `companies` seed uses valid UUIDs confirmed from live data.
 
-### Phase 2 is still gated on Phase 1 completion
+### 3.4 API Contract Validation
+- Zod schemas in API routes are the contract validators.
+- Contract tests: known-good and known-bad payloads → assert HTTP status and response shape.
+- Contract tests for `/api/ingest` and `/api/project-state*` are Phase 1 deliverables.
 
-Do not begin Phase 2 (Telemetry Standardization) until:
-- [ ] `001_initial_schema.sql` created and validated.
-- [ ] `runs` canonical contract implemented (migration + tests).
-- [ ] `project_state` canonical contract implemented.
-- [ ] `agent_outputs` taxonomy reconciled.
-- [ ] `agent_events` table created and ingest route writes to it.
-- [ ] Contract tests pass for ingest and project-state APIs.
-
----
-
-## Part 7: Unresolved Questions
-
-1. **Live DB column confirmation**: What are the exact column names, types, and constraints in the live `runs`, `companies`, `agents`, `agent_definitions`, and `project_state` tables? This must be verified before writing `001_initial_schema.sql`.
-
-2. **`agent_events` live status**: Does `agent_events` already exist in the live DB? If so, what is its exact schema? This determines whether `006_agent_events.sql` is `CREATE TABLE` or `ALTER TABLE`.
-
-3. **`projects` table**: Is there a `projects` table in the live DB? If so, should `project_state.project_tag` eventually FK to it rather than use a check constraint?
-
-4. **Governance table existence**: Do `policies` and `audit_log` tables exist in the live DB? What is their exact schema? These are required before Phase 6 (Controlled Execute).
-
-5. **Live QA/cost views**: What summary views exist live (mentioned in Codex audit and master doc)? These should be backfilled into a migration before they can be relied on.
-
-6. **`event` field expansion in ingest**: Expanding the Zod enum for `event` types is a breaking change for old SDK versions. Do any deployed agents use hardcoded event types that would be impacted?
-
-7. **Retry semantics**: When should `parent_run_id` be set? The orchestrator currently doesn't have retry logic — this field can be left null until Phase 5 introduces the queue model.
-
-8. **`cost_usd` precision**: Is `NUMERIC(12,6)` the right precision for cost fields? This allows up to $999,999.999999 per run. Should this be `NUMERIC(18,8)` for sub-cent precision at high token volumes?
+### 3.5 Runtime Contract Validation
+- Add `output_type` validation to orchestrator before Supabase write.
+- Add allowed event-type list to `OversightClient.emit()` for client-side early validation.
+- Ingest route should map SDK `event` field to `agent_events.event_type` consistently.
 
 ---
 
-## Part 8: Recommended Next Implementation Step
+## Part 4: Operational Risks Inventory (Post-Verification)
 
-**Immediate first action**: Query the live Supabase DB to confirm exact column names and types for all foundational tables. Use the Supabase PostgREST OpenAPI spec at `https://<project-ref>.supabase.co/rest/v1/` or run `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'runs'` via the Supabase SQL editor.
+### 4.1 Zombie Runs — CONFIRMED HIGH
+**Status**: Confirmed by live data. Multiple runs from 2026-03-21 with `status='started'` and `completed_at=null`.
+**Mitigation**: Add `timeout_at` via `007_runs_enhancements.sql`. Cleanup job in Phase 5.
 
-**Second action**: Write `001_initial_schema.sql` based on confirmed live schema.
+### 4.2 `agent_events` Write Path Absent — CONFIRMED HIGH
+**Status**: Confirmed. Table exists with 0 rows.
+**Mitigation**: Update ingest route after `003_add_agent_events.sql` is applied.
+**New complexity**: The field mapping requires `company_id` and `depth` from the agents record; message and severity must be derived.
 
-**Do not**: Begin Phase 2 features before these actions complete.
+### 4.3 `001_initial_schema.sql` Missing — CONFIRMED CRITICAL
+**Status**: Confirmed. All 10+ foundational objects have no migration.
+**Mitigation**: Write `001_initial_schema.sql` from verified live schema.
+
+### 4.4 Cost Data Universally Null — CONFIRMED MEDIUM
+**Status**: Confirmed. All 51 live runs have null cost/token data. All 3 cost views show zero. Cost observability is completely non-functional.
+**Root cause**: `OversightClient.report()` exists but agents never call it with real cost data, OR the `run_completed` event fires but accumulates zero because agents don't call `run.report()`.
+**Mitigation**: Add `cost_reported` sentinel via `007_runs_enhancements.sql`. Separately, investigate why agents never report cost data and fix in Phase 2 (Telemetry Standardization).
+
+### 4.5 `agent_outputs.output_type` Constraint — CONFIRMED BLOCKING
+**Status**: Confirmed. `ui_components` fails constraint. Only `lp_blueprint` used in practice.
+**Mitigation**: `006_fix_agent_outputs_constraint.sql`.
+
+### 4.6 FK Violation Risk on Output Write — MEDIUM
+**Status**: Unchanged. If `run_started` ingest fails, subsequent output writes fail FK constraint.
+**Mitigation**: Orchestrator should check ingest success before proceeding.
+
+### 4.7 Token/Cost Data Loss on Crash — MEDIUM
+**Status**: Unchanged (now confirmed empirically — zero cost data in 51 runs).
+**Mitigation (Phase 2)**: Add step-level cost events to `agent_events` so cost is persisted incrementally.
+
+### 4.8 AI-Generated Output Type Drift — LOW-MEDIUM
+**Status**: Unchanged.
+**Mitigation**: Add output_type validation to SDK/orchestrator before Supabase write.
+
+### 4.9 `agent_events.sequence` Race Condition — REMOVED
+**Correction**: Removed. The live `agent_events` schema has no `sequence` column. Events are ordered by `occurred_at` only. This risk is moot.
+
+### 4.10 Ingest-to-agent_events Field Mapping Complexity — NEW MEDIUM
+**Description**: The live `agent_events` schema requires `company_id`, `depth`, `message`, and `severity` — none of which the current SDK emits directly. The ingest route must derive these from context.
+**Risk**: If the derivation logic is wrong (e.g., agent record not found, depth is 0 by default), event rows will be written with incorrect data that pollutes observability.
+**Mitigation**: Implement carefully with explicit fallbacks; test with contract tests before activating.
+
+### 4.11 Cost Views Unreliable — CONFIRMED MEDIUM
+**Description**: Three cost aggregation views (`agent_cost_summary`, `company_cost_summary`, `project_cost_summary`) are live but show zero for all values because `runs.cost_usd` is universally null.
+**Impact**: Dashboard cost displays will show zero even after implementation — will look like a bug.
+**Mitigation**: Label these views as unreliable in API responses and dashboard until cost population is fixed. Fix cost population in Phase 2.
+
+---
+
+## Part 5: Revised Reconciliation Sequence
+
+### Migration Backfill Sequence
+
+```
+Migration 001 — 001_initial_schema.sql (CREATE, foundation)
+  Purpose: Document and reproduce all live foundational tables
+  Objects: companies, agent_definitions, agents, projects, runs, project_state
+  Risk: HIGH (creates tables that already exist live — must use IF NOT EXISTS)
+  Dependency: None (first migration)
+
+Migration 002 — 002_agent_outputs.sql (already exists)
+  Purpose: agent_outputs table
+  Status: File exists, but CHECK constraint is stale
+  Do not modify this file — the constraint fix is in 006
+
+Migration 003 — 003_add_agent_events.sql (CREATE)
+  Purpose: Document agent_events table matching live schema
+  Objects: agent_events (17 columns)
+  Risk: MEDIUM (table already exists live — IF NOT EXISTS required)
+  Dependency: 001 (agents, companies, projects, runs FKs)
+
+Migration 004 — 004_add_governance_tables.sql (CREATE)
+  Purpose: Document policies, audit_log, agent_qa_results
+  Objects: 3 tables
+  Risk: LOW (tables exist live but are empty)
+  Dependency: 001 (agents FK)
+
+Migration 005 — 005_add_cost_views.sql (CREATE VIEW)
+  Purpose: Document 3 cost aggregation views
+  Objects: agent_cost_summary, company_cost_summary, project_cost_summary
+  Risk: LOW (views exist live — CREATE OR REPLACE)
+  Dependency: 001, 003 (runs, agent_events, agents, companies)
+  BLOCKER: View SQL bodies not yet retrievable via PostgREST — requires SQL editor
+
+Migration 006 — 006_fix_agent_outputs_constraint.sql (ALTER)
+  Purpose: Expand output_type CHECK to allow ui_components and others
+  Objects: agent_outputs (ALTER CONSTRAINT)
+  Risk: LOW (additive constraint change, no data migration needed)
+  Dependency: 002
+
+Migration 007 — 007_runs_enhancements.sql (ALTER)
+  Purpose: Add sentinel fields to runs for operational trust
+  Objects: runs (ADD COLUMN x3)
+  Risk: LOW (additive columns, all nullable or with defaults)
+  Dependency: 001
+```
+
+### Code Changes Required (Phase 1 scope)
+
+```
+Change A — Update /api/ingest/route.ts:
+  - Expand agents SELECT to include company_id and depth
+  - Add agent_events INSERT after runs upsert
+  - Map SDK fields to agent_events columns (severity, depth, message, company_id)
+  - Expand Zod event enum for future event types
+  Dependency: Migration 003 applied
+
+Change B — Update orchestrator.py (output validation only):
+  - Add output_type validation before agent_outputs write
+  - Validate against allowed list matching DB constraint
+  Dependency: Migration 006 applied (constraint expanded)
+```
+
+### Contract Tests Required
+
+```
+Test 1: POST /api/ingest run_started
+  - Verify: runs row created with correct fields
+  - Verify: agent_events row created with correct mapping
+
+Test 2: POST /api/ingest run_completed
+  - Verify: runs row updated (status, completed_at, cost fields)
+  - Verify: agent_events row appended
+
+Test 3: POST /api/ingest run_failed
+  - Verify: runs row updated (status=failed, error field)
+  - Verify: agent_events row appended with severity=error
+
+Test 4: PUT /api/project-state valid payload
+  - Verify: row upserted on project_tag conflict
+  - Verify: id auto-generated (uuid)
+
+Test 5: GET /api/project-state/[tag] known tag
+  - Verify: correct row returned
+  - Verify: all expected fields present including id
+```
+
+---
+
+## Part 6: Roadmap Impact — Unchanged
+
+Phase sequencing remains valid. Phase 2 (Telemetry Standardization) must not begin until Phase 1 completion criteria are met.
+
+**Phase 1 completion gate (updated)**:
+- [ ] `001_initial_schema.sql` created and validated against live schema.
+- [ ] `003_add_agent_events.sql` created and matches live schema (17 columns).
+- [ ] `004_add_governance_tables.sql` created.
+- [ ] `005_add_cost_views.sql` created (requires SQL editor for view SQL bodies).
+- [ ] `006_fix_agent_outputs_constraint.sql` applied — `ui_components` writes succeed.
+- [ ] `007_runs_enhancements.sql` applied — `timeout_at`, `cost_reported`, `parent_run_id` added.
+- [ ] Ingest route updated to write `agent_events` (Change A).
+- [ ] Contract tests pass for `/api/ingest` (both runs and agent_events writes verified).
+- [ ] Contract tests pass for `/api/project-state`.
+- [ ] Cost views labeled unreliable in documentation until Phase 2 cost population fix.
+
+---
+
+## Part 7: Resolved Questions (from previous version)
+
+| Question | Status | Answer |
+|---|---|---|
+| Live DB column confirmation for `runs`, `companies`, `agents`, etc. | ✅ RESOLVED | See LIVE_SUPABASE_SCHEMA_INVENTORY.md |
+| `agent_events` live status and schema | ✅ RESOLVED | Exists, 0 rows, 17-column schema confirmed |
+| `projects` table live status | ✅ RESOLVED | Exists, empty, 7 columns |
+| `policies` / `audit_log` live status | ✅ RESOLVED | Both exist, empty |
+| Live cost views | ✅ RESOLVED | 3 views confirmed (agent_cost_summary, company_cost_summary, project_cost_summary) |
+| Retry semantics / `parent_run_id` | ✅ RESOLVED | Defer to Phase 5; field null by default |
+
+## Part 8: Remaining Open Questions
+
+1. **CHECK constraint values** — exact allowed values for `runs.status`, `agent_events.severity`, `agent_events.event_type`, `project_state.project_tag` (if a check exists). Requires Supabase SQL editor.
+
+2. **View SQL bodies** — exact SQL for the 3 cost views. Requires Supabase SQL editor. Needed to write `005_add_cost_views.sql`.
+
+3. **RLS policy expressions** — exact RLS policies for each table. Needed to accurately write migrations.
+
+4. **`numeric` precision for `cost_usd`** — live DB type shown as `numeric` (unqualified). Should migrations use `numeric(12,6)` or match unqualified `numeric`?
+
+5. **`policies` scoping** — no `company_id` FK exists on `policies`. Are policies global-only, or should scoping be added in Phase 8?
+
+6. **`agent_events` CHECK constraint** — does the live `event_type` column have a CHECK constraint? If so, what are the allowed values? This determines whether `003_add_agent_events.sql` is creating the table from scratch or must match an existing constraint.
+
+7. **`agent_events.severity` allowed values** — what are the exact allowed strings? (`info`, `warn`, `error`? or more?)
+
+8. **Cost population root cause** — why are all 51 runs showing null cost? Is `OversightClient.report()` never called, or called but with no arguments? Diagnosing this informs Phase 2 telemetry standardization work.

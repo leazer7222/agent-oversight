@@ -46,3 +46,5 @@ next-env.d.ts
 
 # Claude worktrees — local only, never commit
 .claude/worktrees/
+# Claude Code local machine settings — never commit
+.claude/settings.local.json

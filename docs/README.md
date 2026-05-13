@@ -41,6 +41,7 @@ Should NOT live here:
 - active operational run-state/checkpoint logs
 
 Canonical documentation map:
+- **Platform architecture & philosophy**: `docs/PLATFORM_ARCHITECTURE.md` ← start here for the foundational reasoning
 - Agent inventory/status: `docs/AGENTS.md`
 - Agent implementation/runtime standards: `docs/agent-standards.md`
 - Repo-wide engineering standards: `docs/repo-standards.md`
@@ -80,13 +81,26 @@ agent-oversight/
 └── supabase/migrations/    # Database schema
 ```
 
-## Companies
+## Companies / Tenants
 - ReformAI
 - AfterGlow
 - Personal
 
+Each company is an isolated tenant. They share governance infrastructure, observability, and run tracking. They do not share context, memory, or semantic state.
+
+## Dashboard
+Deployed at https://agentoversight.netlify.app
+
+Pages:
+- **Overview** — control-plane health summary
+- **Agents** — agent registry with status, type, cost, and last-run
+- **Hierarchy** — operational topology view (org chart of tenants, orchestrators, teams, and agents)
+- **Runs** — execution history with filters
+- **Errors** — failure taxonomy and grouped error trends
+- **Costs** — token and cost aggregates by agent
+
 ## Docs
-See /docs for architecture decisions, agent standards, and build notes.
+See `/docs` for architecture decisions, agent standards, and build notes. Start with `docs/PLATFORM_ARCHITECTURE.md` for the foundational platform philosophy.
 
 ## Workspace
 To open this project with optimized settings for Anti-Gravity:

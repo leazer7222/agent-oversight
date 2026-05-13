@@ -746,6 +746,37 @@ Interview-story opportunities:
 - `run_step` vs lifecycle event architectural fork: explains the event-trace/lifecycle-summary distinction in a concrete implementation story.
 - Error taxonomy as product design: `[quota_exceeded]` prefix allows grouping and filtering without a separate enum column — a schema-lite observability pattern.
 
+## Milestone Entry: Phase 4 Dashboard Completion + Platform Architecture Foundations
+Date: 2026-05-13
+
+`Confirmed:`
+- **Phase 4 (Dashboard MVP) completed**: 7 dashboard pages operational — Overview, Agents, Runs, Run Detail, Costs, Errors, and Hierarchy. Deployed at https://agentoversight.netlify.app.
+- **`docs/PLATFORM_ARCHITECTURE.md` created**: Canonical foundational architecture and philosophy document for the platform. Principle-oriented, implementation-light, durable. Covers the core thesis, what Agent Oversight is and is not, the tenant model, canonical primitives, platform boundary, architectural principles (P1–P10), graduation pattern, and intentional exclusions.
+- **Hierarchy page built**: `/dashboard/hierarchy` with `/api/hierarchy` route. Server-side tree assembly from flat DB query. Recursive React component tree. No graph library. No execution-state or live polling. Tenant sections visually isolated. Orchestrator/team/worker type differentiation.
+
+Architecture decisions:
+1. **Agent Oversight is an operational ledger with a governance enforcement surface.** Not a context broker, memory system, or orchestration engine. Neutrality is the source of its authority as a governance substrate.
+2. **Personal, After Glow, and ReformAI are isolated tenants.** They share governance infrastructure, observability rails, and run tracking. They do not share semantic state, context, or memory. This is a permanent architectural boundary, not a temporary limitation.
+3. **The platform boundary is clean:** Agent Oversight owns what happened (runs, events, policies, agent identity). Production intelligence systems (ReformAI) will own what agents know (context brokers, artifact stores, projection semantics, evaluation feedback loops).
+4. **Schema reflects mature architecture; behavior reflects current maturity.** Schema reserves fields for future patterns (context_refs, capability_tags, can_trigger) without implementing behavior. Graduation is additive.
+5. **Hierarchy is organizational metadata, not execution semantics.** The hierarchy page answers "what is the operational structure?" It looks identical whether agents are idle or running. Indentation communicates containment without implying data flow direction. `agent_type = team` is a visual grouping, not a runtime coordination construct.
+6. **Teams are not a separate database entity.** Teams are agent nodes with `agent_type = team` and children via `parent_agent_id`. Adding a separate teams table would be a premature abstraction of a production coordination concept that does not yet exist in Agent Oversight's scope.
+
+Tradeoffs:
+- Chose indented tree over graph rendering library: graph libraries import execution-graph metaphors and signal to future contributors that directed edges are appropriate. Recursive Tailwind tree is simpler and semantically correct.
+- Chose server-side tree assembly over client-side: tree building is pure data transformation with no reason to ship to the client bundle.
+- Chose blue (not green) for active status on hierarchy nodes: green implies "currently running"; blue implies "operational and healthy." Subtle distinction that reinforces the structure-not-activity framing.
+
+PM/system-thinking implications:
+- A control plane that participates in domain decisions forfeits the neutrality that makes its records trustworthy. The architectural constraint "Agent Oversight observes; it does not participate" is a product trust statement, not just an engineering boundary.
+- Platform architecture documents are product artifacts, not engineering documentation. `PLATFORM_ARCHITECTURE.md` is as much a stakeholder communication tool as a contributor guide.
+- The hierarchy page is the first surface in the dashboard that directly communicates governance topology — who is responsible for what, at what authority level, within which tenant. Keeping it structure-only preserves its trustworthiness as a governance reference.
+
+Interview-story opportunities:
+- "How I designed the platform boundary between a control plane and a production intelligence system, and why keeping them separate is a trust property, not just an architecture preference."
+- "Why I chose an indented tree over a graph library for the hierarchy view — and what that decision reveals about preventing execution-semantic drift in operational dashboards."
+- Platform architecture documentation as a leadership artifact: writing `PLATFORM_ARCHITECTURE.md` as a principle-oriented, durable document readable by engineers, architects, and non-technical stakeholders simultaneously.
+
 # Milestone Update Template
 Use this template for every major milestone update:
 

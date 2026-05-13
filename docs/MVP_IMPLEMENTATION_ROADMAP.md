@@ -105,7 +105,7 @@ Interpretation guidance:
 | Phase 1 — Schema Stabilization | ✅ Complete | 2026-05-12 |
 | Phase 2 — Telemetry Standardization | ✅ Complete | 2026-05-12 |
 | Phase 3 — Read APIs | ✅ Complete | 2026-05-12 |
-| Phase 4 — Dashboard MVP | 🔜 In Progress | — |
+| Phase 4 — Dashboard MVP | ✅ Complete | 2026-05-13 |
 | Phase 5 — Execution Queue | ⏳ Deferred | — |
 | Phase 6 — Controlled Execute | ⏳ Deferred | — |
 | Phase 7 — Observability Hardening | ⏳ Deferred | — |
@@ -344,6 +344,20 @@ Prioritize visibility and diagnosis before execution controls.
 - UX expectations: grouped failure views, direct links to run detail
 - Future extensibility: incident workflows and ownership assignment
 - Not to overbuild yet: full incident management platform
+
+## Page: `/hierarchy` ✅ Complete — 2026-05-13
+- Purpose: operational topology and governance structure map
+- Philosophical alignment: answers exactly one question — "what is the operational structure of this platform?" — not "what is running" or "how data flows"
+- Operational value: tenant isolation visibility, orchestrator/team/agent relationships at a glance, governance structure orientation
+- Data source: `GET /api/hierarchy` — flat agent query with server-side tree assembly grouped by tenant
+- Visual design: indented tree (org chart register), not a graph or flow diagram; edges/arrows intentionally absent; indentation communicates containment without implying execution direction
+- Node types: `orchestrator` (violet), `team` (blue), `worker` (zinc); status dot communicates operational health (active=blue, paused=amber, deprecated=gray)
+- Interaction model: expand/collapse only; click-through to agent detail; no live polling; no actions on nodes
+- Intentionally excluded: runtime execution state, data-flow edges, drag-to-restructure, live run activity overlays, React Flow or any graph rendering library, context inheritance visualization
+- Architectural note: `agent_type = team` is an organizational grouping only — teams are agent nodes with children, not a separate database entity; parent/child hierarchy does not imply execution dependency
+- Idle-test invariant: the page looks identical whether all agents are idle or actively running
+- Schema extensibility: `capability_tags`, `context_refs`, `can_trigger`/`can_be_triggered_by` are reserved in schema but not rendered; graduation to production semantics is additive
+- Canonical reference: `docs/PLATFORM_ARCHITECTURE.md`
 
 # Phase 5 — Execution Queue Model
 ## Goals

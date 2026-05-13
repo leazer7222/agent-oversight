@@ -201,6 +201,26 @@ Related documents:
 - Output taxonomies (`agent_outputs.output_type`) need governance; runtime-emitted values must be represented in DB constraints before adoption.
 - Source-of-truth ambiguity is an infrastructure risk category and should block Phase 2 feature expansion until resolved.
 
+## Platform Architecture & Hierarchy UI (2026-05-13)
+
+### Control-plane philosophy
+- Agent Oversight is best understood as an **operational ledger with a governance enforcement surface** — not a context broker, memory system, orchestration engine, or cognitive architecture. Neutrality is the source of its authority.
+- The key boundary: Agent Oversight records what happened and enforces operational rules. It does not participate in domain decisions, store content, or implement intelligence semantics.
+- Personal, After Glow, and ReformAI are **isolated tenants** sharing governance infrastructure, not a context hierarchy. Resist any architecture or UI feature that implies cross-tenant semantic sharing.
+- Canonical reference: `docs/PLATFORM_ARCHITECTURE.md`.
+
+### Visual semantics for hierarchy views
+- **Indentation, not edges.** The hierarchy page uses an indented tree (file-browser / org-chart register) instead of edges with directionality. This is a deliberate choice: graph edges imply execution direction or data flow. Indentation communicates containment without that implication.
+- **Structure views must not become runtime views.** The single design constraint for a topology page: it should answer "what is the operational structure?" not "what is currently running?" These are separate concerns and must live on separate pages.
+- **The idle-test invariant.** If a topology view would look different when agents are actively running versus idle, it has execution-state elements that do not belong on a structure page.
+- **Status color semantics matter.** Use blue for "active/healthy" (not green). Green in operational interfaces implies "currently running." Blue implies "operational and healthy." The distinction prevents the topology view from being misread as a live execution monitor.
+- **Node type reflects governance role, not execution capability.** Orchestrator, team, and worker badges communicate organizational authority, not execution order or data flow.
+
+### Avoiding execution-semantic drift in dashboards
+- Graph rendering libraries (React Flow, Dagre, vis.js) bring execution-graph metaphors into the component tree and signal to future contributors that directed edges are appropriate. Use a recursive tree renderer with Tailwind indentation instead.
+- Do not add polling or live-state indicators to topology views. Once a topology page begins showing live execution state, it will be treated as a real-time monitor and its structural purpose will be lost.
+- The hierarchy page has no "run" or "connect" actions. Actions with governance implications (restructuring the hierarchy) must not be added until their governance semantics are fully defined.
+
 ## Phase 1–3 Execution (2026-05-12)
 
 - **Supabase MCP on Windows**: `claude mcp add` with `-y` fails in PowerShell. Edit `~/.claude.json` directly to add MCP server entries; restart Claude Code to activate.

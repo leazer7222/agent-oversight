@@ -7,6 +7,10 @@ from pydantic import BaseModel
 from google import genai
 from google.genai import types
 
+# Fix Windows cp1252 stdout encoding (emojis crash otherwise)
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 try:
     from openai import OpenAI
 except ImportError:

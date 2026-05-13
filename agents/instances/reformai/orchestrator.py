@@ -4,6 +4,10 @@ import json
 import uuid
 from datetime import datetime
 
+# Fix Windows cp1252 stdout encoding (emojis crash otherwise)
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 # Add project root to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../python-sdk")))

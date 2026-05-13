@@ -60,10 +60,13 @@ Before an agent can run, it must be registered in Supabase.
 
 ### Agent Index
 
-| Agent | Owner | agent_id | Location |
-|---|---|---|---|
-| `context-agent` | `reformai` | `40b5e259-5b28-44fd-9c5b-e758093e5d3d` | `/agents/library/context-agent/` |
-| `marketing-agent` | `reformai` | `761c56f6-4de8-4859-974a-43d964de62f0` | `/agents/library/marketing-agent/` |
+| Agent | Owner | agent_id | Location | Status |
+|---|---|---|---|---|
+| `context-agent` | `reformai` | `40b5e259-5b28-44fd-9c5b-e758093e5d3d` | `/agents/library/context-agent/` | Active |
+| `marketing-agent` | `reformai` | `761c56f6-4de8-4859-974a-43d964de62f0` | `/agents/library/marketing-agent/` | Active |
+| `ui-design-agent` | `reformai` | (see agent.json) | `/agents/library/ui-design-agent/` | Active |
+| `audit-agent` | `reformai` | (see agent.json) | `/agents/library/audit-agent/` | Active |
+| `optimization-agent` | `reformai` | (see agent.json) | `/agents/library/optimization-agent/` | Active |
 
 
 
@@ -137,14 +140,54 @@ Every agent directory must contain these files:
 
 ## 6. Oversight API Reference
 
-**Base URL:** `https://agent-oversight.vercel.app`
-**Auth:** `x-agent-secret: ChArles-Clint0n-Leazer-Jr.-1s-the-B3st`
+**Base URL (local):** `http://localhost:3000`
+**Base URL (production):** `https://agent-oversight.vercel.app` (has Vercel SSO — use local for agent runs)
+**Auth:** `x-agent-secret: <value of INGEST_SECRET in .env.local>`
+
+### Ingestion (write path — agents use these)
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `/api/ingest` | POST | Emit run events (`run_started`, `run_completed`) |
+| `/api/ingest` | POST | Emit run lifecycle events and step events |
 | `/api/project-state/[tag]` | GET | Read project state (current_state, todo, lessons) |
 | `/api/project-state` | PUT | Write project state |
+
+#### Ingest event types
+
+| Event | Writes to | Purpose |
+|---|---|---|
+| `run_started` | `runs` + `agent_events` | Begin a run; sets `timeout_at`, `parent_run_id` |
+| `run_completed` | `runs` + `agent_events` | Mark run success; sets `cost_reported` |
+| `run_failed` | `runs` + `agent_events` | Mark run failure with error category prefix |
+| `run_step` | `agent_events` only | Mid-run trace point; does NOT touch `runs` |
+
+#### run_step payload fields
+```json
+{
+  "agent_id": "<uuid>",
+  "event": "run_step",
+  "run_id": "<uuid>",
+  "message": "human readable description",
+  "severity": "info | warning | error",
+  "duration_ms": 1234,
+  "tokens_in": 0,
+  "tokens_out": 0,
+  "cost_usd": 0.0
+}
+```
+
+### Read APIs (dashboard uses these — no agent auth required, service-role only)
+
+| Endpoint | Method | Filters | Purpose |
+|---|---|---|---|
+| `/api/agents` | GET | `status`, `company`, `limit`, `offset` | Agent list with cost summary |
+| `/api/agents/[id]` | GET | — | Full agent detail + recent 10 runs |
+| `/api/agents/[id]/runs` | GET | `status`, `limit`, `offset` | Paginated run history per agent |
+| `/api/runs` | GET | `status`, `agent`, `errors_only`, `limit`, `offset` | Cross-agent run list |
+| `/api/runs/[id]` | GET | — | Full run with events + outputs |
+| `/api/runs/[id]/events` | GET | — | Chronological event trace + cumulative summary |
+| `/api/cost` | GET | `group_by` (agent\|project), `company`, `limit` | Cost/token aggregates |
+| `/api/errors` | GET | `agent`, `category`, `since`, `limit`, `offset` | Failed runs + error breakdown |
 
 ---
 

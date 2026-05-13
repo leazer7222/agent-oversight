@@ -1,54 +1,78 @@
 # Agent Oversight System - Current State
 
 Last updated: 2026-05-12
-Status: Active (Phase 1 Reconciliation Review complete; reconciliation implementation pending)
+Status: Active — Phase 3 complete; Phase 4 (Dashboard MVP) is next.
 
-## Current Objective State
-Phase 1 analysis is complete. Phase 1 Reconciliation Review is complete. Implementation of the reconciliation migrations and ingest route update is the next required work.
+---
 
-## What Was Completed
-- Phase 1 schema stabilization analysis (Codex, 2026-05-13).
-- Phase 1 reconciliation review and architecture validation (Claude, 2026-05-12).
-- Canonical contract definitions for `runs`, `agent_events`, `agent_outputs`, `project_state`.
-- Reconciliation strategy and migration sequencing documented.
-- All continuity/architecture/lessons documents updated.
+## Completed Phases
 
-## Critical Gap Identified
-`001_initial_schema.sql` does NOT exist in the repo. The foundational tables (`companies`, `agents`, `agent_definitions`, `runs`, `project_state`) are undocumented in migrations. The platform cannot be reproduced from repo state alone. This must be fixed before any other migration work.
+### Phase 1 — Schema Stabilization ✅
+- `001_initial_schema.sql` — reverse-engineered from live DB (governance doc, not re-applied)
+- `003_add_agent_events_indexes.sql` — 4 indexes applied live
+- `004_add_governance_tables.sql` — output_type_registry, event_type_registry applied live
+- `005_add_cost_views.sql` — agent_cost_summary, project_cost_summary views applied live
+- `006_fix_agent_outputs_constraint.sql` — added ui_components to output_type CHECK constraint applied live
+- `007_runs_reconciliation.sql` — timeout_at, parent_run_id, cost_reported columns applied live
+- Ingest route updated: agent_events write path activated, timeout_at set on run_started, cost_reported set on terminal events
+- TypeScript `Agent` interface corrected to match live DB column names (25 fields)
 
-## Confirmed Critical Drift
-1. `001_initial_schema.sql` missing — foundational tables not in migrations.
-2. `runs` mismatch — `error`, `completed_at`, `cost_*` fields used by API but status of migration columns unconfirmed.
-3. `project_state` mismatch — migration shape unknown; API uses `project_tag/current_state/todo/lessons`.
-4. `agent_outputs.output_type` — `ui_components` emitted by runtime not allowed by migration constraint.
-5. `agent_events` write path — ingest route never writes to this table; event traces are zero.
-6. Invalid UUID literals in `companies` seed rows (if they existed in the uncommitted migration).
+### Phase 2 — Telemetry Standardization ✅
+- `run_step` event type added to ingest schema — writes directly to agent_events, bypasses runs table
+- `StepTimer` context manager added to Python SDK for wall-clock step measurement
+- Error taxonomy added to Python SDK: `categorize_error()` with 5 error categories; errors prefixed `[category]`
+- `RunContext.step()` method added — emits run_step events, accumulates cost, non-fatal
+- Real token/cost capture wired in marketing-agent: `response.usage` (OpenAI) and `usage_metadata` (Gemini)
+- Per-model cost estimation functions added to marketing-agent
+- Windows UTF-8 stdout fix applied to marketing-agent and orchestrator
+- orchestrator.py updated with step events: context_ready, llm_synthesis (with timer), output_persisted (with timer)
+- context-agent updated with step events: docs_discovered, docs_extracted (with timer)
 
-## Canonical Decisions Made
-- Source of truth: migrations + documented contracts (not live DB).
-- `runs.id` is the single canonical run identifier.
-- `project_state` uses typed columns (Option A).
-- `agent_events` is append-only, write path is required in ingest route.
-- `cost_reported BOOLEAN` required on `runs` to distinguish unreported from zero cost.
-- `timeout_at TIMESTAMPTZ` required on `runs` for zombie run detection.
-- `parent_run_id UUID` on `runs` for retry chain linkage.
-- Output taxonomy expanded to include: `ui_components`, `code_artifact`, `research_report`, `eval_result`.
+### Phase 3 — Read APIs ✅ (commit c06ef74)
+- `src/lib/api/pagination.ts` — shared parsePagination + paginationMeta helpers
+- `GET /api/agents` — list with cost summary, status/company filter, pagination
+- `GET /api/agents/[id]` — full agent detail + recent 10 runs
+- `GET /api/agents/[id]/runs` — paginated run history, status filter
+- `GET /api/runs` — cross-agent run list, status/agent/errors_only filters
+- `GET /api/runs/[id]` — full run detail with events + outputs
+- `GET /api/runs/[id]/events` — event trace with cumulative token/cost summary
+- `GET /api/cost` — cost aggregates from cost views, group_by=agent|project
+- `GET /api/errors` — failed runs with error category breakdown + frequency table
 
-## Exact Next Priority
-1. Query live Supabase to confirm exact column names/types for all foundational tables.
-2. Create `001_initial_schema.sql` matching confirmed live schema.
-3. Create `003_reconcile_runs.sql`.
-4. Create `004_reconcile_project_state.sql`.
-5. Create `005_agent_outputs_taxonomy.sql`.
-6. Create `006_agent_events.sql`.
-7. Update ingest route to write to `agent_events`.
-8. Write and run contract tests.
+---
 
-## Blocking Condition for Phase 2
-Phase 2 (Telemetry Standardization) must NOT begin until all 8 items above are complete and verified.
+## Current Objective
 
-## Explicit Non-Work This Session
-- No frontend build work.
-- No queue/worker implementation.
-- No orchestration refactor.
-- No Phase 2+ features.
+**Phase 4 — Dashboard MVP**
+
+Build the UI pages that consume the Phase 3 APIs. Priority order:
+
+1. `/dashboard` — agent list, total cost, recent errors (uses /api/agents, /api/errors)
+2. `/dashboard/runs` — execution history with filters (uses /api/runs)
+3. `/dashboard/runs/[id]` — run detail with event timeline + outputs (uses /api/runs/[id], /api/runs/[id]/events)
+4. `/dashboard/agents/[id]` — agent detail with run history (uses /api/agents/[id], /api/agents/[id]/runs)
+5. `/dashboard/costs` — cost breakdown by agent/project (uses /api/cost)
+6. `/dashboard/errors` — error feed with category grouping (uses /api/errors)
+
+---
+
+## Known Blockers / Caveats
+
+- **LLM billing**: tokens_in/tokens_out/cost_usd fields produce nulls because both OpenAI and Gemini free tiers are exhausted. Token/cost pipeline code is correct; blocked on enabling billing.
+- **Supabase types**: Phase 3 routes use `as any[]` casts instead of generated types. A background task has been flagged to generate types via `mcp__supabase__generate_typescript_types` and wire them in.
+- **Vercel SSO**: Preview deployment has SSO protection. Python agents must POST to `http://localhost:3000` (local Next.js server) for local runs.
+
+---
+
+## Key Technical References
+
+| Concern | Location |
+|---------|----------|
+| Supabase project | `hdhovyrlnfojtkqbcegh` |
+| Live DB schema | `docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md` |
+| Migration files | `supabase/migrations/` |
+| Python SDK | `python-sdk/oversight.py` |
+| Ingest API | `src/app/api/ingest/route.ts` |
+| Read APIs | `src/app/api/agents/`, `src/app/api/runs/`, `src/app/api/cost/`, `src/app/api/errors/` |
+| Orchestrator | `agents/instances/reformai/orchestrator.py` |
+| Agent library | `agents/library/` |

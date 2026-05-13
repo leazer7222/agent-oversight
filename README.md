@@ -3,34 +3,48 @@
 Personal control plane for monitoring, controlling, and coordinating all AI agents across ReformAI, AfterGlow, and Personal projects.
 
 ## Stack
-- **Database**: Supabase (Postgres + Realtime)
-- **Event queue**: Inngest (durable execution)
-- **Frontend**: Next.js + Vercel
-- **Alerts**: Resend (email)
-- **Agents**: Elite Python-based agents with Google Drive integration
+- **Database**: Supabase (Postgres) — project `hdhovyrlnfojtkqbcegh`
+- **Frontend**: Next.js 15 + Vercel
+- **Agents**: Python-based agents with Google Drive integration
+- **Telemetry**: Custom oversight SDK (`python-sdk/oversight.py`)
+- **Deferred**: Inngest (execution queue — Phase 5), Resend (email alerts — post-Phase 4)
 
-## Elite Agents (ReformAI)
-### 1. Context Agent
-- **Capabilities**: Recursive Google Drive search, Multi-format extraction (PDF, DOCX, Google Docs).
-- **Extraction Power**: Capable of processing 300k+ characters of rich context for high-precision synthesis.
-- **Config**: `CONTEXT_FOLDER_ID`, `CONTEXT_RECURSIVE`, `CONTEXT_MAX_CHARS_PER_FILE`.
+## Build Status
 
-### 2. Marketing Agent
-- **Capabilities**: Elite strategy synthesis and UI/Design blueprint generation.
-- **Providers**: Supports OpenAI (GPT-4o, GPT-4o-mini) and Google Gemini (2.0 Flash, 1.5 Pro).
-- **Dual Output**: Generates structured JSON for downstream agents and long-form Markdown for the team.
+| Phase | Status |
+|-------|--------|
+| Schema Stabilization | ✅ Complete |
+| Telemetry Standardization | ✅ Complete |
+| Read APIs | ✅ Complete |
+| Dashboard MVP | 🔜 In Progress |
+
+## Agent Library (ReformAI)
+
+| Agent | Purpose |
+|-------|---------|
+| `context-agent` | Recursive Google Drive search + multi-format extraction |
+| `marketing-agent` | Strategic synthesis + UI/design blueprint generation |
+| `ui-design-agent` | High-fidelity UI/UX and frontend code generation |
+| `audit-agent` | Quality assurance; scores context relevance (1–10) |
+| `optimization-agent` | Repo standards compliance scanner |
 
 ## Structure
 ```
 agent-oversight/
-├── src/                    # Next.js dashboard + API
+├── src/
+│   └── app/
+│       └── api/
+│           ├── ingest/         # POST — agent telemetry ingestion
+│           ├── project-state/  # GET/PUT — project context state
+│           ├── agents/         # GET — agent list + detail + runs
+│           ├── runs/           # GET — run list + detail + events
+│           ├── cost/           # GET — cost aggregates
+│           └── errors/         # GET — failed runs + breakdown
 ├── agents/
-│   ├── library/            # Reusable agent definitions
-│   │   ├── context-agent/  # GDrive + Binary Extraction
-│   │   └── marketing-agent/# Strategic Synthesis
-│   └── instances/          # Per-company deployments
-├── python-sdk/             # oversight.py for Python agents
-└── supabase/migrations/    # Database schema
+│   ├── library/                # Reusable agent definitions
+│   └── instances/              # Per-company deployments (orchestrators)
+├── python-sdk/                 # oversight.py — OversightClient, StepTimer, error taxonomy
+└── supabase/migrations/        # Forward-only DB schema migrations
 ```
 
 ## Companies
@@ -39,4 +53,9 @@ agent-oversight/
 - Personal
 
 ## Docs
-See /docs for architecture decisions, agent standards, and build notes.
+See `/docs/` for architecture decisions, agent standards, MVP roadmap, and lessons.
+Key entry points:
+- `docs/MVP_IMPLEMENTATION_ROADMAP.md` — phased build plan + current status
+- `docs/agent-standards.md` — API reference + agent runtime contract
+- `docs/HANDOFF_PROTOCOL.md` — operational continuity and session state
+- `tasks/current-state.md` — what's active right now

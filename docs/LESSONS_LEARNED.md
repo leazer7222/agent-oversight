@@ -200,3 +200,16 @@ Related documents:
 - `project_state` must have one explicit contract shape (typed columns vs JSON envelope); dual assumptions create guaranteed drift.
 - Output taxonomies (`agent_outputs.output_type`) need governance; runtime-emitted values must be represented in DB constraints before adoption.
 - Source-of-truth ambiguity is an infrastructure risk category and should block Phase 2 feature expansion until resolved.
+
+## Phase 1–3 Execution (2026-05-12)
+
+- **Supabase MCP on Windows**: `claude mcp add` with `-y` fails in PowerShell. Edit `~/.claude.json` directly to add MCP server entries; restart Claude Code to activate.
+- **Git worktree node_modules**: Worktrees don't inherit node_modules from the main checkout. Create a directory junction: `cmd /c mklink /J node_modules ..\node_modules`. Never run `npm install` from within the worktree.
+- **Supabase GenericStringError**: Without generated TypeScript types, `supabase.from('table').select(...)` returns `GenericStringError` as the data type. Cast as `any[]` short-term; generate types via `mcp__supabase__generate_typescript_types` long-term.
+- **cost_reported sentinel pattern**: `runs.cost_reported BOOLEAN NOT NULL DEFAULT false` distinguishes "agent completed but never reported cost" from "agent reported zero cost". Set `cost_reported = true` only when `cost_usd` is explicitly included in a terminal event payload.
+- **agent_events non-fatal write discipline**: Wrap the agent_events INSERT in a non-fatal try/catch block. Guard on `company_id !== null` before inserting — agents without company association must not crash the run. Telemetry failure must never block agent execution.
+- **Error taxonomy bracket prefix**: Python SDK categorizes errors as `[quota_exceeded]`, `[auth_error]`, `[network_error]`, `[llm_error]`, `[validation_error]`. Stored in `runs.error`. The `/api/errors` endpoint extracts the category via regex `^\[([^\]]+)\]` for grouping/filtering.
+- **LLM token capture**: OpenAI usage is in `response.usage.prompt_tokens` / `completion_tokens`. Gemini usage is in `resp.usage_metadata.prompt_token_count` / `candidates_token_count`. Always capture after the LLM call; pass to `run_completed` as `tokens_in`, `tokens_out`.
+- **Windows stdout emoji crash**: Unicode characters in `print()` crash on Windows cp1252. Add `sys.stdout.reconfigure(encoding='utf-8', errors='replace')` as the first statement in every agent script.
+- **run_step event bypasses runs table**: `run_step` events write only to `agent_events`. The ingest route returns early after the insert without touching the `runs` table. This is intentional — steps are traces, not lifecycle state transitions.
+- **Pagination helper pattern**: `parsePagination(url)` extracts `limit` (capped at 200) and `offset` from URL query params. `paginationMeta({limit, offset}, returnedCount)` computes `has_more`. Both live in `src/lib/api/pagination.ts`.

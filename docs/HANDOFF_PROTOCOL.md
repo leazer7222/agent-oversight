@@ -585,3 +585,59 @@ Conversational context is temporary and should never be treated as the primary s
   8. Obtain and write `005_add_cost_views.sql`.
   9. Run all 11 contract tests.
   10. Verify Phase 1 completion criteria checklist.
+
+## Session Start
+- date/time: 2026-05-12 (Claude — Phase 1–3 execution session, context resumed twice)
+- model/tool: Claude (claude-sonnet-4-6) via Claude Code + Supabase MCP
+- current objective: Execute Phase 1 migrations, activate agent_events write path, implement Phase 2 telemetry, build Phase 3 Read APIs.
+- expected scope: Full implementation across 3 phases. Supabase migrations applied live. Ingest route, Python SDK, agents, and API routes all modified.
+- intended files to inspect: All ingest/run API routes, types.ts, oversight.py, orchestrator.py, all agent scripts
+
+## Progress Checkpoint
+- work completed:
+  - Supabase MCP wired via ~/.claude.json (CLI was unreliable on Windows PowerShell)
+  - Migrations 003–007 applied to live DB via Supabase MCP execute_sql
+  - 001_initial_schema.sql created (governance doc, reverse-engineered from live DB)
+  - Ingest route extended: agent_events write path activated, timeout_at/cost_reported/parent_run_id wired
+  - TypeScript Agent interface corrected to match 25 live DB column names
+  - Python SDK overhauled: StepTimer, RunContext.step(), categorize_error(), error_categories
+  - marketing-agent: LLM token/cost capture (OpenAI + Gemini), cost estimation tables, UTF-8 stdout fix
+  - orchestrator.py and context-agent: step events added, UTF-8 fix
+  - node_modules junction created for worktree: `cmd /c mklink /J`
+  - Phase 3 Read APIs: 8 endpoints built and committed (c06ef74)
+- files changed: ingest/route.ts, types.ts, oversight.py, marketing-agent/agent.py, context-agent/agent.py, orchestrator.py, 6 new API routes, pagination.ts, 7 migration files
+- architectural discoveries:
+  - Cost views aggregate from agent_events not runs — cost will show zero until agent_events write path is active AND agents report cost
+  - Supabase TypeScript inference fails on string-based select() without generated types — returns GenericStringError
+  - Windows node_modules must be junction-linked into worktrees
+- blockers encountered:
+  - Both OpenAI and Gemini free tiers exhausted — cannot verify token/cost pipeline end-to-end without billing enabled
+  - Supabase TypeScript types not generated — using as any[] casts in Phase 3 routes
+- open questions:
+  - When will LLM billing be enabled to verify cost pipeline?
+- next recommended action: Phase 4 Dashboard MVP
+
+## Session End
+- date/time: 2026-05-12 (Claude — Phase 1–3 execution + documentation session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed:
+  - Phase 1: schema migrations applied, ingest route activated, types corrected
+  - Phase 2: step events, StepTimer, error taxonomy, LLM cost capture
+  - Phase 3: 8 Read API endpoints built and committed
+  - Documentation: all 10 relevant docs updated (tasks, lessons, handoff, agent-standards, roadmap, README, master doc)
+- architecture impact:
+  - Platform now has a complete API layer for dashboard visibility (8 endpoints)
+  - Telemetry is standardized: lifecycle events + step traces + error taxonomy all active
+  - Schema is stable: migrations as governance source, live DB reconciled
+- operational lessons learned:
+  - See docs/LESSONS_LEARNED.md — "Phase 1–3 Execution (2026-05-12)" section
+- PM/system-thinking lessons:
+  - Phases 1–3 demonstrate "observability before autonomy" — operators now have full API access to all agent data before any dashboard UI exists
+  - Cost visibility requires three things: schema (cost_reported), write path (ingest route), and agent discipline (explicit cost reporting after LLM calls)
+- risks introduced:
+  - as any[] casts in Phase 3 routes will hide type errors until Supabase types are generated
+  - LLM cost/token data remains null until billing is enabled
+- next priorities:
+  1. Phase 4: build Dashboard MVP UI pages
+  2. Generate Supabase TypeScript types (background task flagged)
+  3. Enable LLM billing to verify token/cost pipeline

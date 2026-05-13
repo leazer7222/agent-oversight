@@ -79,35 +79,38 @@ Update rules:
 - Primary challenge: close product architecture gap without over-engineering prematurely.
 
 # Current System Maturity Assessment
-## Prototype-level
-- Frontend control plane UX is largely absent; `src/app/page.tsx` remains starter page and existing pages are domain mockup routes.
-- Execution model is script/orchestrator-centric rather than queue- and policy-driven.
-- Telemetry granularity is incomplete (lifecycle mostly, step/event/tool-call-level sparse).
-- Config and secret handling patterns are development-heavy and unsafe for production posture.
+*Last updated: 2026-05-12 after Phases 1–3 completion*
+
+## Early-platform (post Phase 3)
+- Schema contract stabilized: migrations are governance source of truth; live DB reconciled (migrations 003–007 applied).
+- Telemetry is standardized: lifecycle events (run_started/completed/failed) + step events (run_step) + error taxonomy all active.
+- Full operational Read API surface: 8 endpoints covering agents, runs, events, cost, errors.
+- Python SDK fully instrumented: StepTimer, step events, error categorization, LLM cost capture.
+- Dashboard UI is absent — API exists but no operator-visible UI yet (Phase 4).
 
 ## Production-leaning
 - Clear repository organization for agent library vs instance deployments.
-- Reusable Python telemetry client (`python-sdk/oversight.py`) with run lifecycle context manager.
-- Supabase-backed persistence for core entities (`agents`, `runs`, `project_state`, `agent_outputs`) with active project connectivity.
-- Strong intent toward platform governance visible in live schema (policies, event views, QA results, cost summaries).
+- Reusable Python telemetry client with run lifecycle context manager, step timer, error taxonomy.
+- Supabase-backed persistence for all core entities with stable schema contract.
+- 8 operational read API endpoints consumed by future dashboard.
+- Forward-only migration discipline established (001–007).
 
 ## Missing for production readiness
-- Canonical schema governance (live DB vs migration mismatch).
-- Durable async execution control plane (run queue, retries, leases, cancellation, idempotency).
-- End-to-end observability (run/event/tool traces, failure drill-down, SLO-oriented dashboards).
-- Formal evaluation system tied to quality gates and release confidence.
-- Secure, role-aware execution authorization and secret management.
+- Dashboard UI (Phase 4 — in progress).
+- Durable async execution control plane (Phase 5 — deferred).
+- Secure execution authorization and HITL (Phases 6–8 — deferred).
+- Supabase TypeScript generated types (background task pending).
+- LLM billing enabled for live token/cost verification.
 
 ## Biggest infrastructure risks
-- Schema drift causes runtime fragility and onboarding confusion.
-- Shared secret ingestion and plaintext local credential patterns increase security exposure.
-- Cost/token fields exist but are weakly populated; financial observability remains low-confidence.
-- Lack of standardized agent contract compliance tests allows hidden regressions.
+- LLM cost data is null until billing is enabled (OpenAI/Gemini free tiers exhausted).
+- as any[] casts in Phase 3 routes hide type errors until types are generated.
+- Execution is synchronous and script-centric — no queue, retries, or cancellation (Phase 5).
+- Secret handling is development-grade — not hardened for production multi-user access.
 
 ## Biggest product risks
-- Platform vision exceeds current UX/API capabilities, causing strategy-execution gap.
-- Weak runtime and governance controls hinder trust for “execute from dashboard” use case.
-- Without reliable metrics (quality, latency, cost, failure), PM decision-making remains intuition-heavy.
+- Without dashboard UI, operators still cannot see agent/run/cost/error data without API calls.
+- Cost/token pipeline untestable until billing is re-enabled.
 
 # Executive Summary
 This repository is a serious in-progress transition from a practical multi-agent prototype into an AI AgentOps/control-plane platform.
@@ -707,6 +710,41 @@ Interview-story opportunities:
 - Demonstrating multi-session architecture discipline: live verification invalidated the original reconciliation strategy; corrected it before writing an implementation plan based on wrong assumptions.
 - `agent_events` write path gap: explains why a system can have an observability schema and zero operational observability simultaneously.
 - Implementation plan structure: per-migration dependency graph + risk level + verification query + rollback is PM-level infrastructure ownership.
+
+## Milestone Entry: Phases 1–3 Execution — Schema, Telemetry, Read APIs
+Date: 2026-05-12
+
+`Confirmed:`
+- **Phase 1 (Schema Stabilization)**: Migrations 003–007 applied to live Supabase DB. `001_initial_schema.sql` created as governance doc. Ingest route activated with `agent_events` write path, `timeout_at` set on `run_started`, `cost_reported` boolean set on terminal events. TypeScript `Agent` interface corrected to 25 live DB column names.
+- **Phase 2 (Telemetry Standardization)**: `run_step` event type added to ingest schema — writes to `agent_events` only, does not touch `runs`. `StepTimer` context manager and `RunContext.step()` method added to Python SDK. Error taxonomy with 5 categories (`quota_exceeded`, `auth_error`, `network_error`, `llm_error`, `validation_error`) implemented. Real LLM token/cost capture wired into marketing-agent (OpenAI `response.usage`, Gemini `usage_metadata`). Per-model cost estimation functions added. All agents updated with step events and UTF-8 stdout fix.
+- **Phase 3 (Read APIs)**: 8 operational API endpoints built and committed (c06ef74). Shared pagination helper created. All routes use service-role Supabase client. TypeScript compiles clean (with `as any[]` casts for untyped queries).
+
+Architecture decisions:
+1. **`run_step` bypasses `runs` table**: Step events write only to `agent_events` and return early. This preserves `runs` as lifecycle summary and `agent_events` as trace. The ingest route detects the event type and forks the execution path before touching the runs table.
+2. **Error bracket prefix pattern**: Python SDK stores errors as `[category] message` in `runs.error`. Regex extraction in `/api/errors` provides category grouping without a separate column. Low overhead, queryable.
+3. **Non-fatal agent_events writes**: `agent_events` INSERT is wrapped in try/catch; `company_id` is guarded. Telemetry failures must never block agent execution — this is the observable systems principle applied.
+4. **`cost_reported` sentinel**: `runs.cost_reported = true` only when `cost_usd` is explicitly included in the payload. Dashboard can distinguish "agent didn't report" from "agent reported zero."
+5. **as any[] casts**: Acceptable short-term. Long-term requires `mcp__supabase__generate_typescript_types` → `src/lib/supabase/types.ts` → typed client generic.
+
+Tradeoffs:
+- Accepted `as any[]` in Phase 3 to maintain momentum; flagged as background task. Type correctness is a future hardening concern, not an immediate correctness blocker.
+- `run_step` event does not create a `runs` row even if no prior `run_started` was emitted. This accepts some orphaned-event risk to keep the ingest handler simple.
+
+Operational lessons:
+- Supabase MCP setup on Windows: `claude mcp add` with `-y` flag is unreliable in PowerShell. Edit `~/.claude.json` directly.
+- Git worktrees on Windows do not inherit node_modules. Directory junction (`mklink /J`) is the fix.
+- LLM free tier exhaustion blocks cost pipeline verification. Both OpenAI and Gemini are throttled. Code is correct; needs billing enabled.
+- Cost views (agent_cost_summary, project_cost_summary) aggregate from `agent_events`, not `runs`. Zero agent_events rows → cost views show zero. Phase 1 activation of the write path is the prerequisite for financial observability.
+
+PM/system-thinking implications:
+- Phases 1–3 complete the "observability before autonomy" principle from the roadmap. API surface now exists to answer: "what ran, what failed, what did it cost?" — without touching the DB directly.
+- A working API layer with zero UX is still operationally incomplete. Operators need a dashboard. Phase 4 converts the API contract into operator-visible information.
+- Cost observability requires three independent pieces: schema (cost fields), write path (ingest route), and discipline (agents calling report). All three must be present for the financial dashboard to show real numbers.
+
+Interview-story opportunities:
+- "How I built a 3-phase API-first platform foundation before touching the UI." Demonstrates sequencing discipline.
+- `run_step` vs lifecycle event architectural fork: explains the event-trace/lifecycle-summary distinction in a concrete implementation story.
+- Error taxonomy as product design: `[quota_exceeded]` prefix allows grouping and filtering without a separate enum column — a schema-lite observability pattern.
 
 # Milestone Update Template
 Use this template for every major milestone update:

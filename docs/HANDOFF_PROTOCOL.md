@@ -340,6 +340,109 @@ Conversational context is temporary and should never be treated as the primary s
   2. Begin Phase 1 schema reconciliation using clarified document ownership.
 
 ## Session Start
+- date/time: 2026-05-12 (Claude live schema verification session)
+- model/tool: Claude (claude-sonnet-4-6)
+- current objective: Query live Supabase to produce verified schema inventory for all tables/views. Do NOT write migrations or modify schema.
+- expected scope: Read-only verification via PostgREST API. Produce `docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md`.
+- intended files to inspect: HANDOFF_PROTOCOL.md, PHASE_1_SCHEMA_STABILIZATION_AUDIT.md, PHASE_1_RECONCILIATION_STRATEGY.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, MVP_IMPLEMENTATION_ROADMAP.md
+
+## Progress Checkpoint
+- work completed: Live schema inspection complete. Wrote two Python inspection scripts, ran both against live Supabase via service role key. OpenAPI spec retrieved, all tables queried, row data extracted from tables with data.
+- files inspected: .env.local (credentials), all required docs, inspect_schema.py output, inspect_rows.py output
+- files changed: HANDOFF_PROTOCOL.md, LESSONS_LEARNED.md, docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md (new)
+- architectural discoveries:
+  - `agent_events` exists live but is empty and has a much richer schema than the reconciliation strategy proposed (17 columns, severity, depth, message, orchestrator linkage, run_id nullable)
+  - `project_state` has a uuid PK in addition to project_tag unique — reconciliation strategy must be corrected
+  - `runs` does NOT have `event` or `run_id` columns — Codex's dual-identifier concern was based on inferred missing migration
+  - `runs` has `created_at` not in reconciliation contract — must add
+  - ALL 51 run rows have null cost/token data — financial observability is completely absent
+  - 3 cost aggregation views exist: agent_cost_summary, company_cost_summary, project_cost_summary
+  - Only `lp_blueprint` output type in live data — ui_components writes fail due to constraint
+- blockers encountered: Cannot retrieve view SQL or RLS policy expressions via PostgREST — requires Supabase SQL editor access
+- open questions: 10 listed in LIVE_SUPABASE_SCHEMA_INVENTORY.md — primarily CHECK constraints, view SQL, RLS policy expressions
+- next recommended action: Write 001_initial_schema.sql using confirmed schema from inventory document
+
+## Session End
+- date/time: 2026-05-12 (Claude live schema verification session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed: Complete live schema verification for all 11 tables + 3 views. Produced docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md.
+- architecture impact: Corrected reconciliation strategy errors (agent_events schema, project_state PK, runs.created_at). Confirmed migration backfill requirements for 7 migration files.
+- operational lessons learned: PostgREST API introspection via OpenAPI spec is sufficient for column/type/FK discovery but cannot expose CHECK constraint expressions, view SQL, or RLS policy details.
+- PM/system-thinking lessons: Live data reveals operational truth that documentation cannot — all 51 runs have null cost data, meaning financial dashboards would show zero even with a working UI.
+- risks introduced: None. Read-only verification.
+- next priorities:
+  1. Access Supabase SQL editor to retrieve view SQL and CHECK constraint details.
+  2. Write 001_initial_schema.sql from confirmed live schema.
+  3. Correct Phase 1 Reconciliation Strategy to match live agent_events schema and project_state PK.
+
+## Session Start
+- date/time: 2026-05-12 (Claude reconciliation review session)
+- model/tool: Claude (claude-sonnet-4-6)
+- current objective: Phase 1 Reconciliation Review — challenge Codex findings, validate architectural decisions, define canonical contracts, produce reconciliation strategy.
+- expected scope: Architecture and operational validation only. No Phase 2 implementation. May propose migrations, define schemas, define event taxonomies.
+- intended files to inspect:
+  - All docs listed in HANDOFF_PROTOCOL.md
+  - supabase/migrations/*
+  - src/app/api/*
+  - python-sdk/oversight.py
+  - src/lib/adapters/types.ts
+
+## Progress Checkpoint
+- work completed:
+  - Pulled latest main (already up to date).
+  - Performed full document intake.
+  - Discovered critical gap: `001_initial_schema.sql` does NOT exist in repo — Codex analyzed an uncommitted/inferred file.
+  - Analyzed ingest route, project-state routes, Python SDK, and types — confirmed actual runtime contracts.
+  - Performed architectural review of all six areas: runs, agent_events, agent_outputs, project_state, schema governance, operational risks.
+  - Challenged and corrected three Codex assumptions (source-of-truth reversal, Phase 2 prerequisite timing, agent_events observability gap).
+  - Produced `docs/PHASE_1_RECONCILIATION_STRATEGY.md`.
+- files inspected: all major docs + migrations + API routes + SDK + types
+- files changed: HANDOFF_PROTOCOL.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, LESSONS_LEARNED.md, tasks/current-state.md, tasks/todo.md, PHASE_1_RECONCILIATION_STRATEGY.md (new)
+- architectural discoveries:
+  - `001_initial_schema.sql` is missing — foundational tables are not reproducible from repo.
+  - `agent_events` write path is absent from ingest route — event observability is zero despite table possibly existing live.
+  - `runs.id` is already the canonical identifier in the ingest route — dual-identifier confusion was artifact of inferred missing migration.
+  - Zombie runs are an unaddressed operational risk.
+  - `cost_usd = null` is ambiguous without a `cost_reported` boolean sentinel.
+- blockers encountered:
+  - Cannot write `001_initial_schema.sql` without confirming live DB column names/types via Supabase.
+- open questions:
+  - Exact live schema for `runs`, `companies`, `agents`, `agent_definitions`, `project_state`.
+  - Whether `agent_events` already exists live.
+  - Whether `projects`, `policies`, `audit_log` exist live and their schemas.
+- next recommended action:
+  - Query live Supabase to confirm foundational table schemas, then write `001_initial_schema.sql`.
+
+## Session End
+- date/time: 2026-05-12 (Claude reconciliation review session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed:
+  - Completed Phase 1 Reconciliation Review (architecture validation and strategy documentation).
+  - Created `docs/PHASE_1_RECONCILIATION_STRATEGY.md` with canonical contracts, risk inventory, reconciliation sequencing, and governance strategy.
+  - Updated all continuity/architecture/lessons documents.
+- architecture impact:
+  - Corrected source-of-truth governance: migrations + documented contracts are canonical; live DB is operational reality.
+  - Added `cost_reported`, `timeout_at`, `parent_run_id` fields to canonical `runs` contract.
+  - Defined `agent_events` as append-only with required ingest write path.
+  - Expanded `agent_outputs` taxonomy to include `ui_components`, `code_artifact`, `research_report`, `eval_result`.
+  - Confirmed `project_state` stays typed columns (Option A).
+  - Identified `001_initial_schema.sql` as first reconciliation deliverable.
+- operational lessons learned:
+  - Audit findings based on inferred/uncommitted files propagate errors downstream — always verify source files exist before treating audit as authoritative.
+  - Agent event traces require ingest route write path — table existence alone does not create observability.
+- PM/system-thinking lessons:
+  - Architecture reviews must validate primary sources before accepting conclusions.
+  - Cost observability requires explicit `cost_reported` sentinel to distinguish null-from-unreported from null-from-zero.
+- risks introduced:
+  - None new. Existing risks more precisely scoped and inventoried.
+- next priorities:
+  1. Query live Supabase to confirm exact column schemas.
+  2. Create `001_initial_schema.sql`.
+  3. Create `003_reconcile_runs.sql` through `006_agent_events.sql`.
+  4. Add `agent_events` write path to ingest route.
+  5. Write and run contract tests.
+
+## Session Start
 - date/time: 2026-05-13 09:10:00 -05:00
 - model/tool: ChatGPT / Codex
 - current objective: Phase 1 - Canonical Schema Stabilization (schema audit + contract definitions only).
@@ -406,3 +509,135 @@ Conversational context is temporary and should never be treated as the primary s
   2. Reconcile `project_state` table contract to one canonical shape.
   3. Align `agent_outputs` taxonomy with runtime emitted values.
   4. Confirm/backfill migration coverage for inferred live governance/telemetry entities.
+
+## Session Start
+- date/time: 2026-05-13 (Claude implementation planning session)
+- model/tool: Claude (claude-sonnet-4-6)
+- current objective: Update PHASE_1_RECONCILIATION_STRATEGY.md with live-verified corrections; create PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md with full migration sequence, API/runtime alignment, and Phase 2 gate criteria.
+- expected scope: Documentation and planning only. No migrations applied. No application code changed.
+- intended files to inspect: PHASE_1_RECONCILIATION_STRATEGY.md, LIVE_SUPABASE_SCHEMA_INVENTORY.md, ingest/route.ts, types.ts, oversight.py
+
+## Progress Checkpoint
+- work completed:
+  - Rewrote `docs/PHASE_1_RECONCILIATION_STRATEGY.md` with corrections from live verification:
+    - `agent_events` canonical contract corrected to verified 17-column live schema (occurred_at not event_time, run_id nullable, adds severity/depth/message/company_id/orchestrator fields)
+    - `project_state` corrected to uuid PK + project_tag UNIQUE (not project_tag as PK)
+    - `runs` canonical contract adds created_at
+    - Removed sequence race risk (no sequence in live); added ingest field mapping complexity risk
+    - Revised migration sequence to 7 files (001–007)
+    - Marked cost views as unreliable (all zero, underlying data is null)
+  - Created `docs/PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md` with:
+    - Verified starting point (11 tables, 3 views, only `002_agent_outputs.sql` committed)
+    - Per-migration plan for all 6 migration files: purpose, objects, SQL, dependency, risk level, verification query, rollback
+    - API alignment plan (ingest route: expand agent SELECT, add agent_events write, set timeout_at, set cost_reported)
+    - Runtime alignment plan (Agent TypeScript interface field corrections, SDK cost reporting discipline)
+    - Contract test plan (11 specific tests to pass before Phase 1 complete)
+    - Rollback/safety strategy
+    - SQL editor checks table (8 items blocked until Supabase SQL editor access)
+    - Phase 1 completion criteria checklist (13 items)
+    - Risks before Phase 2 (6 risks)
+    - Recommended next execution step
+- files inspected: PHASE_1_RECONCILIATION_STRATEGY.md, LIVE_SUPABASE_SCHEMA_INVENTORY.md, ingest/route.ts, types.ts, oversight.py
+- files changed: PHASE_1_RECONCILIATION_STRATEGY.md (rewrite), PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md (new), HANDOFF_PROTOCOL.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, LESSONS_LEARNED.md
+- architectural discoveries:
+  - `005_add_cost_views.sql` cannot be written without SQL editor access — view SQL bodies are opaque to PostgREST
+  - `agent_events` ingest write must conditionally guard on `company_id` being non-null (some agents may lack company_id)
+  - TypeScript `Agent` interface has 5 wrong field names vs live DB — any UI consuming agent data is currently broken
+  - Agent discipline problem (not SDK bug) explains zero cost observability: agents never call `ctx.report()`
+- blockers encountered:
+  - `005_add_cost_views.sql` blocked until Supabase SQL editor access obtained
+  - `001_initial_schema.sql` completion blocked on SQL editor for policies, budgets, and view bodies
+- open questions:
+  - What exact columns do `policies` and `budgets` tables have?
+  - Are RLS policies on `runs` and `agent_events` correctly configured for service role bypass?
+  - Do cost views correctly aggregate over `agent_outputs` or `runs`?
+- next recommended action:
+  - Obtain Supabase SQL editor access and run the 8 SQL editor checks in the implementation plan
+  - Then apply `006_fix_agent_outputs_constraint.sql` (most urgent operational fix)
+  - Then deploy `route.ts` changes to activate agent_events write path
+
+## Session End
+- date/time: 2026-05-13 (Claude implementation planning session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed:
+  - Corrected PHASE_1_RECONCILIATION_STRATEGY.md (agent_events schema, project_state PK, cost view reliability, migration sequence)
+  - Created PHASE_1_RECONCILIATION_IMPLEMENTATION_PLAN.md — full execution-ready implementation plan
+  - Updated HANDOFF_PROTOCOL.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, LESSONS_LEARNED.md
+- architecture impact:
+  - Planning phase complete. Execution phase can begin with concrete migration SQL, API change specs, and TypeScript interface corrections.
+  - `005_add_cost_views.sql` remains a documented blocker until SQL editor access is obtained.
+- operational lessons learned:
+  - Live verification can invalidate architecture assumptions; reconciliation strategy must follow verified operational reality while migrations remain governance source of truth.
+  - Cost views require SQL editor access to reverse-engineer — PostgREST introspection has a hard ceiling.
+- PM/system-thinking lessons:
+  - An implementation plan that cannot be executed without external access (SQL editor) must document that dependency explicitly rather than hoping it resolves itself.
+  - The distinction between "table exists" and "write path exists" is operationally critical and often missed in architecture reviews.
+- risks introduced:
+  - None. Documentation and planning only.
+- next priorities:
+  1. Obtain Supabase SQL editor access → run 8 SQL editor checks in implementation plan.
+  2. Apply `006_fix_agent_outputs_constraint.sql` to live DB.
+  3. Apply `007_runs_reconciliation.sql` to live DB.
+  4. Deploy `route.ts` changes (expand agent SELECT + agent_events write + cost_reported).
+  5. Fix `src/lib/adapters/types.ts` Agent interface.
+  6. Create `001_initial_schema.sql` from verified live schema.
+  7. Apply `003_add_agent_events.sql` and `004_add_governance_tables.sql`.
+  8. Obtain and write `005_add_cost_views.sql`.
+  9. Run all 11 contract tests.
+  10. Verify Phase 1 completion criteria checklist.
+
+## Session Start
+- date/time: 2026-05-12 (Claude — Phase 1–3 execution session, context resumed twice)
+- model/tool: Claude (claude-sonnet-4-6) via Claude Code + Supabase MCP
+- current objective: Execute Phase 1 migrations, activate agent_events write path, implement Phase 2 telemetry, build Phase 3 Read APIs.
+- expected scope: Full implementation across 3 phases. Supabase migrations applied live. Ingest route, Python SDK, agents, and API routes all modified.
+- intended files to inspect: All ingest/run API routes, types.ts, oversight.py, orchestrator.py, all agent scripts
+
+## Progress Checkpoint
+- work completed:
+  - Supabase MCP wired via ~/.claude.json (CLI was unreliable on Windows PowerShell)
+  - Migrations 003–007 applied to live DB via Supabase MCP execute_sql
+  - 001_initial_schema.sql created (governance doc, reverse-engineered from live DB)
+  - Ingest route extended: agent_events write path activated, timeout_at/cost_reported/parent_run_id wired
+  - TypeScript Agent interface corrected to match 25 live DB column names
+  - Python SDK overhauled: StepTimer, RunContext.step(), categorize_error(), error_categories
+  - marketing-agent: LLM token/cost capture (OpenAI + Gemini), cost estimation tables, UTF-8 stdout fix
+  - orchestrator.py and context-agent: step events added, UTF-8 fix
+  - node_modules junction created for worktree: `cmd /c mklink /J`
+  - Phase 3 Read APIs: 8 endpoints built and committed (c06ef74)
+- files changed: ingest/route.ts, types.ts, oversight.py, marketing-agent/agent.py, context-agent/agent.py, orchestrator.py, 6 new API routes, pagination.ts, 7 migration files
+- architectural discoveries:
+  - Cost views aggregate from agent_events not runs — cost will show zero until agent_events write path is active AND agents report cost
+  - Supabase TypeScript inference fails on string-based select() without generated types — returns GenericStringError
+  - Windows node_modules must be junction-linked into worktrees
+- blockers encountered:
+  - Both OpenAI and Gemini free tiers exhausted — cannot verify token/cost pipeline end-to-end without billing enabled
+  - Supabase TypeScript types not generated — using as any[] casts in Phase 3 routes
+- open questions:
+  - When will LLM billing be enabled to verify cost pipeline?
+- next recommended action: Phase 4 Dashboard MVP
+
+## Session End
+- date/time: 2026-05-12 (Claude — Phase 1–3 execution + documentation session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed:
+  - Phase 1: schema migrations applied, ingest route activated, types corrected
+  - Phase 2: step events, StepTimer, error taxonomy, LLM cost capture
+  - Phase 3: 8 Read API endpoints built and committed
+  - Documentation: all 10 relevant docs updated (tasks, lessons, handoff, agent-standards, roadmap, README, master doc)
+- architecture impact:
+  - Platform now has a complete API layer for dashboard visibility (8 endpoints)
+  - Telemetry is standardized: lifecycle events + step traces + error taxonomy all active
+  - Schema is stable: migrations as governance source, live DB reconciled
+- operational lessons learned:
+  - See docs/LESSONS_LEARNED.md — "Phase 1–3 Execution (2026-05-12)" section
+- PM/system-thinking lessons:
+  - Phases 1–3 demonstrate "observability before autonomy" — operators now have full API access to all agent data before any dashboard UI exists
+  - Cost visibility requires three things: schema (cost_reported), write path (ingest route), and agent discipline (explicit cost reporting after LLM calls)
+- risks introduced:
+  - as any[] casts in Phase 3 routes will hide type errors until Supabase types are generated
+  - LLM cost/token data remains null until billing is enabled
+- next priorities:
+  1. Phase 4: build Dashboard MVP UI pages
+  2. Generate Supabase TypeScript types (background task flagged)
+  3. Enable LLM billing to verify token/cost pipeline

@@ -21,8 +21,8 @@ class ContextAgent:
     def __init__(self, agent_id: str):
         self.agent_id = agent_id
         self.client = OversightClient(
-            url=os.environ.get("OVERSIGHT_URL", "http://localhost:3000/api/agents/ingest"),
-            secret=os.environ.get("OVERSIGHT_SECRET")
+            url=os.environ.get("OVERSIGHT_URL", "http://localhost:3000"),  # SDK appends /api/ingest
+            secret=os.environ.get("OVERSIGHT_SECRET") or os.environ.get("INGEST_SECRET")
         )
         
         # Initialize Google Drive Service
@@ -142,55 +142,63 @@ class ContextAgent:
         
         with self.client.run(agent_id=self.agent_id, metadata={"query": query, "company_id": company_id}) as run:
             try:
-                run.report(metadata={"step": "searching_documents", "folder_id": target_folder, "recursive": recursive})
-                
-                if recursive:
-                    files = self.search_docs(query, target_folder)
-                else:
-                    # Supported MimeTypes for non-recursive list
-                    mimetypes = [
-                        "application/vnd.google-apps.document",
-                        "application/pdf",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    ]
-                    mime_q = "(" + " or ".join([f"mimeType='{m}'" for m in mimetypes]) + ")"
-                    q = f"'{target_folder}' in parents and {mime_q}"
-                    res = self.drive_service.files().list(
-                        q=q, fields="files(id, name, mimeType)", supportsAllDrives=True, includeItemsFromAllDrives=True, corpora="allDrives"
-                    ).execute()
-                    files = res.get('files', [])
-                
-                # --- Surgical Filter (Optional via Env) ---
+                # Step: search Drive for relevant documents
+                with run.timer() as t:
+                    if recursive:
+                        files = self.search_docs(query, target_folder)
+                    else:
+                        mimetypes = [
+                            "application/vnd.google-apps.document",
+                            "application/pdf",
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        ]
+                        mime_q = "(" + " or ".join([f"mimeType='{m}'" for m in mimetypes]) + ")"
+                        q = f"'{target_folder}' in parents and {mime_q}"
+                        res = self.drive_service.files().list(
+                            q=q, fields="files(id, name, mimeType)", supportsAllDrives=True, includeItemsFromAllDrives=True, corpora="allDrives"
+                        ).execute()
+                        files = res.get('files', [])
+
+                # Surgical filter (optional via env)
                 include_list_raw = os.environ.get("CONTEXT_INCLUDE_LIST")
                 if include_list_raw:
                     allowed_files = [name.strip() for name in include_list_raw.split(",")]
                     original_count = len(files)
                     files = [f for f in files if f['name'] in allowed_files]
                     print(f"ContextAgent: Surgical filter applied. Kept {len(files)} of {original_count} files.")
-                
+
                 print(f"ContextAgent found {len(files)} files in folder {target_folder}.")
                 for f in files:
                     print(f" - {f['name']} ({f['mimeType']})")
 
-                run.report(metadata={"step": "reading_documents", "count": len(files)})
-                
-                # Truncation limit (Optional via Env)
+                run.step("docs_discovered",
+                    message=f"Found {len(files)} documents in Drive folder",
+                    duration_ms=t.ms,
+                    payload={"folder_id": target_folder, "count": len(files),
+                             "docs": [f["name"] for f in files]})
+
+                # Step: read and extract document content
                 max_chars = os.environ.get("CONTEXT_MAX_CHARS_PER_FILE")
                 if max_chars:
                     max_chars = int(max_chars)
 
-                results = []
-                for f in files: 
-                    content = self.read_doc(f["id"], f["mimeType"])
-                    if content:
-                        if max_chars:
-                            content = content[:max_chars]
-                        results.append({"name": f["name"], "content": content})
-                
+                with run.timer() as t:
+                    results = []
+                    for f in files:
+                        content = self.read_doc(f["id"], f["mimeType"])
+                        if content:
+                            if max_chars:
+                                content = content[:max_chars]
+                            results.append({"name": f["name"], "content": content})
+
+                total_chars = sum(len(r["content"]) for r in results)
+                run.step("docs_extracted",
+                    message=f"Extracted text from {len(results)} documents ({total_chars:,} chars)",
+                    duration_ms=t.ms,
+                    payload={"docs_processed": len(results), "total_chars": total_chars})
+
                 context = "\n\n".join([f"Source: {r['name']}\n{r['content']}" for r in results])
-                
-                run.report(metadata={"docs_processed": len(results)})
-                
+
                 return {
                     "context": context,
                     "docs": [f["name"] for f in files],
@@ -199,7 +207,7 @@ class ContextAgent:
                 }
             except Exception as e:
                 print(f"Error in ContextAgent: {e}")
-                run.report(metadata={"error": str(e)})
+                run.step("error", severity="error", message=str(e))
                 return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":

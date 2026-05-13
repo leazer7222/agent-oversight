@@ -18,3 +18,14 @@
 [2026-05-13] | `runs` semantics blurred between summary row and event trace | Keep `runs` as lifecycle summary and use append-only `agent_events` for trace detail.
 [2026-05-13] | Runtime emitted `agent_outputs.output_type=ui_components` not allowed by migration constraints | Enforce output taxonomy governance: runtime values must be codified in DB constraints before use.
 [2026-05-13] | Schema source-of-truth ambiguity slowed confidence in Phase sequencing | Require dual completion for schema changes: live apply + migration/doc reconciliation.
+[2026-05-12] | Codex analyzed 001_initial_schema.sql but the file was never committed | Always verify source files exist before treating audit findings as authoritative.
+[2026-05-12] | agent_events receives zero writes despite possibly existing live — ingest route never writes to it | Table existence is not observability; write path must be explicitly implemented.
+[2026-05-12] | null cost_usd is indistinguishable from unreported vs genuinely zero | Add cost_reported BOOLEAN to runs as sentinel field.
+[2026-05-12] | runs stuck in started status are zombie runs with no cleanup mechanism | Add timeout_at TIMESTAMPTZ to runs at insert time; build cleanup job in Phase 5.
+[2026-05-12] | migrations + documented contracts are canonical, not live DB | Live DB is operational reality; reconciliation closes the gap toward canonical intent.
+[2026-05-12] | Supabase MCP `claude mcp add` fails in PowerShell with -y flag | Edit ~/.claude.json directly to add MCP server entries; the CLI is unreliable on Windows PowerShell
+[2026-05-12] | node_modules don't exist in git worktrees by default | Use `cmd /c mklink /J node_modules ..\node_modules` to create a directory junction pointing to the main project's node_modules
+[2026-05-12] | Supabase .select() with string arg returns GenericStringError type in TypeScript without generated types | Cast query result data as `any[]` to avoid type errors; long-term fix is `mcp__supabase__generate_typescript_types`
+[2026-05-12] | cost_reported BOOLEAN sentinel required on runs | null cost_usd without sentinel is ambiguous; agents must call ctx.step() or report() with cost after every LLM call
+[2026-05-12] | agent_events write is non-fatal; guard on company_id | Wrap agent_events INSERT in try/catch; skip if company_id is null — some agents may not have company association
+[2026-05-12] | Python SDK error categorization uses bracket prefix | Errors are stored as `[category] message`; /api/errors extracts category via regex `^\[([^\]]+)\]`

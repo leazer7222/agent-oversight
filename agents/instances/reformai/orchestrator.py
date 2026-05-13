@@ -4,6 +4,10 @@ import json
 import uuid
 from datetime import datetime
 
+# Fix Windows cp1252 stdout encoding (emojis crash otherwise)
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 # Add project root to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../python-sdk")))
@@ -113,15 +117,41 @@ class Orchestrator:
         marketing_agent = MarketingAgent(marketing_agent_id)
         
         if self.oversight:
-            # We track the generation run
             with self.oversight.run(agent_id=marketing_agent_id, metadata={"goal": goal}) as run:
-                marketing_result = marketing_agent.run(goal=goal, context=context_data)
-                
+
+                # Step: context ready
+                run.step("context_ready",
+                    message=f"Context retrieved from {len(context_result.get('docs', []))} docs",
+                    payload={"doc_count": len(context_result.get("docs", [])), "chars": len(raw_text_context)})
+
+                # Step: LLM synthesis
+                with run.timer() as t:
+                    marketing_result = marketing_agent.run(goal=goal, context=context_data)
+                model_name = marketing_result.get("model") or "unknown"
+                run.step("llm_synthesis",
+                    message=f"Marketing strategy generated via {model_name}",
+                    duration_ms=t.ms,
+                    payload={"model": model_name, "status": marketing_result.get("status")})
+
+                # Report token/cost usage captured from the LLM response
+                run.report(
+                    tokens_in=marketing_result.get("tokens_in"),
+                    tokens_out=marketing_result.get("tokens_out"),
+                    cost_usd=marketing_result.get("cost_usd"),
+                    metadata={"model": marketing_result.get("model")},
+                )
+
                 # Step 4: Local Persistence & DB
                 if marketing_result.get("status") == "success":
-                    self._handle_output(marketing_result.get("full_output"), marketing_agent_id, run.run_id)
+                    with run.timer() as t:
+                        self._handle_output(marketing_result.get("full_output"), marketing_agent_id, run.run_id)
+                    run.step("output_persisted",
+                        message="Output saved to local filesystem and Supabase",
+                        duration_ms=t.ms)
                 else:
-                    run.report(metadata={"error": "Marketing generation failed."})
+                    run.step("llm_synthesis", severity="error",
+                        message="Marketing generation failed",
+                        payload={"error": marketing_result.get("message", "unknown")})
         else:
             marketing_result = marketing_agent.run(goal=goal, context=context_data)
             if marketing_result.get("status") == "success":

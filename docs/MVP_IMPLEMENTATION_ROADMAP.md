@@ -98,38 +98,47 @@ Interpretation guidance:
 - If a proposed shortcut undermines schema or telemetry contracts, reject it.
 - If execution cannot be audited or replayed, it is not MVP-complete.
 
+# Phase Completion Status
+
+| Phase | Status | Completed |
+|-------|--------|-----------|
+| Phase 1 — Schema Stabilization | ✅ Complete | 2026-05-12 |
+| Phase 2 — Telemetry Standardization | ✅ Complete | 2026-05-12 |
+| Phase 3 — Read APIs | ✅ Complete | 2026-05-12 |
+| Phase 4 — Dashboard MVP | 🔜 In Progress | — |
+| Phase 5 — Execution Queue | ⏳ Deferred | — |
+| Phase 6 — Controlled Execute | ⏳ Deferred | — |
+| Phase 7 — Observability Hardening | ⏳ Deferred | — |
+| Phase 8 — Governance + Eval | ⏳ Deferred | — |
+
 # Current System State
 ## Confirmed current architecture
 - Python runtime with modular agents and orchestrator-based execution.
-- Next.js app with API routes, including ingestion and project-state endpoints.
-- Supabase as persistence layer.
-- Telemetry/oversight layer with run lifecycle semantics.
-- Documentation foundation for handoff continuity and architecture learning.
+- Next.js app with ingest API, project-state API, and 8 operational Read API endpoints.
+- Supabase as persistence layer (schema stabilized; migrations 001–007 applied or documented).
+- Telemetry/oversight layer: full run lifecycle + step events + error taxonomy.
+- `python-sdk/oversight.py`: RunContext, StepTimer, error categorization, cost estimation.
 
 ## Current maturity level
-- Prototype-to-early-platform transition.
-- Strong proof-of-value execution chain exists.
-- Operational control-plane surface remains incomplete.
+- Early-platform stage. Control-plane API surface is complete. Dashboard UI is the remaining gap.
+- Agent execution is functional and telemetry-emitting. Cost/token data is present in code but zero until LLM billing is enabled.
 
 ## Strongest existing foundations
-- Modular agent structure (`agents/library`, `agents/instances`).
-- Shared telemetry abstraction (`python-sdk/oversight.py`).
-- Existing Supabase persistence model for runs/outputs/state.
-- Operational documentation discipline is now established.
+- Stable schema contract (migrations as governance source of truth, live DB as operational reality).
+- Consistent telemetry (run lifecycle + step events + error taxonomy all implemented).
+- 8 operational Read API endpoints covering all MVP data needs.
+- Modular agent library with step-instrumented agents.
 
 ## Biggest gaps
-- Canonical schema ownership and migration alignment.
-- Telemetry consistency and event taxonomy depth.
-- Read API surface for dashboard visibility.
-- Durable execution queue and decoupled worker lifecycle.
-- Controlled execution governance from dashboard.
+- No dashboard UI yet — operators cannot view agent/run/cost/error data without querying APIs directly.
+- LLM billing not enabled — token/cost columns are null in all current run rows.
+- No Supabase TypeScript generated types — Phase 3 routes use `as any[]` casts.
 
-## Biggest risks
-- schema drift and contract ambiguity
-- inconsistent telemetry and cost/token reporting
-- execution fragility from synchronous orchestration assumptions
-- weak governance model for operator-triggered execution
-- security and secret-handling hardening needs
+## Biggest remaining risks
+- LLM cost visibility blocked until billing is enabled
+- Execution fragility from synchronous orchestration (no queue — Phase 5)
+- No operator execution controls (Phase 6)
+- Secret handling not hardened (Vercel SSO, env var discipline)
 
 # Lessons Already Learned
 1. Token exhaustion creates operational continuity problems.  

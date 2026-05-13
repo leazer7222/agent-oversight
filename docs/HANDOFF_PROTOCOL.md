@@ -340,6 +340,73 @@ Conversational context is temporary and should never be treated as the primary s
   2. Begin Phase 1 schema reconciliation using clarified document ownership.
 
 ## Session Start
+- date/time: 2026-05-12 (Claude reconciliation review session)
+- model/tool: Claude (claude-sonnet-4-6)
+- current objective: Phase 1 Reconciliation Review — challenge Codex findings, validate architectural decisions, define canonical contracts, produce reconciliation strategy.
+- expected scope: Architecture and operational validation only. No Phase 2 implementation. May propose migrations, define schemas, define event taxonomies.
+- intended files to inspect:
+  - All docs listed in HANDOFF_PROTOCOL.md
+  - supabase/migrations/*
+  - src/app/api/*
+  - python-sdk/oversight.py
+  - src/lib/adapters/types.ts
+
+## Progress Checkpoint
+- work completed:
+  - Pulled latest main (already up to date).
+  - Performed full document intake.
+  - Discovered critical gap: `001_initial_schema.sql` does NOT exist in repo — Codex analyzed an uncommitted/inferred file.
+  - Analyzed ingest route, project-state routes, Python SDK, and types — confirmed actual runtime contracts.
+  - Performed architectural review of all six areas: runs, agent_events, agent_outputs, project_state, schema governance, operational risks.
+  - Challenged and corrected three Codex assumptions (source-of-truth reversal, Phase 2 prerequisite timing, agent_events observability gap).
+  - Produced `docs/PHASE_1_RECONCILIATION_STRATEGY.md`.
+- files inspected: all major docs + migrations + API routes + SDK + types
+- files changed: HANDOFF_PROTOCOL.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, LESSONS_LEARNED.md, tasks/current-state.md, tasks/todo.md, PHASE_1_RECONCILIATION_STRATEGY.md (new)
+- architectural discoveries:
+  - `001_initial_schema.sql` is missing — foundational tables are not reproducible from repo.
+  - `agent_events` write path is absent from ingest route — event observability is zero despite table possibly existing live.
+  - `runs.id` is already the canonical identifier in the ingest route — dual-identifier confusion was artifact of inferred missing migration.
+  - Zombie runs are an unaddressed operational risk.
+  - `cost_usd = null` is ambiguous without a `cost_reported` boolean sentinel.
+- blockers encountered:
+  - Cannot write `001_initial_schema.sql` without confirming live DB column names/types via Supabase.
+- open questions:
+  - Exact live schema for `runs`, `companies`, `agents`, `agent_definitions`, `project_state`.
+  - Whether `agent_events` already exists live.
+  - Whether `projects`, `policies`, `audit_log` exist live and their schemas.
+- next recommended action:
+  - Query live Supabase to confirm foundational table schemas, then write `001_initial_schema.sql`.
+
+## Session End
+- date/time: 2026-05-12 (Claude reconciliation review session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed:
+  - Completed Phase 1 Reconciliation Review (architecture validation and strategy documentation).
+  - Created `docs/PHASE_1_RECONCILIATION_STRATEGY.md` with canonical contracts, risk inventory, reconciliation sequencing, and governance strategy.
+  - Updated all continuity/architecture/lessons documents.
+- architecture impact:
+  - Corrected source-of-truth governance: migrations + documented contracts are canonical; live DB is operational reality.
+  - Added `cost_reported`, `timeout_at`, `parent_run_id` fields to canonical `runs` contract.
+  - Defined `agent_events` as append-only with required ingest write path.
+  - Expanded `agent_outputs` taxonomy to include `ui_components`, `code_artifact`, `research_report`, `eval_result`.
+  - Confirmed `project_state` stays typed columns (Option A).
+  - Identified `001_initial_schema.sql` as first reconciliation deliverable.
+- operational lessons learned:
+  - Audit findings based on inferred/uncommitted files propagate errors downstream — always verify source files exist before treating audit as authoritative.
+  - Agent event traces require ingest route write path — table existence alone does not create observability.
+- PM/system-thinking lessons:
+  - Architecture reviews must validate primary sources before accepting conclusions.
+  - Cost observability requires explicit `cost_reported` sentinel to distinguish null-from-unreported from null-from-zero.
+- risks introduced:
+  - None new. Existing risks more precisely scoped and inventoried.
+- next priorities:
+  1. Query live Supabase to confirm exact column schemas.
+  2. Create `001_initial_schema.sql`.
+  3. Create `003_reconcile_runs.sql` through `006_agent_events.sql`.
+  4. Add `agent_events` write path to ingest route.
+  5. Write and run contract tests.
+
+## Session Start
 - date/time: 2026-05-13 09:10:00 -05:00
 - model/tool: ChatGPT / Codex
 - current objective: Phase 1 - Canonical Schema Stabilization (schema audit + contract definitions only).

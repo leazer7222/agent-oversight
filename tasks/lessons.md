@@ -18,3 +18,8 @@
 [2026-05-13] | `runs` semantics blurred between summary row and event trace | Keep `runs` as lifecycle summary and use append-only `agent_events` for trace detail.
 [2026-05-13] | Runtime emitted `agent_outputs.output_type=ui_components` not allowed by migration constraints | Enforce output taxonomy governance: runtime values must be codified in DB constraints before use.
 [2026-05-13] | Schema source-of-truth ambiguity slowed confidence in Phase sequencing | Require dual completion for schema changes: live apply + migration/doc reconciliation.
+[2026-05-12] | Codex analyzed 001_initial_schema.sql but the file was never committed | Always verify source files exist before treating audit findings as authoritative.
+[2026-05-12] | agent_events receives zero writes despite possibly existing live — ingest route never writes to it | Table existence is not observability; write path must be explicitly implemented.
+[2026-05-12] | null cost_usd is indistinguishable from unreported vs genuinely zero | Add cost_reported BOOLEAN to runs as sentinel field.
+[2026-05-12] | runs stuck in started status are zombie runs with no cleanup mechanism | Add timeout_at TIMESTAMPTZ to runs at insert time; build cleanup job in Phase 5.
+[2026-05-12] | migrations + documented contracts are canonical, not live DB | Live DB is operational reality; reconciliation closes the gap toward canonical intent.

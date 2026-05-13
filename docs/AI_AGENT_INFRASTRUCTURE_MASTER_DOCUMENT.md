@@ -634,7 +634,39 @@ PM/system-thinking implications:
 Interview-story opportunities:
 - Contract-first stabilization under active schema drift.
 - Converting architecture ambiguity into explicit operational gating criteria before feature scaling.
- 
+
+## Milestone Entry: Phase 1 Reconciliation Review
+Date: 2026-05-12
+
+`Confirmed:`
+- Performed independent architectural validation of Codex's Phase 1 schema stabilization findings.
+- Discovered critical gap: `001_initial_schema.sql` does not exist in the repo. The foundational tables (`companies`, `agents`, `agent_definitions`, `runs`, `project_state`) are completely undocumented in migrations. Codex referenced reading this file but it was never committed.
+- Confirmed via code reading: `runs.id` is already the canonical identifier in the live ingest route. The dual-identifier confusion in Codex's analysis was an artifact of an inferred missing migration.
+- Confirmed via code reading: the ingest route never writes to `agent_events`, despite the table potentially existing live. Run-level event traceability is zero in the current runtime.
+- Defined canonical contracts for `runs`, `agent_events`, `agent_outputs`, and `project_state`.
+- Produced `docs/PHASE_1_RECONCILIATION_STRATEGY.md`.
+
+Architecture decisions:
+1. **Source-of-truth correction**: Migrations + documented contracts are canonical. Live DB is operational reality. Reconciliation closes the gap toward canonical intent.
+2. **`runs` canonical contract additions**: `cost_reported BOOLEAN` for financial observability; `timeout_at TIMESTAMPTZ` for zombie detection; `parent_run_id` for retry lineage.
+3. **`agent_events` write path is required**: Ingest route must write event rows. Append-only via RLS policy.
+4. **`project_state` stays typed columns**: Option A confirmed.
+5. **`001_initial_schema.sql` is the first reconciliation deliverable.**
+
+Operational lessons:
+- Architecture audits based on inferred or uncommitted files propagate errors downstream.
+- Table existence does not equal observability — write path must exist.
+- Cost observability requires explicit `cost_reported` boolean sentinel.
+
+PM/system-thinking implications:
+- Missing `001_initial_schema.sql` is a platform reproducibility risk, not just a documentation gap.
+- Treating live DB as canonical removes incentive to maintain migration discipline.
+
+Interview-story opportunities:
+- Independent validation of AI-generated analysis: found critical gap the original audit missed.
+- `cost_reported` sentinel pattern: distinguishing unreported from zero cost in observability design.
+- Append-only `agent_events` contract: event traces vs run summaries as distinct architectural primitives.
+
 # Milestone Update Template
 Use this template for every major milestone update:
 

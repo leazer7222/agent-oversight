@@ -167,6 +167,15 @@ Related documents:
 - Keep strategic reasoning in `AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`; keep this file concise and chronological.
 - Keep tactical continuity and active blockers in `HANDOFF_PROTOCOL.md`, not in standards documents.
 
+## Phase 1 Reconciliation Review (2026-05-12)
+
+- Always verify referenced files exist before treating an audit as authoritative — Codex analyzed `001_initial_schema.sql` but this file was never committed to the repo.
+- Table existence in live DB does not equal observability — `agent_events` can exist live and receive zero writes because the ingest route never inserts to it.
+- `null cost_usd` is ambiguous without a `cost_reported BOOLEAN` sentinel; treat nullable numeric fields as unreliable for dashboard aggregation unless a sentinel confirms reporting occurred.
+- Source-of-truth governance is a design decision: migrations + documented contracts are canonical (what the system *should* be); live DB is operational reality (what it *is*). Never reverse these.
+- `runs.id` is already the canonical identifier in the ingest route — no dual-identifier issue exists at the runtime level; the confusion was introduced by an inferred migration file.
+- Zombie runs (stuck in `started` forever) are a silent reliability risk; `timeout_at` field on `runs` is required to support future detection/cleanup.
+
 ## Schema Contract Stabilization (2026-05-13)
 
 - Ingest/API code can become a hidden schema contract; migrations must be reconciled immediately when API column assumptions diverge.

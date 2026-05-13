@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 const IngestSchema = z.object({
   agent_id:      z.string().uuid(),
-  event:         z.enum(['run_started', 'run_completed', 'run_failed']),
+  event:         z.enum(['run_started', 'run_completed', 'run_failed', 'run_step']),
   run_id:        z.string().uuid(),
   timestamp:     z.string().datetime().optional(),
   tokens_in:     z.number().int().nonnegative().optional(),
@@ -14,16 +14,20 @@ const IngestSchema = z.object({
   cost_usd:      z.number().nonnegative().optional(),
   error:         z.string().optional(),
   metadata:      z.record(z.string(), z.unknown()).optional(),
-  // Phase 2 fields (optional, ignored if not sent)
   parent_run_id: z.string().uuid().optional(),
+  // Phase 2 step event fields
   step_name:     z.string().optional(),
+  message:       z.string().optional(),
+  duration_ms:   z.number().int().nonnegative().optional(),
+  severity:      z.enum(['info', 'warning', 'error']).optional(),
 })
 
 // How long a run is allowed to run before it is considered a zombie
 const RUN_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
-function buildEventMessage(event: string, data: { error?: string; step_name?: string }): string {
-  if (event === 'run_started')   return data.step_name ? `Run started: ${data.step_name}` : 'Run started'
+function buildEventMessage(event: string, data: { error?: string; step_name?: string; message?: string }): string {
+  if (data.message) return data.message
+  if (event === 'run_started')   return 'Run started'
   if (event === 'run_completed') return 'Run completed successfully'
   if (event === 'run_failed')    return data.error ? `Run failed: ${data.error}` : 'Run failed'
   return event
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
   const {
     agent_id, event, run_id, timestamp,
     tokens_in, tokens_out, cost_usd, error, metadata,
-    parent_run_id, step_name,
+    parent_run_id, step_name, message, duration_ms, severity,
   } = parsed.data
 
   const supabase = createServiceRoleClient()
@@ -74,6 +78,30 @@ export async function POST(request: NextRequest) {
 
   if (agent.status !== 'active') {
     return Response.json({ error: 'Agent is not active' }, { status: 403 })
+  }
+
+  // run_step: write directly to agent_events, skip runs table entirely
+  if (event === 'run_step') {
+    if (agent.company_id) {
+      const { error: stepErr } = await supabase.from('agent_events').insert({
+        agent_id,
+        company_id:   agent.company_id,
+        project_id:   agent.project_id ?? null,
+        run_id,
+        event_type:   'run_step',
+        occurred_at:  now,
+        message:      message || step_name || 'step',
+        payload:      metadata ?? {},
+        severity:     severity ?? 'info',
+        depth:        agent.depth ?? 0,
+        duration_ms:  duration_ms ?? null,
+        tokens_in:    tokens_in  ?? null,
+        tokens_out:   tokens_out ?? null,
+        cost_usd:     cost_usd   ?? null,
+      })
+      if (stepErr) console.error('[ingest] run_step write failed:', stepErr.message)
+    }
+    return Response.json({ ok: true, run_id }, { status: 200 })
   }
 
   // Write run record
@@ -129,10 +157,11 @@ export async function POST(request: NextRequest) {
         run_id,
         event_type:   event,
         occurred_at:  now,
-        message:      buildEventMessage(event, { error, step_name }),
+        message:      buildEventMessage(event, { error, step_name, message }),
         payload:      metadata ?? {},
         severity:     event === 'run_failed' ? 'error' : 'info',
         depth:        agent.depth ?? 0,
+        duration_ms:  duration_ms ?? null,
         tokens_in:    tokens_in  ?? null,
         tokens_out:   tokens_out ?? null,
         cost_usd:     cost_usd   ?? null,

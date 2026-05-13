@@ -58,7 +58,7 @@ export interface AgentRun {
 // Ingest payload — what agents POST to /api/ingest
 export interface IngestPayload {
   agent_id:      AgentId
-  event:         'run_started' | 'run_completed' | 'run_failed'
+  event:         'run_started' | 'run_completed' | 'run_failed' | 'run_step'
   run_id:        string
   timestamp?:    string
   tokens_in?:    number
@@ -66,8 +66,11 @@ export interface IngestPayload {
   cost_usd?:     number
   error?:        string
   metadata?:     Record<string, unknown>
-  parent_run_id?: string  // set on retries to link to original run
-  step_name?:    string   // optional label shown in agent_events message
+  parent_run_id?: string              // retry chain linkage
+  step_name?:    string               // step identifier (run_step events)
+  message?:      string               // human-readable event description
+  duration_ms?:  number               // wall-clock time for this step
+  severity?:     'info' | 'warning' | 'error'
 }
 
 // Response from /api/ingest

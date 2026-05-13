@@ -11,7 +11,9 @@ Usage:
     )
 
     with client.run(agent_id="<uuid>", run_id="<uuid>") as run:
-        result = do_work()
+        with run.timer() as t:
+            result = do_work()
+        run.step("work_complete", message="Work finished", duration_ms=t.ms)
         run.report(tokens_in=100, tokens_out=200, cost_usd=0.001)
 """
 
@@ -24,6 +26,7 @@ import contextlib
 from dataclasses import dataclass, field
 from typing import Any, Dict, Generator, Optional
 
+
 try:
     import httpx as _http_lib
     _USE_HTTPX = True
@@ -32,6 +35,51 @@ except ImportError:
     import json as _json_lib
     _USE_HTTPX = False
 
+
+# ---------------------------------------------------------------------------
+# Error taxonomy — categorize exceptions before they reach the DB
+# ---------------------------------------------------------------------------
+
+ERROR_CATEGORIES = {
+    "quota_exceeded":   ["quota", "rate limit", "resource_exhausted", "insufficient_quota", "429"],
+    "auth_error":       ["unauthorized", "403", "401", "authentication", "permission denied"],
+    "network_error":    ["connection", "timeout", "network", "unreachable", "eof"],
+    "llm_error":        ["openai", "gemini", "anthropic", "model", "completion", "generate"],
+    "validation_error": ["validation", "schema", "invalid", "missing field", "required"],
+}
+
+
+def categorize_error(exc: Exception) -> str:
+    """Return a short error category string for the given exception."""
+    msg = str(exc).lower()
+    for category, keywords in ERROR_CATEGORIES.items():
+        if any(k in msg for k in keywords):
+            return category
+    return "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Timer context manager for measuring step durations
+# ---------------------------------------------------------------------------
+
+class StepTimer:
+    """Simple wall-clock timer. Use as a context manager."""
+
+    def __init__(self) -> None:
+        self._start: float = 0.0
+        self.ms: int = 0
+
+    def __enter__(self) -> "StepTimer":
+        self._start = time.monotonic()
+        return self
+
+    def __exit__(self, *_: Any) -> None:
+        self.ms = int((time.monotonic() - self._start) * 1000)
+
+
+# ---------------------------------------------------------------------------
+# Core SDK classes
+# ---------------------------------------------------------------------------
 
 class OversightError(Exception):
     pass
@@ -65,6 +113,53 @@ class RunContext:
         if metadata:
             self.metadata.update(metadata)
 
+    def step(
+        self,
+        step_name: str,
+        *,
+        message: Optional[str] = None,
+        duration_ms: Optional[int] = None,
+        payload: Optional[Dict[str, Any]] = None,
+        severity: str = "info",
+        tokens_in: Optional[int] = None,
+        tokens_out: Optional[int] = None,
+        cost_usd: Optional[float] = None,
+    ) -> None:
+        """
+        Emit a mid-run step event to agent_events.
+        Non-fatal — if the emit fails, execution continues.
+
+        Args:
+            step_name: Short identifier for this step (e.g. 'context_retrieved').
+            message:   Human-readable description. Defaults to step_name.
+            duration_ms: Wall-clock time for this step in milliseconds.
+            payload:   Arbitrary structured data for this step.
+            severity:  'info', 'warning', or 'error'.
+            tokens_in/tokens_out/cost_usd: Also accumulates into run totals.
+        """
+        # Accumulate cost data if provided at step level
+        if tokens_in is not None or tokens_out is not None or cost_usd is not None:
+            self.report(tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=cost_usd)
+
+        try:
+            self.client._post({
+                "agent_id":    self.agent_id,
+                "event":       "run_step",
+                "run_id":      self.run_id,
+                "step_name":   step_name,
+                "message":     message or step_name,
+                "duration_ms": duration_ms,
+                "severity":    severity,
+                "metadata":    payload or {},
+            })
+        except Exception:
+            # Step events are non-fatal — never block the agent's work
+            pass
+
+    def timer(self) -> StepTimer:
+        """Return a StepTimer context manager for measuring step duration."""
+        return StepTimer()
+
 
 class OversightClient:
     def __init__(
@@ -75,7 +170,12 @@ class OversightClient:
         timeout: float = 10.0,
     ) -> None:
         self.url = (url or os.environ.get("OVERSIGHT_URL", "")).rstrip("/")
-        self.secret = secret or os.environ.get("OVERSIGHT_SECRET", "")
+        self.secret = (
+            secret
+            or os.environ.get("OVERSIGHT_SECRET")
+            or os.environ.get("INGEST_SECRET")
+            or ""
+        )
         self.timeout = timeout
 
         if not self.url:
@@ -84,6 +184,9 @@ class OversightClient:
             raise OversightError("OVERSIGHT_SECRET is required (env var or constructor arg)")
 
     def _post(self, payload: Dict[str, Any]) -> None:
+        # Strip None values — ingest route ignores missing optional fields
+        payload = {k: v for k, v in payload.items() if v is not None}
+
         endpoint = f"{self.url}/api/ingest"
         headers = {
             "Content-Type": "application/json",
@@ -119,19 +222,14 @@ class OversightClient:
     ) -> None:
         payload: Dict[str, Any] = {
             "agent_id": agent_id,
-            "event": event,
-            "run_id": run_id,
+            "event":    event,
+            "run_id":   run_id,
         }
-        if tokens_in is not None:
-            payload["tokens_in"] = tokens_in
-        if tokens_out is not None:
-            payload["tokens_out"] = tokens_out
-        if cost_usd is not None:
-            payload["cost_usd"] = cost_usd
-        if error is not None:
-            payload["error"] = error
-        if metadata:
-            payload["metadata"] = metadata
+        if tokens_in  is not None: payload["tokens_in"]  = tokens_in
+        if tokens_out is not None: payload["tokens_out"] = tokens_out
+        if cost_usd   is not None: payload["cost_usd"]   = cost_usd
+        if error      is not None: payload["error"]       = error
+        if metadata:               payload["metadata"]    = metadata
 
         self._post(payload)
 
@@ -151,15 +249,16 @@ class OversightClient:
         try:
             yield ctx
         except Exception as exc:
+            error_category = categorize_error(exc)
             self.emit(
                 agent_id=agent_id,
                 event="run_failed",
                 run_id=run_id,
-                error=str(exc),
+                error=f"[{error_category}] {exc}",
                 tokens_in=ctx.tokens_in,
                 tokens_out=ctx.tokens_out,
                 cost_usd=ctx.cost_usd,
-                metadata=ctx.metadata or None,
+                metadata={**ctx.metadata, "error_category": error_category} or None,
             )
             raise
         else:

@@ -84,7 +84,7 @@ export function AgentTreeNode({ node, collapsed, onToggle, indentLevel }: Props)
           href={`/dashboard/agents/${node.id}`}
           className={cn('flex-1 min-w-0 text-sm truncate hover:text-blue-400 transition-colors', nameStyle)}
         >
-          {node.display_name ?? node.name}
+          {node.name}
         </Link>
 
         {/* Type badge */}

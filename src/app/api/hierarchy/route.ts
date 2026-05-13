@@ -5,7 +5,6 @@ export const runtime = 'nodejs'
 export interface AgentTreeNode {
   id: string
   name: string
-  display_name: string | null
   agent_type: string | null
   status: string | null
   depth: number
@@ -20,7 +19,7 @@ export interface TenantGroup {
   agents: AgentTreeNode[]
 }
 
-function buildTree(rows: any[]): TenantGroup[] {
+export function buildTenantTree(rows: any[]): TenantGroup[] {
   // Group rows by company
   const byCompany = new Map<string, any[]>()
   for (const row of rows) {
@@ -38,7 +37,6 @@ function buildTree(rows: any[]): TenantGroup[] {
       nodeMap.set(row.id, {
         id:           row.id,
         name:         row.name,
-        display_name: row.display_name ?? null,
         agent_type:   row.agent_type  ?? null,
         status:       row.status      ?? null,
         depth:        row.depth       ?? 0,
@@ -101,7 +99,7 @@ export async function GET() {
   const { data: rows, error } = await supabase
     .from('agents')
     .select(`
-      id, name, display_name,
+      id, name,
       agent_type, status,
       depth, parent_agent_id,
       company_id, model, last_run_at,
@@ -120,7 +118,7 @@ export async function GET() {
     company_name: row.companies?.name ?? null,
   }))
 
-  const tenants = buildTree(flat)
+  const tenants = buildTenantTree(flat)
 
   return Response.json({ tenants })
 }

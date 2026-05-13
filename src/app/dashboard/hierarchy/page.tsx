@@ -1,10 +1,27 @@
-import { apiFetch } from '@/lib/api/fetch'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { HierarchyView } from '@/components/dashboard/hierarchy/HierarchyView'
+import { buildTenantTree } from '@/app/api/hierarchy/route'
 import type { TenantGroup } from '@/app/api/hierarchy/route'
 
 export default async function HierarchyPage() {
-  const res = await apiFetch('/api/hierarchy')
-  const tenants: TenantGroup[] = res?.tenants ?? []
+  const supabase = createServiceRoleClient()
+  const { data: rows } = await supabase
+    .from('agents')
+    .select(`
+      id, name,
+      agent_type, status,
+      depth, parent_agent_id,
+      company_id, model, last_run_at,
+      companies ( name )
+    `)
+    .order('depth', { ascending: true })
+    .order('name',  { ascending: true })
+
+  const flat = (rows ?? []).map((row: any) => ({
+    ...row,
+    company_name: row.companies?.name ?? null,
+  }))
+  const tenants: TenantGroup[] = buildTenantTree(flat)
 
   return (
     <div className="p-6 space-y-4 max-w-4xl">

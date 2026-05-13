@@ -1,10 +1,11 @@
 /**
- * Server-side fetch helper for internal Read API calls.
- * Uses NEXT_PUBLIC_SITE_URL in production; falls back to localhost.
+ * Server-side fetch helper for internal API calls.
+ * Uses NEXT_PUBLIC_SITE_URL in production; falls back to localhost
+ * using PORT env var (set in .env.local for dev) or 3000.
  */
 const BASE =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-  'http://localhost:3000'
+  `http://localhost:${process.env.PORT ?? 3000}`
 
 export async function apiFetch<T = any>(path: string): Promise<T | null> {
   try {

@@ -167,6 +167,15 @@ Related documents:
 - Keep strategic reasoning in `AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md`; keep this file concise and chronological.
 - Keep tactical continuity and active blockers in `HANDOFF_PROTOCOL.md`, not in standards documents.
 
+## Live Schema Verification (2026-05-12)
+
+- PostgREST OpenAPI spec (`GET /rest/v1/`) is sufficient for table/column/FK discovery but cannot expose CHECK constraint values, view SQL bodies, or RLS policy expressions — use Supabase SQL editor for those.
+- `information_schema` and `pg_catalog` are not accessible via PostgREST by default; direct DB access or Supabase SQL editor required for constraint details.
+- Querying `?limit=0&select=*` returns an empty array `[]` for empty tables — column names cannot be derived from empty row responses; OpenAPI spec is the fallback for empty tables.
+- Live data reveals operational truth: all 51 run rows had null cost_usd — financial dashboards would show zero even with a working UI. Schema fields and operational discipline are separate concerns.
+- `agent_events` existing live with zero rows is categorically different from `agent_events` not existing — a write path must be added to the ingest route to activate observability.
+- When a reconciliation strategy is drafted without live DB verification, schema details can diverge significantly from reality — always verify live before writing migrations.
+
 ## Phase 1 Reconciliation Review (2026-05-12)
 
 - Always verify referenced files exist before treating an audit as authoritative — Codex analyzed `001_initial_schema.sql` but this file was never committed to the repo.

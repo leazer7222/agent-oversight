@@ -340,6 +340,42 @@ Conversational context is temporary and should never be treated as the primary s
   2. Begin Phase 1 schema reconciliation using clarified document ownership.
 
 ## Session Start
+- date/time: 2026-05-12 (Claude live schema verification session)
+- model/tool: Claude (claude-sonnet-4-6)
+- current objective: Query live Supabase to produce verified schema inventory for all tables/views. Do NOT write migrations or modify schema.
+- expected scope: Read-only verification via PostgREST API. Produce `docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md`.
+- intended files to inspect: HANDOFF_PROTOCOL.md, PHASE_1_SCHEMA_STABILIZATION_AUDIT.md, PHASE_1_RECONCILIATION_STRATEGY.md, AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md, MVP_IMPLEMENTATION_ROADMAP.md
+
+## Progress Checkpoint
+- work completed: Live schema inspection complete. Wrote two Python inspection scripts, ran both against live Supabase via service role key. OpenAPI spec retrieved, all tables queried, row data extracted from tables with data.
+- files inspected: .env.local (credentials), all required docs, inspect_schema.py output, inspect_rows.py output
+- files changed: HANDOFF_PROTOCOL.md, LESSONS_LEARNED.md, docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md (new)
+- architectural discoveries:
+  - `agent_events` exists live but is empty and has a much richer schema than the reconciliation strategy proposed (17 columns, severity, depth, message, orchestrator linkage, run_id nullable)
+  - `project_state` has a uuid PK in addition to project_tag unique — reconciliation strategy must be corrected
+  - `runs` does NOT have `event` or `run_id` columns — Codex's dual-identifier concern was based on inferred missing migration
+  - `runs` has `created_at` not in reconciliation contract — must add
+  - ALL 51 run rows have null cost/token data — financial observability is completely absent
+  - 3 cost aggregation views exist: agent_cost_summary, company_cost_summary, project_cost_summary
+  - Only `lp_blueprint` output type in live data — ui_components writes fail due to constraint
+- blockers encountered: Cannot retrieve view SQL or RLS policy expressions via PostgREST — requires Supabase SQL editor access
+- open questions: 10 listed in LIVE_SUPABASE_SCHEMA_INVENTORY.md — primarily CHECK constraints, view SQL, RLS policy expressions
+- next recommended action: Write 001_initial_schema.sql using confirmed schema from inventory document
+
+## Session End
+- date/time: 2026-05-12 (Claude live schema verification session)
+- model/tool: Claude (claude-sonnet-4-6)
+- final work completed: Complete live schema verification for all 11 tables + 3 views. Produced docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md.
+- architecture impact: Corrected reconciliation strategy errors (agent_events schema, project_state PK, runs.created_at). Confirmed migration backfill requirements for 7 migration files.
+- operational lessons learned: PostgREST API introspection via OpenAPI spec is sufficient for column/type/FK discovery but cannot expose CHECK constraint expressions, view SQL, or RLS policy details.
+- PM/system-thinking lessons: Live data reveals operational truth that documentation cannot — all 51 runs have null cost data, meaning financial dashboards would show zero even with a working UI.
+- risks introduced: None. Read-only verification.
+- next priorities:
+  1. Access Supabase SQL editor to retrieve view SQL and CHECK constraint details.
+  2. Write 001_initial_schema.sql from confirmed live schema.
+  3. Correct Phase 1 Reconciliation Strategy to match live agent_events schema and project_state PK.
+
+## Session Start
 - date/time: 2026-05-12 (Claude reconciliation review session)
 - model/tool: Claude (claude-sonnet-4-6)
 - current objective: Phase 1 Reconciliation Review — challenge Codex findings, validate architectural decisions, define canonical contracts, produce reconciliation strategy.

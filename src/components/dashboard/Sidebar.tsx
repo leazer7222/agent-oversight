@@ -12,10 +12,11 @@ import {
 } from 'lucide-react'
 
 const nav = [
-  { href: '/dashboard',        label: 'Overview',  icon: LayoutDashboard },
-  { href: '/dashboard/runs',   label: 'Runs',      icon: Play },
-  { href: '/dashboard/errors', label: 'Errors',    icon: AlertCircle },
-  { href: '/dashboard/costs',  label: 'Costs',     icon: DollarSign },
+  { href: '/dashboard',         label: 'Overview', icon: LayoutDashboard },
+  { href: '/dashboard/agents',  label: 'Agents',   icon: Bot },
+  { href: '/dashboard/runs',    label: 'Runs',     icon: Play },
+  { href: '/dashboard/errors',  label: 'Errors',   icon: AlertCircle },
+  { href: '/dashboard/costs',   label: 'Costs',    icon: DollarSign },
 ]
 
 export function Sidebar() {
@@ -36,7 +37,7 @@ export function Sidebar() {
         {nav.map(({ href, label, icon: Icon }) => {
           const active = href === '/dashboard'
             ? path === '/dashboard'
-            : path.startsWith(href)
+            : path === href || path.startsWith(href + '/')
           return (
             <Link
               key={href}

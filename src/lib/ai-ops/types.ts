@@ -15,6 +15,10 @@ export interface ProviderSignal {
   quota_source: SnapshotSource | null
   quota_snapshotted_at: Date | null
   hours_until_reset: number | null
+  // Whether a provider_account row exists (reset schedule configured)
+  has_account: boolean
+  reset_period: 'weekly' | 'monthly' | null
+  reset_anchor: number | null
   // Derived from existing runs telemetry
   run_count_7d: number
   error_rate_24h: number | null

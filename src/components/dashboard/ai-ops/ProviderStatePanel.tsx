@@ -1,4 +1,5 @@
 import { QuotaConfirmButton } from './QuotaConfirmButton'
+import { ResetScheduleButton } from './ResetScheduleButton'
 import type { Provider, ProviderSignal } from '@/lib/ai-ops/types'
 import { PROVIDER_SHORT } from '@/lib/ai-ops/types'
 
@@ -88,7 +89,7 @@ export function ProviderStatePanel({ signals }: Props) {
                 {s.hours_until_reset !== null ? (
                   <span className="text-xs text-zinc-500">Reset in {formatHours(s.hours_until_reset)}</span>
                 ) : (
-                  <span className="text-xs text-zinc-700">Reset —</span>
+                  <span className="text-xs text-zinc-700">No reset schedule</span>
                 )}
               </div>
               <div className="shrink-0">
@@ -118,6 +119,11 @@ export function ProviderStatePanel({ signals }: Props) {
                 </span>
               )}
               <QuotaConfirmButton provider={s.provider as Provider} />
+              <ResetScheduleButton
+                provider={s.provider as Provider}
+                currentPeriod={s.reset_period}
+                currentAnchor={s.reset_anchor}
+              />
             </div>
           </div>
         ))}

@@ -142,3 +142,35 @@ Add new lessons at the end of each session.
 - `NEXT_PUBLIC_SITE_URL` must be set in Netlify env vars after the first deploy — the URL is only known after Netlify assigns it.
 - Git worktrees in `.claude/worktrees/` are tracked as gitlinks (mode 160000) if accidentally staged — Netlify treats them as submodules and fails checkout. Fix: `git rm --cached .claude/worktrees/*` and add `.claude/worktrees/` to `.gitignore`.
 - shadcn/ui dependencies (`@base-ui/react`, `class-variance-authority`, `clsx`, `tailwind-merge`) must be installed in the main project root — worktree node_modules junctions don't carry over to CI builds.
+
+---
+
+## Agile Team / Agent Architecture
+
+### Python module imports from hyphenated directories
+- Python cannot import modules from directories with hyphens in the name (e.g., `product-clarification-agent`).
+- Use `importlib.util.spec_from_file_location("alias", Path("agents/library/product-clarification-agent/agent.py"))` to load the module dynamically.
+
+### Environment variables for Python agents vs Next.js dev server
+- `INGEST_SECRET` and `OVERSIGHT_SECRET` in `.env.local` are the local Next.js dev server secrets — they do NOT match the production Vercel deployment.
+- Python agents calling the production Vercel endpoint need `AGENT_OVERSIGHT_SECRET=ChArles-Clint0n-Leazer-Jr.-1s-the-B3st`.
+- In the `OversightClient` init, check `AGENT_OVERSIGHT_SECRET` first, then fall back to `OVERSIGHT_SECRET`/`INGEST_SECRET`.
+
+### Bash env var scoping on Windows
+- `set VAR=val` in the Bash tool does NOT export to child processes — the variable is set for the current shell process only.
+- Use the `VAR=val python script.py` prefix syntax to pass env vars to child processes.
+
+### dotenv in worktrees
+- `find_dotenv(".env.local", usecwd=True)` correctly walks up from CWD and finds `.env.local` in the main repo root, even when a script runs from a worktree subdirectory.
+
+### Supabase agents table insert order
+- Register parent/orchestrator agents in Supabase BEFORE worker agents that reference them via `parent_agent_id` — the FK constraint fires on insert.
+
+### Supabase trigger_type constraint
+- The `trigger_type` check constraint on the `agents` table does NOT accept `"orchestrator"` as a value.
+- Use `"manual"` for orchestrator agents; `"manual"` is also correct for agents invoked by script or CLI.
+
+### oversight.py SDK — extending for new run fields
+- `emit()` and `run()` now accept `team_id`, `context_bundle_id`, `context_bundle_version`, `parent_run_id` as optional kwargs.
+- These flow through to the `/api/ingest` payload and populate the matching columns in the `runs` table.
+- When adding new DB columns that agents should populate, update the SDK in the same PR — not separately.

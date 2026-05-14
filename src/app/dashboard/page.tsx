@@ -5,14 +5,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { CostLabel } from '@/components/dashboard/CostLabel'
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { ProviderQuotaStrip } from '@/components/dashboard/ProviderQuotaStrip'
+import { assembleSignals } from '@/lib/ai-ops/signals'
 import { Bot, Play, DollarSign, AlertCircle } from 'lucide-react'
 
 export default async function OverviewPage() {
-  const [agentsRes, runsRes, costRes, errorsRes] = await Promise.all([
+  const [agentsRes, runsRes, costRes, errorsRes, signals] = await Promise.all([
     apiFetch('/api/agents?limit=50'),
     apiFetch('/api/runs?limit=5'),
     apiFetch('/api/cost'),
     apiFetch('/api/errors?limit=5'),
+    assembleSignals().catch(() => []),
   ])
 
   const agents: any[]  = agentsRes?.data  ?? []
@@ -41,6 +44,9 @@ export default async function OverviewPage() {
         />
         <KpiCard icon={AlertCircle} label="Failed Runs" value={totalErrors} highlight={totalErrors > 0} />
       </div>
+
+      {/* Provider quota strip */}
+      {signals.length > 0 && <ProviderQuotaStrip signals={signals} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Agents table */}

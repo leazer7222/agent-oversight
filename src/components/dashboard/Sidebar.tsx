@@ -10,6 +10,7 @@ import {
   DollarSign,
   Bot,
   Network,
+  Gauge,
 } from 'lucide-react'
 
 const nav = [
@@ -19,6 +20,7 @@ const nav = [
   { href: '/dashboard/runs',      label: 'Runs',      icon: Play },
   { href: '/dashboard/errors',    label: 'Errors',    icon: AlertCircle },
   { href: '/dashboard/costs',     label: 'Costs',     icon: DollarSign },
+  { href: '/dashboard/ai-ops',    label: 'AI Ops',    icon: Gauge },
 ]
 
 export function Sidebar() {

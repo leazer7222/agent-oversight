@@ -1,35 +1,48 @@
 # Agent Oversight System - Todo
 
-## Completed
-
-### Phase 4 — Dashboard MVP ✅ (2026-05-13)
-- [x] `/dashboard` — overview KPIs, agents table, recent failures, recent runs
-- [x] `/dashboard/runs` — paginated list, status filter bar
-- [x] `/dashboard/runs/[id]` — stats, error block, event timeline, outputs
-- [x] `/dashboard/agents/[id]` — metadata, stats, run history
-- [x] `/dashboard/costs` — cost by agent / by project toggle
-- [x] `/dashboard/errors` — category chip filters, paginated failure table
-- [x] Shared components: StatusBadge, DurationLabel, CostLabel, EmptyState, Sidebar
-- [x] shadcn/ui + Tailwind v4 dark mode
-- [x] `apiFetch` server-side helper
-
-### Phase 5 — Agents Page + Deploy ✅ (2026-05-13)
-- [x] `/dashboard/agents` list page with status filter + full stats
-- [x] Sidebar Agents link + active state fix
-- [x] Netlify config (`netlify.toml` + `@netlify/plugin-nextjs`)
-- [x] Fix git worktree gitlinks blocking Netlify build
-- [x] Root redirect `/` → `/dashboard`
-- [x] OAuth2 client recreated + `.mcp.json` updated
-- [x] Deployed: https://agentoversight.netlify.app
-
-## Next Up (Phase 6)
+## Active
 
 ### Immediate
-- [ ] Add `NEXT_PUBLIC_SITE_URL=https://agentoversight.netlify.app` in Netlify → redeploy
-- [ ] Enable LLM billing
-- [ ] Fire a real agent run → verify live data in dashboard
+- [ ] Merge PR → confirm Netlify deploy succeeds
+- [ ] Open /dashboard/ai-ops → set reset schedule + confirm quota → verify recommendation fires with High confidence
+- [ ] Add `NEXT_PUBLIC_SITE_URL=https://agentoversight.netlify.app` in Netlify env vars
 
-### Polish
+### Platform polish
+- [ ] Enable LLM billing → fire real agent run → verify live cost/token data
 - [ ] Generate Supabase TypeScript types → `src/lib/supabase/types.ts`
 - [ ] Real-time refresh (polling) on overview page
 - [ ] Error alerting — notify on agent failure (email / Slack)
+
+### V2 AI Ops
+- [ ] Browser extension: detect quota-exhausted message on claude.ai / chat.openai.com → POST to /api/ai-ops/quota-snapshot with pct=0
+- [ ] OpenAI API usage endpoint integration (for API key users)
+
+## Completed
+
+### Phase 4 — Dashboard MVP ✅ (2026-05-13)
+- [x] /dashboard, /dashboard/runs, /dashboard/runs/[id], /dashboard/agents/[id], /dashboard/costs, /dashboard/errors
+- [x] Shared components, apiFetch helper, TypeScript clean
+
+### Phase 5 — Agents Page + Deploy ✅ (2026-05-13)
+- [x] /dashboard/agents list page
+- [x] Netlify deploy: https://agentoversight.netlify.app
+
+### Phase 6 — AI Ops Dashboard ✅ (2026-05-13)
+- [x] Migration 008: 5 AI Ops tables live in Supabase
+- [x] Recommendation engine (deterministic rules)
+- [x] Provider health polling (status page APIs)
+- [x] Signal assembly from existing runs telemetry
+- [x] /dashboard/ai-ops page with workload selector
+- [x] RecommendationCard + feedback (thumbs up/down)
+- [x] ProviderStatePanel with quota bars + health dots
+- [x] QuotaConfirmButton (slider, expires 8h)
+- [x] ResetScheduleButton (weekly/monthly, day picker)
+- [x] API routes: quota-snapshot, feedback, provider-account
+- [x] Sidebar: AI Ops nav item
+- [x] PR created + branch pushed
+
+## Parking Lot
+- Automatic model routing (V5 — requires trust earned through V1-V4)
+- Multi-user team quota pooling
+- Cost forecasting beyond "trending" signal
+- Push notifications for provider health changes

@@ -174,3 +174,58 @@ Add new lessons at the end of each session.
 - `emit()` and `run()` now accept `team_id`, `context_bundle_id`, `context_bundle_version`, `parent_run_id` as optional kwargs.
 - These flow through to the `/api/ingest` payload and populate the matching columns in the `runs` table.
 - When adding new DB columns that agents should populate, update the SDK in the same PR — not separately.
+
+---
+
+## Contractor Pipeline (ReformAI_Agents)
+
+### Python CLI output
+- Windows cp1252 console crashes on Unicode chars (arrows `←`, box-drawing `─`, emoji `✅`) in Python print statements.
+- Rule: use ASCII-only in all Python CLI output — no special chars, no emoji.
+
+### File paths
+- XLSX files moved from `OneDrive\Desktop\ReformAI_Agents` to `AI-Projects\ReformAI_Agents` — always verify paths before writing scripts.
+- All 27 pipeline scripts had this old path hardcoded — fixed with a single PowerShell string replace pass.
+
+### Agent vs tool design
+- Over-agentized systems create governance overhead without benefit. Apply the test: agents own state + run lifecycle; tools are bounded I/O functions.
+- The contractor pipeline's 8 "agents" were really 1 orchestrator + 7 tools/utilities.
+
+### Pipeline state machine
+- Never use filesystem mtime for workflow state — use a DB-backed state machine with explicit status fields.
+- The legacy `ingestion_state.json` + mtime approach caused batches to re-run or skip incorrectly.
+
+### UUID generation
+- Never hand-craft UUIDs — always use `uuid.uuid4()`. Hand-crafted UUIDs may have invalid variant bytes and get rejected by the ingest API with a 422.
+
+### Windows environment variables
+- Env vars set after a terminal session starts are NOT visible in that session.
+- Use `[System.Environment]::GetEnvironmentVariable("VAR", "User")` to read from the registry directly in the same session, or inject with `$env:VAR = ...`.
+- Env vars set in one PowerShell tool call do NOT persist to the next tool call — inject in the same command.
+
+---
+
+## HubSpot API
+
+### PATCH vs POST for updates
+- `POST /crm/v3/objects/{type}/{id}` returns **405 Method Not Allowed** — this is not a valid update endpoint.
+- Updates must use `PATCH /crm/v3/objects/{type}/{id}`.
+- Create uses `POST /crm/v3/objects/{type}` (no ID).
+
+### Association endpoint
+- HubSpot v4 association creation uses `PUT`, not `POST`.
+- Endpoint: `PUT /crm/v4/objects/{fromType}/{fromId}/associations/{toType}/{toId}`
+- Body: `[{"associationCategory": "HUBSPOT_DEFINED", "associationTypeId": 279}]`
+
+### Non-ASCII emails
+- HubSpot returns 400 Bad Request for email addresses containing accented characters (e.g. `info@plomerosBogotá.com`).
+- Always validate email is ASCII-encodable before sending to HubSpot: `email.encode("ascii")` — if it raises `UnicodeEncodeError`, skip the email.
+
+### URL encoding in urllib.request
+- `urllib.request` fails on non-ASCII characters in URL query parameters (accented domain names).
+- Always `urllib.parse.quote(value, safe='')` for any user-supplied value in a URL.
+
+### One HubSpot record per company
+- The contractor pipeline creates one Supabase row per (company, subcategory) pair.
+- For HubSpot, group by `company_url_domain` before syncing — one company = one HubSpot record.
+- Write the `hubspot_company_id` back to ALL rows sharing that domain so future rows inherit it.

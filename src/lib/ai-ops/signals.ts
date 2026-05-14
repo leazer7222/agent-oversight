@@ -111,36 +111,59 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
   const accountMap: Record<string, { id: string; provider: string; quota_reset_period: string | null; quota_reset_anchor: number | null }> = {}
   for (const a of accounts ?? []) accountMap[a.provider] = a
 
-  // Latest quota snapshot per account
+  // Latest quota snapshot per account per window_type
   const accountIds = (accounts ?? []).map(a => a.id)
-  let quotaSnaps: Record<string, any> = {}
+  // snapsByWindow[accountId][windowType] = most recent snapshot
+  let snapsByWindow: Record<string, Record<string, any>> = {}
 
   if (accountIds.length > 0) {
     const { data: snaps } = await supabase
       .from('provider_quota_snapshots')
-      .select('provider_account_id, quota_remaining_pct, confidence, snapshot_source, snapshotted_at, expires_at')
+      .select('provider_account_id, quota_remaining_pct, confidence, snapshot_source, snapshotted_at, expires_at, window_type')
       .in('provider_account_id', accountIds)
       .order('snapshotted_at', { ascending: false })
 
     for (const s of snaps ?? []) {
-      if (!quotaSnaps[s.provider_account_id]) quotaSnaps[s.provider_account_id] = s
+      const wt = s.window_type ?? 'primary'
+      if (!snapsByWindow[s.provider_account_id]) snapsByWindow[s.provider_account_id] = {}
+      if (!snapsByWindow[s.provider_account_id][wt]) snapsByWindow[s.provider_account_id][wt] = s
     }
   }
 
   return PROVIDERS.map((p): ProviderSignal => {
     const h = health[p]
     const account = accountMap[p]
-    const snap = account ? quotaSnaps[account.id] : null
+    const windows = account ? (snapsByWindow[account.id] ?? {}) : {}
 
-    // Compute hours until reset from account config
+    // Helper: get a valid (non-expired) snapshot for a given window type
+    function getSnap(wt: string) {
+      const s = windows[wt] ?? windows['primary'] ?? null
+      if (!s) return null
+      if (s.expires_at && new Date(s.expires_at) < new Date()) return null
+      return s
+    }
+
+    const snap5h = getSnap('five_hour')
+    const snap7d = getSnap('seven_day')
+    const snapAny = snap5h ?? snap7d ?? getSnap('primary')
+
+    const quota_remaining_pct_5h: number | null = snap5h?.quota_remaining_pct ?? null
+    const quota_remaining_pct_7d: number | null = snap7d?.quota_remaining_pct ?? null
+
+    // Binding = minimum of available windows (most constrained)
+    const available = [quota_remaining_pct_5h, quota_remaining_pct_7d].filter((v): v is number => v !== null)
+    const quota_remaining_pct: number | null = available.length > 0 ? Math.min(...available) : null
+
+    // Compute hours until reset — prefer the binding window's reset_at if stored,
+    // otherwise fall back to account schedule config
     let hours_until_reset: number | null = null
     if (account?.quota_reset_period && account?.quota_reset_anchor != null) {
       const now = new Date()
       if (account.quota_reset_period === 'weekly') {
-        const targetDay = account.quota_reset_anchor // 0=Sun
+        const targetDay = account.quota_reset_anchor
         const currentDay = now.getDay()
         let daysUntil = (targetDay - currentDay + 7) % 7
-        if (daysUntil === 0) daysUntil = 7 // reset already happened today, next is in 7 days
+        if (daysUntil === 0) daysUntil = 7
         hours_until_reset = daysUntil * 24 - now.getHours()
       } else if (account.quota_reset_period === 'monthly') {
         const targetDay = account.quota_reset_anchor
@@ -150,21 +173,10 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
       }
     }
 
-    // Quota state
-    let quota_remaining_pct: number | null = null
-    let quota_confidence: Confidence | null = null
-    let quota_source: SnapshotSource | null = null
-    let quota_snapshotted_at: Date | null = null
-
-    if (snap) {
-      const expired = snap.expires_at && new Date(snap.expires_at) < new Date()
-      if (!expired) {
-        quota_remaining_pct = snap.quota_remaining_pct
-        quota_confidence = snap.confidence as Confidence
-        quota_source = snap.snapshot_source as SnapshotSource
-        quota_snapshotted_at = new Date(snap.snapshotted_at)
-      }
-    }
+    // Metadata from any available snapshot
+    const quota_confidence: Confidence | null = snapAny ? snapAny.confidence as Confidence : null
+    const quota_source: SnapshotSource | null = snapAny ? snapAny.snapshot_source as SnapshotSource : null
+    const quota_snapshotted_at: Date | null = snapAny ? new Date(snapAny.snapshotted_at) : null
 
     const rs = runsStats[p]
 
@@ -174,6 +186,8 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
       health: h.status,
       health_checked_at: h.checked_at,
       quota_remaining_pct,
+      quota_remaining_pct_5h,
+      quota_remaining_pct_7d,
       quota_confidence,
       quota_source,
       quota_snapshotted_at,

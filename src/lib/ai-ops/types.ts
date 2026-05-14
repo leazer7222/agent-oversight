@@ -10,11 +10,13 @@ export interface ProviderSignal {
   health: HealthStatus
   health_checked_at: Date | null
   // null = no quota data at all
-  quota_remaining_pct: number | null
+  quota_remaining_pct: number | null      // binding minimum — used by recommendation engine
+  quota_remaining_pct_5h: number | null  // 5-hour rolling window
+  quota_remaining_pct_7d: number | null  // 7-day weekly budget
   quota_confidence: Confidence | null
   quota_source: SnapshotSource | null
   quota_snapshotted_at: Date | null
-  hours_until_reset: number | null
+  hours_until_reset: number | null       // from the binding (most constrained) window
   // Whether a provider_account row exists (reset schedule configured)
   has_account: boolean
   reset_period: 'weekly' | 'monthly' | null

@@ -22,22 +22,29 @@ function HealthDot({ status }: { status: ProviderSignal['health'] }) {
   )
 }
 
-function QuotaBar({ pct }: { pct: number | null }) {
+function QuotaBar({ pct, label }: { pct: number | null; label?: string }) {
   if (pct === null) {
-    return <span className="text-xs text-zinc-600">—</span>
+    return (
+      <span className="flex items-center gap-1.5">
+        {label && <span className="text-xs text-zinc-600 w-12 shrink-0">{label}</span>}
+        <span className="text-xs text-zinc-600">—</span>
+      </span>
+    )
   }
   const filled = Math.round(pct / 10)
+  const color = pct > 50 ? 'bg-emerald-500' : pct > 20 ? 'bg-yellow-500' : 'bg-red-500'
   return (
     <span className="flex items-center gap-1.5">
+      {label && <span className="text-xs text-zinc-500 w-12 shrink-0">{label}</span>}
       <span className="flex gap-px">
         {Array.from({ length: 10 }, (_, i) => (
           <span
             key={i}
-            className={`h-2 w-2 rounded-sm ${i < filled ? 'bg-zinc-400' : 'bg-zinc-700'}`}
+            className={`h-2 w-2 rounded-sm ${i < filled ? color : 'bg-zinc-700'}`}
           />
         ))}
       </span>
-      <span className="text-xs text-zinc-400">~{Math.round(pct)}%</span>
+      <span className="text-xs text-zinc-300 font-medium">{Math.round(pct)}%</span>
     </span>
   )
 }
@@ -82,8 +89,9 @@ export function ProviderStatePanel({ signals }: Props) {
               <span className="text-sm font-medium text-zinc-300 w-28 shrink-0">
                 {PROVIDER_SHORT[s.provider as Provider]}
               </span>
-              <div className="flex-1 min-w-0">
-                <QuotaBar pct={s.quota_remaining_pct} />
+              <div className="flex-1 min-w-0 space-y-1">
+                <QuotaBar pct={s.quota_remaining_pct_5h ?? s.quota_remaining_pct} label="5h" />
+                <QuotaBar pct={s.quota_remaining_pct_7d} label="Weekly" />
               </div>
               <div className="shrink-0">
                 {s.hours_until_reset !== null ? (

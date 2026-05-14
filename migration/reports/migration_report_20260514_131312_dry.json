@@ -1,0 +1,227 @@
+{
+  "generated_at": "2026-05-14T13:13:12.854337",
+  "migration_batch_id": "migration_2026-05-14",
+  "market_id": "co-renovation",
+  "dry_run": true,
+  "sheet_inventory": {
+    "pipeline_workbook": "C:\\Users\\cjlea\\AI-Projects\\ReformAI_Agents\\Shared Docs\\REFORM AI B2B PIPELINE (official).xlsx",
+    "pipeline_sheets_found": [
+      "Pivot Table",
+      "Contractors enriched",
+      "Pipeline Summary",
+      "Contractors master",
+      "Contractors",
+      "Request Failed"
+    ],
+    "catalog_workbook": "C:\\Users\\cjlea\\AI-Projects\\ReformAI_Agents\\Shared Docs\\Master_ReformAI_Contractor_Catalogs.xlsx",
+    "catalog_sheets_found": [
+      "Catalog Classification",
+      "Provider Tab Summary",
+      "Stonhard Colombia",
+      "Lirolhaus",
+      "Pisosteka",
+      "Vidrios y Espejos El Country",
+      "El Diamante Vidrios y Espejos",
+      "Maderlinea",
+      "JM Pisos Bogotá",
+      "AVILA Luminios y Vidrios",
+      "Macdera",
+      "Alfocentrex",
+      "Remodelaencasa",
+      "Chimeneas El Chalet (install)",
+      "ABAS Vidrios Norte",
+      "Mármoles Neira",
+      "Coalvid Aluminios y Vidrios",
+      "Pulido de Pisos",
+      "Viva el Mármol",
+      "Versacrete",
+      "Carrara Granitos y Marmoles S.A",
+      "Pisos Laminados Medellin",
+      "Pisos Laminados de Madera",
+      "Pisos Laminados y de Madera en ",
+      "DValen",
+      "Chimeneas de Colombia",
+      "Pisos Laminados de Colombia",
+      "CALIFRIO",
+      "Konker",
+      "Lugar Deco",
+      "Safra SAS",
+      "Persianas Modulinea",
+      "Bamluz",
+      "RentaPuertas",
+      "Air Cool RH S.A.S",
+      "EXPOLAMINADOS CORTINAS Y PERS_3",
+      "Decopersianas"
+    ],
+    "provider_tabs_found": 35,
+    "master_present": true,
+    "enriched_present": true,
+    "failed_present": true,
+    "legacy_contractors_present": true,
+    "catalog_classification_present": true
+  },
+  "source_row_counts": {
+    "contractors_master": 734,
+    "contractors_enriched": 537,
+    "request_failed": 177,
+    "legacy_contractors": 500,
+    "catalog_classification": 676
+  },
+  "merge_results": {
+    "unique_records_after_merge": 757,
+    "master_internal_collisions": 1,
+    "master_blank_company_rows": [],
+    "enriched_merged_into_master": 537,
+    "enriched_only_records": 0,
+    "failed_updated_existing": 0,
+    "failed_only_records": 0,
+    "enriched_vs_failed_conflicts": 0,
+    "catalog_rows_enriched": 651,
+    "catalog_unmatched_rows": 24
+  },
+  "legacy_sheet_treatment": {
+    "sheet_present": true,
+    "rows_added": 24,
+    "rows_skipped_duplicate": 476
+  },
+  "preservation": {
+    "pending_extraction_rows": 443,
+    "extraction_completed_rows": 127,
+    "request_failed_rows": 161,
+    "no_contact_found_rows": 26,
+    "blank_extraction_status_rows": 0
+  },
+  "extraction_status_breakdown": {
+    "pending": 443,
+    "request_failed": 161,
+    "extraction_completed": 127,
+    "no_contact_found": 26
+  },
+  "data_quality": {
+    "blank_subcategory_count": 0,
+    "blank_subcategory_dedupe_keys": [],
+    "master_blank_company_count": 0,
+    "master_blank_company_rows": []
+  },
+  "ambiguous_dedup_cases": {
+    "master_internal_collisions": [
+      {
+        "dedupe_key": "ee8877113b472ab053712dafddffbc054316781fd16a880c46c6d3147290130a",
+        "company": "Costa Epoxicos",
+        "subcategory": "Epoxy Floor Coating Specialist",
+        "collision_row": 566,
+        "first_seen_row": 306
+      }
+    ],
+    "enriched_vs_failed_conflicts": [],
+    "catalog_unmatched_keys": [
+      [
+        "maestroya",
+        "general contractor"
+      ],
+      [
+        "construaplicaciones s.a. (masonry)",
+        "masonry & structural works"
+      ],
+      [
+        "dbr construcciones (masonry)",
+        "masonry & structural works"
+      ],
+      [
+        "central pisos de madera (deck)",
+        "deck & terrace builder"
+      ],
+      [
+        "estucos y pinturas (papel tapiz)",
+        "wallpaper installer"
+      ],
+      [
+        "pintores 1a s.a.s. (estucos)",
+        "stucco / plaster applicator"
+      ],
+      [
+        "plomeros medellin (banos)",
+        "shower & bathtub installer"
+      ],
+      [
+        "dijees construccion (cocinas)",
+        "kitchen cabinet & vanity installer"
+      ],
+      [
+        "construaplicaciones s.a. (piscinas)",
+        "pool installer / renovator"
+      ],
+      [
+        "belair s.a.s. (ventilacion)",
+        "ventilation specialist"
+      ],
+      [
+        "carpinteria ebanos (muebles)",
+        "custom furniture maker"
+      ],
+      [
+        "cocinas gmo cali",
+        "custom furniture maker"
+      ],
+      [
+        "acusticos & livianos (paneles)",
+        "acoustic panel installer"
+      ],
+      [
+        "ecoacustika (paneles)",
+        "acoustic panel installer"
+      ],
+      [
+        "viva el marmol (restauracion)",
+        "grout & tile restoration"
+      ],
+      [
+        "brilladora ground (restauracion)",
+        "grout & tile restoration"
+      ],
+      [
+        "carpinteria bogota (estanteria)",
+        "built-in shelving installer"
+      ],
+      [
+        "carpinteria ebanos (estanteria)",
+        "built-in shelving installer"
+      ],
+      [
+        "aliados de obras (backsplash)",
+        "backsplash & tile installer"
+      ],
+      [
+        "drywall 1a (cielo raso)",
+        "suspended ceiling / acoustic tile"
+      ],
+      [
+        "pisos de madera barranquilla",
+        "hardwood / engineered wood flooring installer"
+      ],
+      [
+        "pisos epoxicos barranquilla",
+        "epoxy floor coating specialist"
+      ],
+      [
+        "pulido de pisos cali",
+        "stone restoration & polishing"
+      ],
+      [
+        "pulido de pisos barranquilla",
+        "stone restoration & polishing"
+      ]
+    ]
+  },
+  "import_result": {
+    "upserted": 0,
+    "errors": []
+  },
+  "validation": {
+    "source_master_rows": 734,
+    "supabase_records_upserted": 0,
+    "delta": -734,
+    "delta_note": "Delta >= 0 means enriched-only, failed-only, or legacy-only rows were added. Delta < 0 indicates an import error.",
+    "status": "PASS"
+  }
+}

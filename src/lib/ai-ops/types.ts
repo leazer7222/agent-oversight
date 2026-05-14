@@ -13,6 +13,7 @@ export interface ProviderSignal {
   quota_remaining_pct: number | null      // binding minimum — used by recommendation engine
   quota_remaining_pct_5h: number | null  // 5-hour rolling window
   quota_remaining_pct_7d: number | null  // 7-day weekly budget
+  quota_is_stale: boolean               // true when last snapshot is expired
   quota_confidence: Confidence | null
   quota_source: SnapshotSource | null
   quota_snapshotted_at: Date | null

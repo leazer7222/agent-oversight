@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { ProviderSignal, Provider } from '@/lib/ai-ops/types'
 import { PROVIDER_SHORT } from '@/lib/ai-ops/types'
 
-function QuotaBar({ pct, label }: { pct: number | null; label: string }) {
+function QuotaBar({ pct, label, stale }: { pct: number | null; label: string; stale?: boolean }) {
   if (pct === null) return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-zinc-600">{label}</span>
@@ -10,17 +10,21 @@ function QuotaBar({ pct, label }: { pct: number | null; label: string }) {
     </div>
   )
   const filled = Math.round(pct / 10)
-  const color = pct > 50 ? 'bg-emerald-500' : pct > 20 ? 'bg-yellow-500' : 'bg-red-500'
+  const color = stale
+    ? 'bg-zinc-600'
+    : pct > 50 ? 'bg-emerald-500' : pct > 20 ? 'bg-yellow-500' : 'bg-red-500'
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-zinc-500">{label}</span>
       <span className="flex items-center gap-1.5">
         <span className="flex gap-px">
           {Array.from({ length: 10 }, (_, i) => (
-            <span key={i} className={`h-1.5 w-2 rounded-sm ${i < filled ? color : 'bg-zinc-700'}`} />
+            <span key={i} className={`h-1.5 w-2 rounded-sm ${i < filled ? color : 'bg-zinc-800'}`} />
           ))}
         </span>
-        <span className="text-xs text-zinc-300 font-medium">{Math.round(pct)}%</span>
+        <span className={`text-xs font-medium ${stale ? 'text-zinc-600' : 'text-zinc-300'}`}>
+          {Math.round(pct)}%{stale && <span className="ml-1 text-zinc-700">stale</span>}
+        </span>
       </span>
     </div>
   )
@@ -65,12 +69,12 @@ export function ProviderQuotaStrip({ signals }: Props) {
 
             {/* 5h bar */}
             <div className="flex-1">
-              <QuotaBar pct={s.quota_remaining_pct_5h} label="5h" />
+              <QuotaBar pct={s.quota_remaining_pct_5h} label="5h" stale={s.quota_is_stale} />
             </div>
 
             {/* Weekly bar */}
             <div className="flex-1">
-              <QuotaBar pct={s.quota_remaining_pct_7d} label="Weekly" />
+              <QuotaBar pct={s.quota_remaining_pct_7d} label="Weekly" stale={s.quota_is_stale} />
             </div>
 
             {/* Reset countdown */}

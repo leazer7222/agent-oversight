@@ -135,12 +135,13 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
     const account = accountMap[p]
     const windows = account ? (snapsByWindow[account.id] ?? {}) : {}
 
-    // Helper: get a valid (non-expired) snapshot for a given window type
+    // Helper: get the most recent snapshot for a window type, expired or not
     function getSnap(wt: string) {
-      const s = windows[wt] ?? windows['primary'] ?? null
-      if (!s) return null
-      if (s.expires_at && new Date(s.expires_at) < new Date()) return null
-      return s
+      return windows[wt] ?? windows['primary'] ?? null
+    }
+
+    function isExpired(s: any): boolean {
+      return !!(s?.expires_at && new Date(s.expires_at) < new Date())
     }
 
     const snap5h = getSnap('five_hour')
@@ -149,6 +150,7 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
 
     const quota_remaining_pct_5h: number | null = snap5h?.quota_remaining_pct ?? null
     const quota_remaining_pct_7d: number | null = snap7d?.quota_remaining_pct ?? null
+    const quota_is_stale: boolean = !!(snapAny && isExpired(snapAny))
 
     // Binding = minimum of available windows (most constrained)
     const available = [quota_remaining_pct_5h, quota_remaining_pct_7d].filter((v): v is number => v !== null)
@@ -188,6 +190,7 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
       quota_remaining_pct,
       quota_remaining_pct_5h,
       quota_remaining_pct_7d,
+      quota_is_stale,
       quota_confidence,
       quota_source,
       quota_snapshotted_at,

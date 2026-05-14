@@ -30,6 +30,21 @@ Template to copy from: `/agents/library/_template/`
     - Status: Active | Owner: `reformai` | Type: `worker`
     - Run: `python agents/teams/agile/run.py --goal "your goal"`
 
+### Contractor Pipeline
+- **contractor-pipeline-orchestrator** (`ReformAI_Agents/Contractor_Orchestrator_Agent/run_contractor_pipeline.py`)
+    - Purpose: Governed orchestrator for the ReformAI contractor discovery pipeline. Owns run lifecycle, stage sequencing (batch plan → research → extraction → catalog → sync), and telemetry. Phase 1 wraps existing scripts; Phase 2+ will own the full governed flow.
+    - agent_id: `d2e3f4a5-b6c7-8901-2345-6789abcdef01`
+    - Status: Active | Owner: `reformai` | Type: `orchestrator` | Phase: 1 (telemetry wrapper)
+    - Run: `python run_contractor_pipeline.py --market-id co-renovation --label scheduled`
+    - Markets: `co-renovation` (active) · `mx-renovation` · `pt-renovation` · `es-renovation` (inactive, greenfield)
+
+### Workspace Team
+- **workspace-orchestrator** (Supabase only — no run script yet)
+    - Purpose: Orchestrator for the YouTube workspace pipeline (discovery → transcript → extraction of workspace setup videos).
+    - agent_id: `e5f6a7b8-c9d0-5678-ef01-234567890123`
+    - Status: Active | Owner: `reformai` | Type: `orchestrator` | Phase: stub
+    - Workers: `reformai.workspace-discovery-agent` · `reformai.workspace-transcript-agent` · `reformai.workspace-extraction-agent`
+
 ### Context & Marketing
 - **context-agent** ([library](agents/library/context-agent/))
     - Purpose: Retrieves project context from Google Drive.

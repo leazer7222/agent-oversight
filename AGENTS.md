@@ -34,7 +34,7 @@ Template to copy from: `/agents/library/_template/`
 - **contractor-pipeline-orchestrator** (`ReformAI_Agents/Contractor_Orchestrator_Agent/run_contractor_pipeline.py`)
     - Purpose: Governed orchestrator for the ReformAI contractor discovery pipeline. Owns run lifecycle, stage sequencing (batch plan → research → extraction → catalog → sync), and telemetry. Phase 1 wraps existing scripts; Phase 2+ will own the full governed flow.
     - agent_id: `73de0fbc-3419-4f33-aac5-d79ebef25b59`
-    - Status: Active | Owner: `reformai` | Type: `orchestrator` | Phase: 5 (XLSX export-only)
+    - Status: Active | Owner: `reformai` | Type: `orchestrator` | Phase: HubSpot sync live
     - Run: `python run_contractor_pipeline.py --market-id co-renovation --label scheduled`
     - Markets: `co-renovation` (active) · `mx-renovation` · `pt-renovation` · `es-renovation` (inactive, greenfield)
 

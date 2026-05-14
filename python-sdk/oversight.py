@@ -219,17 +219,25 @@ class OversightClient:
         cost_usd: Optional[float] = None,
         error: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        team_id: Optional[str] = None,
+        context_bundle_id: Optional[str] = None,
+        context_bundle_version: Optional[int] = None,
+        parent_run_id: Optional[str] = None,
     ) -> None:
         payload: Dict[str, Any] = {
             "agent_id": agent_id,
             "event":    event,
             "run_id":   run_id,
         }
-        if tokens_in  is not None: payload["tokens_in"]  = tokens_in
-        if tokens_out is not None: payload["tokens_out"] = tokens_out
-        if cost_usd   is not None: payload["cost_usd"]   = cost_usd
-        if error      is not None: payload["error"]       = error
-        if metadata:               payload["metadata"]    = metadata
+        if tokens_in              is not None: payload["tokens_in"]               = tokens_in
+        if tokens_out             is not None: payload["tokens_out"]              = tokens_out
+        if cost_usd               is not None: payload["cost_usd"]                = cost_usd
+        if error                  is not None: payload["error"]                   = error
+        if metadata:                           payload["metadata"]                = metadata
+        if team_id                is not None: payload["team_id"]                 = team_id
+        if context_bundle_id      is not None: payload["context_bundle_id"]       = context_bundle_id
+        if context_bundle_version is not None: payload["context_bundle_version"]  = context_bundle_version
+        if parent_run_id          is not None: payload["parent_run_id"]           = parent_run_id
 
         self._post(payload)
 
@@ -239,12 +247,25 @@ class OversightClient:
         agent_id: str,
         run_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        team_id: Optional[str] = None,
+        context_bundle_id: Optional[str] = None,
+        context_bundle_version: Optional[int] = None,
+        parent_run_id: Optional[str] = None,
     ) -> Generator[RunContext, None, None]:
         """Context manager that emits run_started / run_completed / run_failed."""
         run_id = run_id or str(uuid.uuid4())
         ctx = RunContext(client=self, agent_id=agent_id, run_id=run_id)
 
-        self.emit(agent_id=agent_id, event="run_started", run_id=run_id, metadata=metadata)
+        self.emit(
+            agent_id=agent_id,
+            event="run_started",
+            run_id=run_id,
+            metadata=metadata,
+            team_id=team_id,
+            context_bundle_id=context_bundle_id,
+            context_bundle_version=context_bundle_version,
+            parent_run_id=parent_run_id,
+        )
 
         try:
             yield ctx

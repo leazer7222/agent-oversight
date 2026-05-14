@@ -20,6 +20,10 @@ const IngestSchema = z.object({
   message:       z.string().optional(),
   duration_ms:   z.number().int().nonnegative().optional(),
   severity:      z.enum(['info', 'warning', 'error']).optional(),
+  // Agile Team / workspace attribution fields
+  team_id:                 z.string().optional(),
+  context_bundle_id:       z.string().optional(),
+  context_bundle_version:  z.number().int().nonnegative().optional(),
 })
 
 // How long a run is allowed to run before it is considered a zombie
@@ -60,6 +64,7 @@ export async function POST(request: NextRequest) {
     agent_id, event, run_id, timestamp,
     tokens_in, tokens_out, cost_usd, error, metadata,
     parent_run_id, step_name, message, duration_ms, severity,
+    team_id, context_bundle_id, context_bundle_version,
   } = parsed.data
 
   const supabase = createServiceRoleClient()
@@ -114,8 +119,11 @@ export async function POST(request: NextRequest) {
       status:       'started',
       started_at:   now,
       timeout_at,
-      parent_run_id: parent_run_id ?? null,
-      metadata:     metadata ?? null,
+      parent_run_id:           parent_run_id           ?? null,
+      metadata:                metadata                ?? null,
+      team_id:                 team_id                 ?? null,
+      context_bundle_id:       context_bundle_id       ?? null,
+      context_bundle_version:  context_bundle_version  ?? null,
     })
 
     if (insertErr) {

@@ -1,0 +1,27 @@
+{
+  "agent_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "product-clarification-agent",
+  "display_name": "Product Clarification Agent",
+  "description": "Converts fuzzy product goals into structured Clarification Briefs for the Agile Team. Reads workspace canonical docs, extracts the underlying user problem, identifies missing information, and produces a Brief conforming to clarification-brief.schema.json.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "team": "agile",
+  "agent_type": "worker",
+  "instance_type": "stateless",
+  "mcp_dependencies": [],
+  "schema_contracts": {
+    "output": "docs/schemas/clarification-brief.schema.json"
+  },
+  "context_inputs": [
+    "docs/workspaces/{workspace_id}/PRODUCT.md",
+    "docs/workspaces/{workspace_id}/DOMAIN.md",
+    "docs/teams/agile/STORY-READY.md"
+  ],
+  "env_vars": {
+    "required": ["OVERSIGHT_URL", "OVERSIGHT_SECRET", "PCA_AGENT_ID"],
+    "provider_choice": "AGILE_LLM_PROVIDER (anthropic|openai|gemini, default: anthropic)",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": ["OPENAI_API_KEY", "OPENAI_MODEL (default: gpt-4o)"],
+    "gemini": ["GEMINI_API_KEY", "GEMINI_MODEL (default: gemini-2.0-flash-exp)"]
+  }
+}

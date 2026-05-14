@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "clarification-brief.schema.json",
+  "title": "ClarificationBrief",
+  "description": "Output contract for the Product Clarification Agent. Every field is required. Schema validation is enforced by the Team Orchestrator before any artifact is saved.",
+  "type": "object",
+  "required": [
+    "metadata",
+    "restated_goal",
+    "problem_statement",
+    "target_user",
+    "proposed_scope",
+    "success_criteria",
+    "open_questions",
+    "domain_terms",
+    "staleness_flags",
+    "context_integrity"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["agent", "run_id", "timestamp", "workspace_id", "team_id", "context_bundle_id", "context_bundle_version"],
+      "additionalProperties": false,
+      "properties": {
+        "agent":                   { "type": "string", "const": "product-clarification-agent" },
+        "run_id":                  { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+        "timestamp":               { "type": "string", "format": "date-time" },
+        "workspace_id":            { "type": "string", "minLength": 1 },
+        "team_id":                 { "type": "string", "const": "agile" },
+        "context_bundle_id":       { "type": "string", "minLength": 1 },
+        "context_bundle_version":  { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "restated_goal": {
+      "type": "string",
+      "minLength": 20,
+      "description": "1-2 sentences. What the agent understood the user to be asking for. Must not add scope that was not implied."
+    },
+
+    "problem_statement": {
+      "type": "string",
+      "minLength": 20,
+      "description": "The underlying user problem, stated independently of any solution. Must not say 'build X' or 'add Y'. Must say 'users currently cannot Z' or equivalent."
+    },
+
+    "target_user": {
+      "type": "string",
+      "minLength": 5,
+      "description": "Who this affects. Must reference user definitions from PRODUCT.md."
+    },
+
+    "proposed_scope": {
+      "type": "object",
+      "required": ["in_scope", "out_of_scope"],
+      "additionalProperties": false,
+      "properties": {
+        "in_scope": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 5 },
+          "minItems": 1,
+          "description": "What is explicitly included. Must have at least one item."
+        },
+        "out_of_scope": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 5 },
+          "minItems": 1,
+          "description": "What is explicitly excluded. Must have at least one item. A Brief with no out-of-scope is incomplete."
+        }
+      }
+    },
+
+    "success_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 10,
+        "description": "Each criterion must describe something observable or measurable. No 'works well', 'feels good', 'users are happy'."
+      },
+      "minItems": 1,
+      "maxItems": 5
+    },
+
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 15,
+        "description": "Each question must be non-obvious (not answerable from the original input), must unlock a scope or acceptance-criteria decision, and must be specific enough for the human to answer concisely."
+      },
+      "minItems": 1,
+      "maxItems": 5,
+      "description": "Must be answered by the human before this Brief moves to Story Structuring. More than 5 questions indicates the input was too underspecified — set context_integrity.rating to red."
+    },
+
+    "domain_terms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["term", "definition"],
+        "additionalProperties": false,
+        "properties": {
+          "term":       { "type": "string", "minLength": 1 },
+          "definition": { "type": "string", "minLength": 10 }
+        }
+      },
+      "description": "Domain-specific terms referenced in this Brief. Definitions must match DOMAIN.md. May be empty if no domain terms are referenced."
+    },
+
+    "staleness_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Names of canonical documents that appear stale or missing. Empty array if all docs are current and present."
+    },
+
+    "context_integrity": {
+      "type": "object",
+      "required": ["rating", "reasoning"],
+      "additionalProperties": false,
+      "properties": {
+        "rating": {
+          "type": "string",
+          "enum": ["green", "yellow", "red"],
+          "description": "green = all docs present and current, no flags. yellow = docs present but flagged or goal references undefined terms. red = one or more required docs absent."
+        },
+        "reasoning": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Why this rating was assigned. What would need to change to reach green."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "bundle_id": "agile-v1",
+  "version": 1,
+  "workspace_id": "agent-oversight",
+  "team_id": "agile",
+  "description": "Baseline context bundle for the Agile Team running under the agent-oversight workspace. v1 covers PCA only — ARCHITECTURE.md and STACK.md will be added to a future version when the Engineering Planning Agent is built.",
+  "docs": [
+    {
+      "path": "docs/workspaces/agent-oversight/PRODUCT.md",
+      "role": "product_context",
+      "required": true,
+      "description": "What Agent Agile Force is, who it serves, what it does not do. The PCA reads this to validate scope fit and identify target users."
+    },
+    {
+      "path": "docs/workspaces/agent-oversight/DOMAIN.md",
+      "role": "domain_glossary",
+      "required": true,
+      "description": "Domain terms and business rules. The PCA reads this to apply correct terminology and enforce business rules in the Brief."
+    },
+    {
+      "path": "docs/teams/agile/STORY-READY.md",
+      "role": "story_standard",
+      "required": true,
+      "description": "Definition of Ready — the ten-field standard the PCA's output must set up the Story Structuring Agent to meet."
+    }
+  ],
+  "staleness_threshold_hours": 48,
+  "schema_version": "clarification-brief.schema.json",
+  "created_at": "2026-05-14",
+  "notes": "v1 — PCA context only. Increment version and add docs when SSA or EPA are built."
+}

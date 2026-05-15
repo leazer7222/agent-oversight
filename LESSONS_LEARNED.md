@@ -224,6 +224,11 @@ Add new lessons at the end of each session.
 - `OVERSIGHT_SECRET` in `.env.local` is the local dev server secret and does NOT work against the production Vercel endpoint.
 - Production secret: `AGENT_OVERSIGHT_SECRET`.
 
+### Two provider_accounts for the same provider — data split between companies
+- `quota_sync.py` hardcodes `COMPANY_ID = "87fb6e0d"` (Personal). The quota-snapshot API route used `SELECT id FROM companies LIMIT 1` which returned "ReformAI" (first created, different ID). Each wrote to a different `provider_accounts` row. `assembleSignals` picked up whichever account came last in the iteration — always the wrong one.
+- **Rule:** any code that looks up a company to write quota/provider data must use `.eq('name', 'Personal')`, not `LIMIT 1`. There are multiple companies in the DB (ReformAI, AfterGlow, Personal) and order is not guaranteed.
+- **Diagnostic query:** when quota bars are blank/stale, run this before touching code: `SELECT pa.id, pa.company_id, COUNT(pqs.id) AS snapshots FROM provider_accounts pa LEFT JOIN provider_quota_snapshots pqs ON pqs.provider_account_id = pa.id GROUP BY pa.id` — if snapshot counts are split across multiple rows for the same provider, that's the bug.
+
 ### Oversight URL — Netlify vs Vercel
 - The production oversight dashboard moved from `https://agentoversight.netlify.app` to `https://agent-oversight.vercel.app`.
 - Any script with the Netlify URL hardcoded as a default will silently fail telemetry. Audit all agent scripts for this.

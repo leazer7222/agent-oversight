@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     : 'low'
 
   // Expire user-confirmed snapshots after 8 hours
-  const expires_at = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+  const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
   const { error: snapErr } = await supabase.from('provider_quota_snapshots').insert({
     provider_account_id: account.id,

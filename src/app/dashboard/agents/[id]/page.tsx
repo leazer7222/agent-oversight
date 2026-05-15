@@ -7,6 +7,7 @@ import { DurationLabel } from '@/components/dashboard/DurationLabel'
 import { CostLabel } from '@/components/dashboard/CostLabel'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { ArrowLeft } from 'lucide-react'
+import { formatDateTime } from '@/lib/utils'
 
 export default async function AgentDetailPage({
   params,
@@ -65,8 +66,8 @@ export default async function AgentDetailPage({
           { label: 'Type',       value: agent.agent_type },
           { label: 'Model',      value: agent.model },
           { label: 'Platform',   value: agent.platform },
-          { label: 'Last Run',   value: agent.last_event_at ? new Date(agent.last_event_at).toLocaleString() : '—' },
-          { label: 'Registered', value: agent.registered_at ? new Date(agent.registered_at).toLocaleString() : '—' },
+          { label: 'Last Run',   value: formatDateTime(agent.last_event_at) },
+          { label: 'Registered', value: formatDateTime(agent.registered_at) },
         ].map(({ label, value }) => (
           <div key={label} className="flex justify-between text-sm">
             <span className="text-zinc-500">{label}</span>
@@ -103,7 +104,7 @@ export default async function AgentDetailPage({
                     </TableCell>
                     <TableCell><StatusBadge status={r.status} /></TableCell>
                     <TableCell className="text-xs text-zinc-400">
-                      {r.started_at ? new Date(r.started_at).toLocaleString() : '—'}
+                      {formatDateTime(r.started_at)}
                     </TableCell>
                     <TableCell className="text-sm text-zinc-300">
                       <DurationLabel ms={r.duration_ms} />

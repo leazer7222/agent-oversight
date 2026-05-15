@@ -43,14 +43,16 @@ function scoreProvider(signal: ProviderSignal, workload: WorkloadType): number {
 
   // Use-it-or-lose-it: the core allocation signal
   let quotaScore = 0.5 // neutral when unknown
-  if (signal.quota_remaining_pct !== null && signal.hours_until_reset !== null) {
+  if (signal.quota_remaining_pct !== null) {
     const pct = signal.quota_remaining_pct
     const hrs = signal.hours_until_reset
-    if (pct > 50 && hrs < 24)       quotaScore = 1.0   // strong: use today or lose it
-    else if (pct < 15 && hrs > 48)  quotaScore = 0.05  // conserve: critically low, long wait
-    else if (pct > 50)              quotaScore = 0.70
-    else if (hrs < 24)              quotaScore = 0.60
-    else                            quotaScore = 0.50
+    if (pct === 0)                              quotaScore = 0.0   // exhausted — do not use
+    else if (pct < 15 && hrs !== null && hrs > 48) quotaScore = 0.05  // conserve: critically low, long wait
+    else if (pct < 15)                          quotaScore = 0.15  // low, but no reset context
+    else if (hrs !== null && pct > 50 && hrs < 24) quotaScore = 1.0   // strong: use today or lose it
+    else if (pct > 50)                          quotaScore = 0.70
+    else if (hrs !== null && hrs < 24)          quotaScore = 0.60
+    else                                        quotaScore = 0.50
   }
 
   const errorPenalty = signal.error_rate_24h !== null
@@ -66,15 +68,21 @@ function buildReasons(signal: ProviderSignal, workload: WorkloadType): string[] 
   const reasons: string[] = []
 
   // Quota + reset (highest signal — always first if present)
-  if (signal.quota_remaining_pct !== null && signal.hours_until_reset !== null) {
+  if (signal.quota_remaining_pct !== null) {
     const pct = Math.round(signal.quota_remaining_pct)
-    const hrs = Math.round(signal.hours_until_reset)
-    if (pct > 50 && hrs < 24)
+    const hrs = signal.hours_until_reset !== null ? Math.round(signal.hours_until_reset) : null
+    if (pct === 0)
+      reasons.push('Quota exhausted — avoid until reset')
+    else if (pct > 50 && hrs !== null && hrs < 24)
       reasons.push(`${pct}% quota remaining — resets in ${hrs}h (use it today)`)
-    else if (pct < 15)
+    else if (pct < 15 && hrs !== null)
       reasons.push(`${pct}% quota remaining — conserve until reset in ${hrs}h`)
-    else
+    else if (pct < 15)
+      reasons.push(`${pct}% quota remaining — running low`)
+    else if (hrs !== null)
       reasons.push(`${pct}% quota remaining, resets in ${hrs}h`)
+    else
+      reasons.push(`${pct}% quota remaining`)
   }
 
   // Health

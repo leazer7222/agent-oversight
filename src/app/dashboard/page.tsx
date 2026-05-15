@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/dashboard/EmptyState'
 import { ProviderQuotaStrip } from '@/components/dashboard/ProviderQuotaStrip'
 import { assembleSignals } from '@/lib/ai-ops/signals'
 import { Bot, Play, DollarSign, AlertCircle } from 'lucide-react'
+import { formatDateTime } from '@/lib/utils'
 
 export default async function OverviewPage() {
   const [agentsRes, runsRes, costRes, errorsRes, signals] = await Promise.all([
@@ -156,7 +157,7 @@ export default async function OverviewPage() {
                     <TableCell className="text-sm">{r.agent_name ?? '—'}</TableCell>
                     <TableCell><StatusBadge status={r.status} /></TableCell>
                     <TableCell className="text-xs text-zinc-400">
-                      {r.started_at ? new Date(r.started_at).toLocaleString() : '—'}
+                      {formatDateTime(r.started_at)}
                     </TableCell>
                     <TableCell className="text-right text-sm text-zinc-400">
                       <CostLabel usd={r.cost_usd} />

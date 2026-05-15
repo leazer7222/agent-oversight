@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { CostLabel } from '@/components/dashboard/CostLabel'
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { formatDateTime } from '@/lib/utils'
 
 export default async function AgentsPage({
   searchParams,
@@ -102,11 +103,7 @@ export default async function AgentsPage({
                     <CostLabel usd={a.total_cost_usd} />
                   </TableCell>
                   <TableCell className="text-xs text-zinc-500">
-                    {a.last_event_at
-                      ? new Date(a.last_event_at).toLocaleString()
-                      : a.last_run_at
-                      ? new Date(a.last_run_at).toLocaleString()
-                      : '—'}
+                    {formatDateTime(a.last_event_at ?? a.last_run_at)}
                   </TableCell>
                 </TableRow>
               ))}

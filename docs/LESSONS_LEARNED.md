@@ -241,3 +241,14 @@ Related documents:
 - **`.env.local` corruption pattern.** Multiple append operations without newlines produce a single-line file that Next.js cannot parse. All env vars become undefined. Symptom: all Supabase queries fail silently, dashboard shows zeros. Rewrite the file with one key=value per line.
 - **Verify schema columns before writing queries.** The `agents` table has no `display_name` column — only `name`. Always run `SELECT column_name FROM information_schema.columns WHERE table_name = '...'` before writing a SELECT with assumed columns.
 - **Inspect run history before deleting duplicate agent rows.** Keep the row with real run history even if its UUID looks manually generated. Delete the one with zero runs.
+
+## Portugal Contractor Pipeline Rollout (2026-05-14)
+
+- **Do not simplify extraction logic across markets without parity validation.** The in-repo extractor removed critical behaviors from `extract_contacts_mvp.py` (contact-link fallback, robust phone parsing/label scoring, and network fallback depth). This caused real regressions in PT contact capture.
+- **Market-specific extraction profiles are required.** PT runs need Portuguese request headers, PT-centric contact paths, and PT phone normalization/validation. Reusing Colombia defaults (`+57` assumptions, `es-CO`) silently corrupts output quality.
+- **`Contact link` is contract-critical data, not optional metadata.** Research produced valid contact page URLs, but append/extraction paths dropped them. Preserving this field materially improves extraction success.
+- **Null handling bugs can masquerade as completed extraction.** `str(None)`/`nan`-style checks in skip logic caused rows to be treated as already enriched. Use explicit null-safe checks (`pd.isna`) for all contact/status gates.
+- **Temporary output merge behavior can rehydrate stale state.** Legacy extractor resume/output merge can silently reintroduce old contact values and block reprocessing. Clear temp output caches when running corrective passes.
+- **HubSpot stage must be explicitly wired into orchestrator end-state.** Completing research/append/catalog is not equivalent to “end-to-end to HubSpot.” The sync step must be a hard stage in the run chain.
+- **Writeback scoping must use runtime market, never hardcoded defaults.** HubSpot sync originally patched Supabase with `co-renovation` scope even for PT runs, causing successful HubSpot writes to appear unsynced in PT. Market-scoped writeback is mandatory.
+- **HubSpot eligibility is data-state driven.** Only rows with `extraction_status=extraction_completed` and `hubspot_sync_status=not_synced` are sync-ready. Backfilling extraction outcomes to Supabase is required before sync.

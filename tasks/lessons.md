@@ -29,3 +29,13 @@
 [2026-05-12] | cost_reported BOOLEAN sentinel required on runs | null cost_usd without sentinel is ambiguous; agents must call ctx.step() or report() with cost after every LLM call
 [2026-05-12] | agent_events write is non-fatal; guard on company_id | Wrap agent_events INSERT in try/catch; skip if company_id is null — some agents may not have company association
 [2026-05-12] | Python SDK error categorization uses bracket prefix | Errors are stored as `[category] message`; /api/errors extracts category via regex `^\[([^\]]+)\]`
+[2026-05-14] | `Stop-Process -Name node -Force` kills ALL node processes on the machine | Never use this — target a specific port: `Get-NetTCPConnection -LocalPort 3000 | Select OwningProcess | Stop-Process`
+[2026-05-14] | Turbopack detects workspace root from nearest package-lock.json — picks wrong dir if one exists higher up | Fix: set `turbopack: { root: process.cwd() }` in next.config.ts
+[2026-05-14] | Supabase REST POST upsert with `Prefer: resolution=merge-duplicates` fails with 409 if unique constraint exists | Use GET-or-create pattern instead: GET the row, INSERT only if missing
+[2026-05-14] | Main project needs `git pull` after PR merge — worktree changes don't auto-sync | Always run `git pull origin main` on the main repo after merging a PR from a worktree branch
+[2026-05-14] | Dev server processes started via Bash tool are unreliable — they block, timeout, or pile up | Never start/stop the dev server from the Bash tool; have the user manage it in their terminal
+[2026-05-14] | Claude Code uses API key auth by default — no .credentials.json exists | Run `claude login` once to create OAuth credentials; required for the `/api/oauth/usage` quota endpoint
+[2026-05-14] | PT rollout exposed extractor parity regressions after simplification | Keep legacy-equivalent extraction behaviors (contact-link fallback, robust phone parsing, fallback URL strategy) before replacing original logic
+[2026-05-14] | Cross-market extraction cannot share a single country assumption | Route extraction profile by `PIPELINE_MARKET_ID` (headers, contact paths, phone rules) to avoid invalid `+57` normalization in PT
+[2026-05-14] | HubSpot sync was not guaranteed in run chain and writeback market was hardcoded | Make HubSpot sync a final orchestrator stage and ensure Supabase writeback uses runtime `market_id`
+[2026-05-14] | HubSpot readiness depends on Supabase extraction status, not workbook-only updates | Always sync extraction outcomes back to `contractor_rows` before HubSpot stage

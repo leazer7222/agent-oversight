@@ -135,9 +135,13 @@ export async function assembleSignals(): Promise<ProviderSignal[]> {
     const account = accountMap[p]
     const windows = account ? (snapsByWindow[account.id] ?? {}) : {}
 
-    // Helper: get the most recent snapshot for a window type, expired or not
+    // Prefer fresh specific window; fall back to fresh primary; last resort: any expired data
     function getSnap(wt: string) {
-      return windows[wt] ?? windows['primary'] ?? null
+      const specific = windows[wt]
+      const primary  = windows['primary']
+      if (specific && !isExpired(specific)) return specific
+      if (primary  && !isExpired(primary))  return primary
+      return specific ?? primary ?? null
     }
 
     function isExpired(s: any): boolean {

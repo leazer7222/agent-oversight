@@ -139,6 +139,8 @@ def fetch_claude_quota(token: str) -> dict | None:
         return {
             "provider": "anthropic",
             "quota_remaining_pct": remaining_pct,
+            "quota_remaining_pct_5h": remaining_5h,
+            "quota_remaining_pct_7d": remaining_7d,
             "hours_until_reset": round(hours_until_reset, 2) if hours_until_reset is not None else None,
         }
     except Exception as e:
@@ -251,7 +253,10 @@ def _sb_headers() -> dict:
         "Prefer": "return=representation",
     }
 
-def post_snapshot(provider: str, remaining_pct: float) -> bool:
+def post_snapshot(provider: str, windows: dict) -> bool:
+    """Write per-window snapshots so the dashboard 5h/Weekly bars show fresh data.
+    windows: { 'five_hour': pct, 'seven_day': pct, 'primary': pct (binding min) }
+    """
     try:
         # 1. Get or create provider_account
         r = requests.get(
@@ -274,23 +279,31 @@ def post_snapshot(provider: str, remaining_pct: float) -> bool:
             r2.raise_for_status()
             account_id = r2.json()[0]["id"]
 
-        # 2. Insert quota snapshot (expires in 4h for api source)
+        # 2. Insert one snapshot per window type (expires in 4h)
         expires_at = (datetime.datetime.utcnow() + datetime.timedelta(hours=4)).isoformat() + "Z"
-        r2 = requests.post(
-            f"{SUPABASE_URL}/rest/v1/provider_quota_snapshots",
-            headers=_sb_headers(),
-            json={
-                "provider_account_id": account_id,
-                "quota_remaining_pct": remaining_pct,
-                "snapshot_source": "api",
-                "confidence": "high",
-                "expires_at": expires_at,
-                "notes": f"quota-sync-agent auto-sync",
-            },
-            timeout=10,
-        )
-        r2.raise_for_status()
-        print(f"[{provider}] Snapshot written to Supabase: {remaining_pct}% remaining")
+        rows_to_insert = [
+            {"window_type": wt, "quota_remaining_pct": pct}
+            for wt, pct in windows.items()
+        ]
+        for row in rows_to_insert:
+            r2 = requests.post(
+                f"{SUPABASE_URL}/rest/v1/provider_quota_snapshots",
+                headers=_sb_headers(),
+                json={
+                    "provider_account_id": account_id,
+                    "quota_remaining_pct": row["quota_remaining_pct"],
+                    "window_type": row["window_type"],
+                    "snapshot_source": "api",
+                    "confidence": "high",
+                    "expires_at": expires_at,
+                    "notes": "quota-sync-agent auto-sync",
+                },
+                timeout=10,
+            )
+            r2.raise_for_status()
+
+        summary = ", ".join(f"{wt}={pct}%" for wt, pct in windows.items())
+        print(f"[{provider}] Snapshots written: {summary}")
         return True
     except Exception as e:
         print(f"[{provider}] Supabase write failed: {e}")
@@ -309,7 +322,10 @@ def main():
     if token:
         quota = fetch_claude_quota(token)
         if quota:
-            ok = post_snapshot("anthropic", quota["quota_remaining_pct"])
+            windows = {"five_hour": quota["quota_remaining_pct_5h"],
+                       "seven_day": quota["quota_remaining_pct_7d"],
+                       "primary":   quota["quota_remaining_pct"]}
+            ok = post_snapshot("anthropic", windows)
             if ok:
                 synced.append("anthropic")
 
@@ -318,7 +334,7 @@ def main():
     if token:
         quota = fetch_codex_quota(token, account_id)
         if quota:
-            ok = post_snapshot("openai", quota["quota_remaining_pct"])
+            ok = post_snapshot("openai", {"primary": quota["quota_remaining_pct"]})
             if ok:
                 synced.append("openai")
 

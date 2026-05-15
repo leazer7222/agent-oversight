@@ -7,6 +7,7 @@ import { CostLabel } from '@/components/dashboard/CostLabel'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
+import { formatDateTime, formatTime } from '@/lib/utils'
 
 const severityColor: Record<string, string> = {
   error:   'bg-red-500/15 text-red-400 border-red-500/20',
@@ -51,7 +52,7 @@ export default async function RunDetailPage({
             <Link href={`/dashboard/agents/${agent.id}`} className="hover:text-zinc-300 transition-colors">
               {agent.name}
             </Link>
-          ) : '—'} · {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
+          ) : '—'} · {formatDateTime(run.started_at)}
         </p>
       </div>
 
@@ -97,7 +98,7 @@ export default async function RunDetailPage({
               <div key={e.id ?? i} className="flex gap-3 rounded-md bg-zinc-900 border border-zinc-800 px-3 py-2.5">
                 <div className="w-20 shrink-0 text-right">
                   <span className="text-xs text-zinc-600">
-                    {e.occurred_at ? new Date(e.occurred_at).toLocaleTimeString() : '—'}
+                    {formatTime(e.occurred_at)}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -143,7 +144,7 @@ export default async function RunDetailPage({
                     {o.output_type}
                   </Badge>
                   <span className="text-xs text-zinc-600">
-                    {o.created_at ? new Date(o.created_at).toLocaleString() : ''}
+                    {formatDateTime(o.created_at)}
                   </span>
                 </div>
                 <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">

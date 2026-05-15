@@ -17,6 +17,14 @@ import base64
 import datetime
 
 import requests
+from dotenv import load_dotenv, find_dotenv
+
+# Load .env.local from repo root (handles both direct run and worktree invocation)
+_env_file = find_dotenv(".env.local", usecwd=True)
+if _env_file:
+    load_dotenv(_env_file, override=False)
+else:
+    load_dotenv(os.path.join(os.path.dirname(__file__), "../../../.env.local"), override=False)
 
 sdk_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../python-sdk"))
 if sdk_dir not in sys.path:
@@ -24,8 +32,12 @@ if sdk_dir not in sys.path:
 from oversight import OversightClient
 
 AGENT_ID         = os.environ.get("QUOTA_SYNC_AGENT_ID", "17ad33d5-7de1-4aa1-b81c-4f654e524ae0")
-OVERSIGHT_URL    = os.environ.get("OVERSIGHT_URL", "https://agentoversight.netlify.app")
-OVERSIGHT_SECRET = os.environ.get("OVERSIGHT_SECRET") or os.environ.get("INGEST_SECRET", "")
+OVERSIGHT_URL    = os.environ.get("OVERSIGHT_URL", "https://agent-oversight.vercel.app")
+OVERSIGHT_SECRET = (
+    os.environ.get("AGENT_OVERSIGHT_SECRET") or
+    os.environ.get("OVERSIGHT_SECRET") or
+    os.environ.get("INGEST_SECRET", "")
+)
 SUPABASE_URL     = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://hdhovyrlnfojtkqbcegh.supabase.co")
 SUPABASE_KEY     = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 COMPANY_ID       = "87fb6e0d-ebff-4344-9b75-07c1a1a213ac"  # Personal
@@ -67,12 +79,11 @@ def _hours_until(iso_or_epoch) -> float | None:
 # ─────────────────────────────────────────────────────────────
 
 _CLAUDE_CREDS = os.path.join(_PROFILE, ".claude", ".credentials.json")
-_CLAUDE_REFRESH_URL = "https://claude.ai/api/oauth/token"
 
 
 def get_claude_token() -> str | None:
     if not os.path.exists(_CLAUDE_CREDS):
-        print("[Claude] .credentials.json not found — using API key auth, quota API unavailable")
+        print("[Claude] .credentials.json not found — quota API unavailable")
         return None
 
     with open(_CLAUDE_CREDS, "r") as f:
@@ -80,30 +91,17 @@ def get_claude_token() -> str | None:
 
     oauth = creds.get("claudeAiOauth", {})
     access_token  = oauth.get("accessToken")
-    refresh_token = oauth.get("refreshToken")
     expires_at_ms = oauth.get("expiresAt", 0)
 
-    # Refresh if within 60 seconds of expiry
-    if time.time() * 1000 > expires_at_ms - 60_000:
-        print("[Claude] Token expired — refreshing...")
-        try:
-            r = requests.post(_CLAUDE_REFRESH_URL, json={
-                "grant_type": "refresh_token",
-                "refresh_token": refresh_token,
-            }, timeout=10)
-            r.raise_for_status()
-            data = r.json()
-            oauth["accessToken"]  = data["access_token"]
-            oauth["refreshToken"] = data.get("refresh_token", refresh_token)
-            oauth["expiresAt"]    = int(time.time() * 1000) + data.get("expires_in", 3600) * 1000
-            creds["claudeAiOauth"] = oauth
-            with open(_CLAUDE_CREDS, "w") as f:
-                json.dump(creds, f, indent=2)
-            access_token = oauth["accessToken"]
-            print("[Claude] Token refreshed.")
-        except Exception as e:
-            print(f"[Claude] Refresh failed: {e}")
-            return None
+    # Claude Desktop keeps this file fresh — just trust whatever token is there.
+    # If it's expired, the quota API call will fail gracefully below.
+    if not access_token:
+        print("[Claude] No access token in credentials file — open Claude Desktop to refresh")
+        return None
+
+    age_h = (time.time() * 1000 - expires_at_ms) / 3_600_000
+    if age_h > 0:
+        print(f"[Claude] Token expired {age_h:.1f}h ago — Claude Desktop should have refreshed it; proceeding anyway")
 
     return access_token
 

@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { DurationLabel } from '@/components/dashboard/DurationLabel'
 import { CostLabel } from '@/components/dashboard/CostLabel'
 import { EmptyState } from '@/components/dashboard/EmptyState'
+import { formatDateTime } from '@/lib/utils'
 
 export default async function RunsPage({
   searchParams,
@@ -88,7 +89,7 @@ export default async function RunsPage({
                   <TableCell className="text-sm">{r.agent_name ?? '—'}</TableCell>
                   <TableCell><StatusBadge status={r.status} /></TableCell>
                   <TableCell className="text-xs text-zinc-400">
-                    {r.started_at ? new Date(r.started_at).toLocaleString() : '—'}
+                    {formatDateTime(r.started_at)}
                   </TableCell>
                   <TableCell className="text-sm text-zinc-300">
                     <DurationLabel ms={r.duration_ms} />

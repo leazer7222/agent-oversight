@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   const { data: company } = await supabase
     .from('companies')
     .select('id')
-    .limit(1)
+    .eq('name', 'Personal')
     .single()
 
   if (!company) {

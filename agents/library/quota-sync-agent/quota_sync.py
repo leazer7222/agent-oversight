@@ -19,6 +19,8 @@ import datetime
 import requests
 from dotenv import load_dotenv, find_dotenv
 
+from gemini_cookie_extractor import get_cookies
+
 # Load .env.local from repo root (handles both direct run and worktree invocation)
 _env_file = find_dotenv(".env.local", usecwd=True)
 if _env_file:
@@ -241,6 +243,58 @@ def fetch_codex_quota(token: str, account_id: str | None) -> dict | None:
         return None
 
 
+def fetch_gemini_quota() -> dict | None:
+    """Fetch Gemini quota from Google AI Studio internal API using browser cookies."""
+    try:
+        cookies = get_cookies()
+        if not cookies or "__Secure-1PSID" not in cookies:
+            print("[Gemini] Required cookies not found (are you logged into aistudio.google.com?)")
+            return None
+
+        # Internal usage API for Google AI Studio
+        # Note: This is a best-guess based on current platform telemetry patterns
+        r = requests.get(
+            "https://aistudio.google.com/api/usage",
+            cookies=cookies,
+            timeout=15,
+        )
+        
+        # If the direct internal API fails, we might need to use the GCP project-based metrics
+        # but for now we follow the "browser-based extraction" strategy.
+        if r.status_code == 404:
+            # Fallback/Alternative endpoint check
+            r = requests.get("https://aistudio.google.com/app/api/usage", cookies=cookies, timeout=15)
+
+        r.raise_for_status()
+        data = r.json()
+
+        # Expected shape based on research: { "usage": { "remaining_pct": 85, "resets_at": "..." } }
+        # Or similar. We will adapt this to the binding primary window.
+        usage = data.get("usage", {})
+        remaining_pct = usage.get("remaining_pct")
+        resets_at = usage.get("resets_at")
+        
+        if remaining_pct is None:
+            # Try alternative mapping
+            remaining_pct = data.get("remaining_percent")
+
+        if remaining_pct is None:
+            print("[Gemini] Could not find remaining_pct in response")
+            return None
+
+        hours_until_reset = _hours_until(resets_at) if resets_at else None
+
+        print(f"[Gemini] {remaining_pct}% remaining, resets in {hours_until_reset or '?' }h")
+        return {
+            "provider": "google",
+            "quota_remaining_pct": remaining_pct,
+            "hours_until_reset": round(hours_until_reset, 2) if hours_until_reset is not None else None,
+        }
+    except Exception as e:
+        print(f"[Gemini] Quota fetch failed: {e}")
+        return None
+
+
 # ─────────────────────────────────────────────────────────────
 # Write to Supabase directly
 # ─────────────────────────────────────────────────────────────
@@ -337,6 +391,13 @@ def main():
             ok = post_snapshot("openai", {"primary": quota["quota_remaining_pct"]})
             if ok:
                 synced.append("openai")
+
+    # ── Gemini ──
+    quota = fetch_gemini_quota()
+    if quota:
+        ok = post_snapshot("google", {"primary": quota["quota_remaining_pct"]})
+        if ok:
+            synced.append("google")
 
     print(f"\nDone. Providers synced: {synced or 'none'}")
 

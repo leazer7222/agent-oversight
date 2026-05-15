@@ -48,3 +48,14 @@ next-env.d.ts
 .claude/worktrees/
 # Claude Code local machine settings — never commit
 .claude/settings.local.json
+
+# python
+__pycache__/
+*.pyc
+
+# local data
+.codex/
+agents/instances/*/outputs/
+outputs/
+session-logs/
+*.log

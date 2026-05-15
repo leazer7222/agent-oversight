@@ -232,3 +232,19 @@ Add new lessons at the end of each session.
 ### Oversight URL — Netlify vs Vercel
 - The production oversight dashboard moved from `https://agentoversight.netlify.app` to `https://agent-oversight.vercel.app`.
 - Any script with the Netlify URL hardcoded as a default will silently fail telemetry. Audit all agent scripts for this.
+
+---
+
+## Chrome Cookie Extraction (Gemini Quota)
+
+### File locking issues
+- Chrome keeps an exclusive lock on the `Cookies` SQLite database while it is running.
+- Traditional `shutil.copyfile` or PowerShell `Copy-Item` will fail with "Permission denied".
+- Current strategy: `quota_sync.py` will retry automatically. Manual sync requires closing Chrome temporarily.
+- Future improvement: use Volume Shadow Copy (VSS) if admin privileges are available, or wait for Chrome to release the lock.
+
+### DPAPI Decryption
+- Chrome cookies on Windows are encrypted using DPAPI.
+- The decryption key is stored in `Local State` (JSON), itself encrypted with DPAPI.
+- Requires `pypiwin32` (for `win32crypt`) and `pycryptodome` (for AES-GCM decryption).
+- Cookie format: `v10` or `v11` prefix followed by nonce and ciphertext.

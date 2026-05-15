@@ -174,3 +174,56 @@ Add new lessons at the end of each session.
 - `emit()` and `run()` now accept `team_id`, `context_bundle_id`, `context_bundle_version`, `parent_run_id` as optional kwargs.
 - These flow through to the `/api/ingest` payload and populate the matching columns in the `runs` table.
 - When adding new DB columns that agents should populate, update the SDK in the same PR — not separately.
+
+---
+
+## Windows Environment Variables
+
+### Machine env vars not visible to running processes
+- Windows user env vars set via `[System.Environment]::SetEnvironmentVariable(... 'User')` are NOT inherited by already-running processes — only by processes started after the change.
+- Always restart Claude Code after adding new machine env vars to ensure they're inherited.
+- Workaround in current session: `$env:VAR = [System.Environment]::GetEnvironmentVariable('VAR', 'User')`.
+
+### Machine env can silently hold the wrong value
+- The machine env `SUPABASE_SERVICE_ROLE_KEY` held the 105-char anon key instead of the 219-char service role key — both are JWTs starting with `eyJ` so visually similar.
+- Before trusting machine env for Supabase auth, verify key length: anon ≈ 105 chars, service_role ≈ 219 chars.
+- Canonical source of truth is always `.env.local` — cross-check machine env against it.
+
+---
+
+## Dashboard / Next.js
+
+### Server-rendered timestamps always need explicit timezone
+- `new Date(...).toLocaleString()` with no options uses the runtime's timezone. On Vercel this is UTC, which looks correct locally (dev machine matches user's TZ) but shows UTC in production.
+- Always pass `{ timeZone: 'America/Chicago' }` (or use the shared `formatDateTime`/`formatTime` helpers in `src/lib/utils.ts`) for any date displayed in the dashboard.
+
+---
+
+## AI Ops / Recommendation Engine
+
+### Quota score requires both pct AND reset hours — easy to accidentally neuter
+- `scoreProvider()` originally only ran quota logic when BOTH `quota_remaining_pct` AND `hours_until_reset` were non-null. Providers with no reset schedule configured always got the neutral 0.5 score, ignoring actual quota.
+- Fix: evaluate quota pct independently; only use `hours_until_reset` for the "use-it-or-lose-it" bonus. A provider at 0% must score 0 regardless of reset schedule.
+
+---
+
+## Quota-Sync Agent
+
+### Claude OAuth token vs Anthropic API key — completely separate systems
+- The Anthropic API key (`ANTHROPIC_API_KEY`, starts `sk-ant-api03-`) is for API access.
+- The Claude OAuth token in `~/.claude/.credentials.json` (`claudeAiOauth.accessToken`, starts `sk-ant-oat01-`) is for the claude.ai subscription quota API (`api.anthropic.com/api/oauth/usage`).
+- Claude Desktop does NOT refresh the credentials file — that file is managed by the Claude Code CLI (`claude login`). Using Claude Desktop does not keep the token fresh.
+- Token lasts ~2 days. To refresh: open a standalone cmd/PowerShell window (NOT inside Claude Code or Claude Desktop) and run `claude login`. It opens a browser OAuth flow.
+
+### Claude OAuth refresh URL changed
+- `https://claude.ai/api/oauth/token` now returns 404 — do not rely on in-script token refresh.
+- Delegate token management entirely to `claude login`; the script should read whatever is in the credentials file and fail gracefully if the API returns 401.
+
+### Oversight secret env var naming
+- Python agents must check `AGENT_OVERSIGHT_SECRET` first, then fall back to `OVERSIGHT_SECRET`, then `INGEST_SECRET`.
+- `OVERSIGHT_SECRET` in `.env.local` is the local dev server secret and does NOT work against the production Vercel endpoint.
+- Production secret: `AGENT_OVERSIGHT_SECRET`.
+
+### Oversight URL — Netlify vs Vercel
+- The production oversight dashboard moved from `https://agentoversight.netlify.app` to `https://agent-oversight.vercel.app`.
+- Any script with the Netlify URL hardcoded as a default will silently fail telemetry. Audit all agent scripts for this.

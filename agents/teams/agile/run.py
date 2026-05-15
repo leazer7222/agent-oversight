@@ -394,7 +394,7 @@ def main() -> None:
 
         # 10. Print human-readable Brief
         print("\n" + "=" * 70)
-        print(md_path.read_text(encoding="utf-8"))
+        print(md_path.read_text(encoding="utf-8").encode(sys.stdout.encoding, errors="replace").decode(sys.stdout.encoding))
         print("=" * 70)
         print(f"\nRun complete. PCA run ID: {pca_run_id[:8]}...")
 

@@ -60,13 +60,14 @@ Before an agent can run, it must be registered in Supabase.
 
 ### Agent Index
 
-| Agent | Owner | agent_id | Location | Status |
+| Agent | Owner | agent_id (definition) | Location | Status |
 |---|---|---|---|---|
 | `context-agent` | `reformai` | `40b5e259-5b28-44fd-9c5b-e758093e5d3d` | `/agents/library/context-agent/` | Active |
 | `marketing-agent` | `reformai` | `761c56f6-4de8-4859-974a-43d964de62f0` | `/agents/library/marketing-agent/` | Active |
 | `ui-design-agent` | `reformai` | (see agent.json) | `/agents/library/ui-design-agent/` | Active |
 | `audit-agent` | `reformai` | (see agent.json) | `/agents/library/audit-agent/` | Active |
 | `optimization-agent` | `reformai` | (see agent.json) | `/agents/library/optimization-agent/` | Active |
+| `code-review-agent` | `reformai` | `f9a8b7c6-d5e4-4f3a-8b2c-1d0e9f8a7b6c` | `/agents/library/code-review-agent/` | Active |
 
 
 
@@ -193,7 +194,67 @@ Every agent directory must contain these files:
 
 ## 7. Naming Conventions
 
-- Agent names: `snake_case` (e.g. `context_agent`, `email_summarizer`)
+- Agent names: `snake_case` or `kebab-case` (e.g. `context-agent`, `marketing-agent`)
 - Owner values: `reformai`, `afterglow`, `personal`
 - Directory names match agent name exactly
 - `run_id`: UUID v4, generated per run
+
+---
+
+## 8. Definition vs. Instance Pattern
+
+Every agent is composed of two distinct registered entities:
+
+**Capability definition** (`agent_definitions` table) — tenant-neutral, versioned library entry.
+- Name: `{capability}` — no tenant prefix (e.g. `code-review-agent`, `marketing-agent`)
+- Defines: `input_schema`, `output_schema`, `config_schema`, `capability_tags`, `version`
+- Shared across all tenants that deploy this capability
+- `agent.json` in the library directory stores the definition UUID
+
+**Operational instance** (`agents` table) — tenant/project-scoped deployment.
+- Name: `{tenant}.{capability}` (e.g. `reformai.code-review-agent`)
+- Defines: `company_id`, `project_id`, `parent_agent_id`, governance params, `config_overrides`
+- `config_overrides` holds instance-specific context: standards refs, jurisdiction, exclusions
+- `can_be_triggered_by` enforces authorization — only listed parent agents may invoke
+
+The **hierarchy page displays instances only**. Definitions are a library catalog, not
+operational nodes. A definition has no run history, status, or hierarchy position.
+
+### Instance config_overrides pattern
+
+```json
+{
+  "tenant": "reformai",
+  "project": "agent-oversight",
+  "review_mode": "pre-push",
+  "context_scope": {
+    "standards_refs": ["docs/PLATFORM_ARCHITECTURE.md", "docs/repo-standards.md"],
+    "architecture_docs": ["docs/PLATFORM_ARCHITECTURE.md"]
+  },
+  "review_scope": "agent-oversight repository",
+  "exclusions": ["personal", "afterglow"]
+}
+```
+
+---
+
+## 9. Output Types
+
+Agents write artifacts to `agent_outputs` with an `output_type` that identifies the artifact
+kind. The CHECK constraint enforces the allowed set.
+
+| output_type | Produced by | Description |
+|---|---|---|
+| `marketing_brief` | marketing-agent | Strategic brief and positioning |
+| `lp_blueprint` | marketing-agent / orchestrator | Landing page structure |
+| `strategy_summary` | marketing-agent | Executive strategy summary |
+| `context_snapshot` | context-agent | Project context snapshot |
+| `ui_components` | ui-design-agent | React component specifications |
+| `code_review` | code-review-agent | Immutable findings artifact with severity taxonomy |
+| `other` | any | Catch-all for non-standard outputs |
+
+**Important semantic distinction:**
+- `agent_outputs` (output_type = `code_review`) — artifacts produced BY an agent about
+  code or other external subjects. The subject is a code diff.
+- `agent_qa_results` — evaluations OF an agent's operational performance. The subject is
+  an agent run. Do not use `agent_qa_results` for code review findings.

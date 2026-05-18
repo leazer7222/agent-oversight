@@ -258,6 +258,12 @@ Add new lessons at the end of each session.
 - Human workflow (acknowledged / resolved / false positive / accepted risk) belongs in a separate `code_review_finding_states` table. That table is deferred from v1.
 - Design `finding_id` as a stable UUID per finding NOW so the lifecycle table can reference it later without a schema change.
 
+### load_dotenv requires override=True inside Claude Code sessions
+- Claude Code injects some env vars as empty strings (`''`) into child processes — including `ANTHROPIC_API_KEY`.
+- `load_dotenv` defaults to `override=False`, so it silently skips a key that already exists in `os.environ`, even if the existing value is empty.
+- Fix: always use `load_dotenv(find_dotenv(...), override=True)` in agent scripts that need `.env.local` values to win over the Claude Code process environment.
+- Diagnosis: if `os.environ.get('KEY')` returns `''` before any dotenv load, this is the issue.
+
 ### Findings must cite sources or they are opinions
 - Every finding in a code_review artifact MUST populate at least one of: `principles`, `standards_refs`, `lessons_refs`.
 - A finding that cites no source is not contestable by the author. Unciteable findings are likely opinions — do not emit them.

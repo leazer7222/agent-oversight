@@ -51,7 +51,7 @@ if hasattr(sys.stdout, "reconfigure"):
 # ── Load .env.local from repo root ───────────────────────────────────────────
 try:
     from dotenv import load_dotenv, find_dotenv
-    load_dotenv(find_dotenv(".env.local", usecwd=True))
+    load_dotenv(find_dotenv(".env.local", usecwd=True), override=True)
 except ImportError:
     pass  # python-dotenv optional; rely on env vars being set externally
 

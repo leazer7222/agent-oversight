@@ -1,0 +1,11 @@
+{
+  "agent_id": "f9a8b7c6-d5e4-4f3a-8b2c-1d0e9f8a7b6c",
+  "name": "code-review-agent",
+  "display_name": "Code Review Agent",
+  "description": "Performs structured pre-push code review against documented architecture principles, governance standards, and operational conventions. Produces an immutable code_review findings artifact.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "instance_type": "stateless",
+  "capability_tags": ["code_review", "quality_assurance", "architecture_review", "governance_review"],
+  "mcp_dependencies": []
+}

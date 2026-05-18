@@ -65,7 +65,16 @@ Template to copy from: `/agents/library/_template/`
     - Purpose: Scans the repo for standards compliance and organizational gaps; produces a prioritized improvement report via LLM.
     - Status: Active
     - Owner: `reformai`
+- **code-review-agent** ([library](agents/library/code-review-agent/))
+    - Purpose: Structured pre-push code review against PLATFORM_ARCHITECTURE.md principles, repo standards, and agent standards. Produces an immutable `code_review` findings artifact with severity taxonomy, confidence levels, principle citations, and remediation guidance. Advisory in v1.
+    - Definition ID: `f9a8b7c6-d5e4-4f3a-8b2c-1d0e9f8a7b6c`
+    - Instance: `reformai.code-review-agent` (ID: `a0b9c8d7-e6f5-4a4b-9c3d-2e1f0a9b8c7d`)
+    - Status: Active | Owner: `reformai` | Type: `worker` | Depth: `1`
+    - Parent: `claude-reformai` | Output type: `code_review`
 
+> **Definition vs. instance:** `code-review-agent` is the reusable capability definition
+> (tenant-neutral). `reformai.code-review-agent` is the operational instance scoped to
+> ReformAI with Agent Oversight as its review jurisdiction. See `docs/agent-standards.md §8`.
 
 ## Required at runtime
 

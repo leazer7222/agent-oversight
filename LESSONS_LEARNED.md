@@ -248,3 +248,39 @@ Add new lessons at the end of each session.
 - The decryption key is stored in `Local State` (JSON), itself encrypted with DPAPI.
 - Requires `pypiwin32` (for `win32crypt`) and `pycryptodome` (for AES-GCM decryption).
 - Cookie format: `v10` or `v11` prefix followed by nonce and ciphertext.
+
+---
+
+## Agent Definition / Instance Architecture
+
+### Definitions are tenant-neutral; instances are tenant-scoped
+- `agent_definitions` table = reusable capability contract. Name convention: `{capability}` (no tenant prefix).
+- `agents` table = operational deployment. Name convention: `{tenant}.{capability}` (e.g. `reformai.code-review-agent`).
+- The schema already had this split (`definition_id` FK on `agents`) — but the naming convention was not enforced until 2026-05-15.
+- `agent.json` in the library directory stores the **definition UUID** (not the instance UUID).
+- Instance-specific jurisdiction lives in `agents.config_overrides` as JSONB. No formal `context_packages` table yet — prove the pattern before building the abstraction.
+
+### Hierarchy page displays instances only
+- Definitions are a library catalog. They have no run history, no operational status, no hierarchy position.
+- Showing definitions in the hierarchy would create phantom nodes with no operational semantics. Keep the surfaces separate.
+
+### agent_outputs vs agent_qa_results — do not conflate
+- `agent_outputs` with `output_type = 'code_review'` = artifact produced by the code-review-agent ABOUT a code diff. Subject is a code change.
+- `agent_qa_results` = evaluation OF an agent's operational performance. Subject is an agent run.
+- A code review finding does NOT belong in `agent_qa_results`. If you are evaluating whether the code-review-agent itself performed well, THAT goes in `agent_qa_results`.
+
+### code_review artifact is immutable — lifecycle state is a separate table
+- The findings artifact written to `agent_outputs` must never be modified after write. It is a ledger entry.
+- Human workflow (acknowledged / resolved / false positive / accepted risk) belongs in a separate `code_review_finding_states` table. That table is deferred from v1.
+- Design `finding_id` as a stable UUID per finding NOW so the lifecycle table can reference it later without a schema change.
+
+### load_dotenv requires override=True inside Claude Code sessions
+- Claude Code injects some env vars as empty strings (`''`) into child processes — including `ANTHROPIC_API_KEY`.
+- `load_dotenv` defaults to `override=False`, so it silently skips a key that already exists in `os.environ`, even if the existing value is empty.
+- Fix: always use `load_dotenv(find_dotenv(...), override=True)` in agent scripts that need `.env.local` values to win over the Claude Code process environment.
+- Diagnosis: if `os.environ.get('KEY')` returns `''` before any dotenv load, this is the issue.
+
+### Findings must cite sources or they are opinions
+- Every finding in a code_review artifact MUST populate at least one of: `principles`, `standards_refs`, `lessons_refs`.
+- A finding that cites no source is not contestable by the author. Unciteable findings are likely opinions — do not emit them.
+- `validate_artifact()` in `output.py` enforces this at write time.

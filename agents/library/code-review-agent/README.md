@@ -141,18 +141,53 @@ None.
 
 ---
 
+## Setup
+
+Install dependencies (from the project root, or into your active venv):
+
+```bash
+pip install anthropic>=0.40.0 python-dotenv>=1.0.0 requests>=2.31.0
+```
+
+Add `ANTHROPIC_API_KEY` to `.env.local` in the project root (it is not included by default):
+
+```
+ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+The agent also reads `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`AGENT_OVERSIGHT_SECRET` from `.env.local`, which are already present for other agents.
+
 ## Running it
 
 ```bash
-# From the project root
+# From the project root — review the last commit
 python agents/library/code-review-agent/agent.py \
-  --commit-sha <sha> \
-  --base-sha <base_sha> \
-  --branch <branch>
+  --commit-sha HEAD \
+  --base-sha HEAD~1 \
+  --branch <your-branch>
+
+# Review a feature branch against main
+python agents/library/code-review-agent/agent.py \
+  --commit-sha HEAD \
+  --base-sha origin/main \
+  --branch feature/my-feature
+
+# Use a cheaper/faster model (default is claude-opus-4-5)
+CODE_REVIEW_MODEL=claude-sonnet-4-5 python agents/library/code-review-agent/agent.py \
+  --commit-sha HEAD --base-sha HEAD~1 --branch main
 ```
 
-v1 is a stub — invocation wiring is deferred. The definition, instance registration,
-output contract, and `output.py` utility are complete and ready for wiring.
+Exit code `1` means recommendation is `block`. Use this in a git pre-push hook:
+
+```bash
+#!/bin/sh
+# .git/hooks/pre-push
+python agents/library/code-review-agent/agent.py \
+  --commit-sha HEAD \
+  --base-sha origin/main \
+  --branch "$(git rev-parse --abbrev-ref HEAD)"
+```
 
 ---
 

@@ -128,7 +128,11 @@ def write_code_review(
             "\n".join(f"  - {e}" for e in errors)
         )
 
-    url = supabase_url or os.environ.get("SUPABASE_URL", "")
+    url = (
+        supabase_url
+        or os.environ.get("SUPABASE_URL")
+        or os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")
+    )
     key = supabase_key or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
     if not url or not key:
@@ -236,7 +240,7 @@ def build_artifact(
         "schema_version": "1.0",
         "review_id": str(uuid.uuid4()),
         "subject": {
-            "type": "pre-push" if pr_number is None else "pr",
+            "type": "pr" if pr_number is not None else "diff",
             "commit_sha": commit_sha,
             "base_sha": base_sha,
             "branch": branch,

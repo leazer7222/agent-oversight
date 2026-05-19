@@ -284,3 +284,40 @@ Add new lessons at the end of each session.
 - Every finding in a code_review artifact MUST populate at least one of: `principles`, `standards_refs`, `lessons_refs`.
 - A finding that cites no source is not contestable by the author. Unciteable findings are likely opinions — do not emit them.
 - `validate_artifact()` in `output.py` enforces this at write time.
+
+---
+
+## Adaptive Cost Risk Engine (Phase 1)
+
+### Migration numbering and linter
+- Migrations 013–020 are the Phase 1 Cost Risk Engine migrations. All must pass `python3 scripts/check_migrations.py --from-migration 013` with zero hard failures before applying.
+- The linter enforces: no TIMESTAMP without TZ, no SERIAL, no ON DELETE CASCADE on Class I tables, no PostgreSQL ENUM types, every CREATE TABLE has `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
+- Migration 012 (phase0 — platform schema + apply_append_only_rls function) was authored in the `funny-heisenberg` worktree and applied directly to Supabase. Apply migrations 013–020 after 012.
+
+### Non-public schema access from Supabase JS client
+- Tables in schemas other than `public` require `supabase.schema('schema_name').from('table_name')`.
+- Functions in `public` schema are callable via `supabase.rpc('function_name')`. Functions in other schemas are NOT directly callable via `.rpc()` without schema prefix — always define monitoring/utility functions in `public`.
+
+### budget_periods UNIQUE constraint with nullable cost_center_id
+- `UNIQUE (tenant_id, cost_center_id, period_key)` does NOT enforce uniqueness when `cost_center_id IS NULL` because NULL ≠ NULL in PostgreSQL.
+- Fix: use two partial unique indexes: one `WHERE cost_center_id IS NULL` on `(tenant_id, period_key)`, and one `WHERE cost_center_id IS NOT NULL` on `(tenant_id, cost_center_id, period_key)`.
+
+### apply_append_only_rls() is NOT for mixed-mutability tables
+- `platform.apply_append_only_rls()` creates restrictive UPDATE and DELETE policies. Do not call it on tables where any field must be updatable (e.g., `budget_reservations.status`, `budget_periods.reserved_usd`).
+- For hybrid tables: create custom RLS — block DELETE with a restrictive policy, allow INSERT + UPDATE, add tenant isolation SELECT policy manually.
+
+### Turbopack + Windows directory junctions (node_modules in worktrees)
+- The LESSONS_LEARNED workaround `cmd /c mklink /J node_modules ..\node_modules` works for webpack-based `next dev` but Turbopack (Next.js 16 default) panics with "Symlink points out of filesystem root" on Windows junctions that traverse deep paths.
+- Workaround: run `next dev --no-turbo` (webpack mode) in the launch.json `runtimeArgs` when using worktrees on Windows.
+- Or: copy the files being developed to the main repo temporarily for preview validation.
+
+### Artifact tables and the settlement_records / evaluation_artifacts sequential dependency
+- `settlement_records.reservation_id` FKs to `budget_reservations.id` — budget_reservations must exist before settlements.
+- `evaluation_artifacts.estimate_id` FKs to `estimate_artifacts.id` — estimates must exist before evaluations.
+- Ingest flow for run_started: (1) task type lookup → (2) run INSERT → (3) fire-and-forget: recommendation artifact → estimate artifact → budget period upsert → reservation.
+- Ingest flow for run_completed: fire-and-forget: evaluation artifact → settle reservation. Order matters: evaluation reads estimate FK first.
+
+### estimate_artifacts.run_request_id vs runs.id
+- In Phase 1, there is no `run_requests` table. `estimate_artifacts.run_request_id` is an application-level reference to `runs.id`.
+- The DB FK to `run_requests.id` is intentionally deferred to Phase 3. Do not add it until that table exists.
+- The UNIQUE index `ON estimate_artifacts(run_request_id)` enforces one estimate per run without needing the FK.

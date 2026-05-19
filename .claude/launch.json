@@ -4,7 +4,7 @@
     {
       "name": "dashboard",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["run", "dev", "--", "--no-turbo"],
       "port": 3002,
       "autoPort": true
     }

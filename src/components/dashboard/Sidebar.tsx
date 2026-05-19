@@ -12,6 +12,7 @@ import {
   Network,
   Gauge,
   ShieldCheck,
+  Calculator,
 } from 'lucide-react'
 
 const nav = [
@@ -22,6 +23,7 @@ const nav = [
   { href: '/dashboard/errors',      label: 'Errors',      icon: AlertCircle },
   { href: '/dashboard/costs',       label: 'Costs',       icon: DollarSign },
   { href: '/dashboard/ai-ops',      label: 'AI Ops',      icon: Gauge },
+  { href: '/dashboard/estimation',  label: 'Estimation',  icon: Calculator },
   { href: '/dashboard/invariants',  label: 'Invariants',  icon: ShieldCheck },
 ]
 

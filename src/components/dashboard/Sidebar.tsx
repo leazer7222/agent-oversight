@@ -12,6 +12,7 @@ import {
   Network,
   Gauge,
   ShieldCheck,
+  BarChart2,
 } from 'lucide-react'
 
 const nav = [
@@ -23,6 +24,7 @@ const nav = [
   { href: '/dashboard/costs',       label: 'Costs',       icon: DollarSign },
   { href: '/dashboard/ai-ops',      label: 'AI Ops',      icon: Gauge },
   { href: '/dashboard/invariants',  label: 'Invariants',  icon: ShieldCheck },
+  { href: '/dashboard/estimation',  label: 'Estimation',  icon: BarChart2 },
 ]
 
 export function Sidebar() {

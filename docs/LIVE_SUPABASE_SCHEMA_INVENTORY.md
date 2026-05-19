@@ -5,15 +5,15 @@
 
 ---
 
-## Current Schema State (2026-05-19)
+## Current Schema State (2026-05-18)
 
-Migrations 012–020 applied. 37 tables across 6 schemas.
+Migrations 012–022 applied. 37 tables across 6 schemas.
 
 ### Schemas
 
 | Schema | Purpose | Migrations |
 |---|---|---|
-| `public` | Original agent oversight tables | 001–011 |
+| `public` | Original agent oversight tables + monitoring + estimation dashboard functions | 001–011, 020, 021, 022 |
 | `platform` | Governance foundations (append-only enforcement, correction records) | 012 |
 | `cost_intelligence` | Pricing, taxonomy, estimates, evaluations | 013, 017, 019 |
 | `telemetry` | Raw event store (RFC-003 envelope) | 014 |
@@ -53,9 +53,43 @@ Migrations 012–020 applied. 37 tables across 6 schemas.
 - `budget_reservations` — per-run budget holds (ART-005)
 - `settlement_records` — final cost accounting (ART-006, append-only)
 
-### Functions
-- `public.invariant_report()` — Phase 1 Class C monitoring, returns JSONB. Called by `/api/monitoring/invariants`.
-- `platform.apply_append_only_rls(schema, table)` — applies no-UPDATE/no-DELETE RLS to artifact tables.
+### Public SECURITY DEFINER Functions
+
+All cross-schema reads/writes go through these functions. PostgREST only exposes `public` — never call `.schema('x').from('y')` at runtime.
+
+| Function | Migration | Purpose | Called by |
+|---|---|---|---|
+| `invariant_report()` | 020 | Phase 1 Class C monitoring — all invariant checks in one JSONB blob | `/api/monitoring/invariants` |
+| `get_task_type_id(code)` | 021 | Resolves task type UUID from code string | `/api/ingest` |
+| `write_run_started_artifacts(...)` | 021 | Writes recommendation + estimate + reservation + budget period atomically | `/api/ingest` |
+| `write_run_completed_artifacts(...)` | 021 | Writes evaluation + settles reservation | `/api/ingest` |
+| `ingest_telemetry_event(...)` | 021 | Writes RFC-003 event envelope to `telemetry.raw_events` | `/api/telemetry/ingest` |
+| `get_estimation_run_detail(run_id)` | 022 | Returns all 4 estimation artifacts for a single run | `/api/estimation/runs/[id]` |
+| `get_estimation_accuracy_overview()` | 022 | Headline accuracy metrics — MAPE, direction, band containment | `/api/estimation/overview` |
+| `get_biggest_misses(limit)` | 022 | Top-N runs by absolute_error_usd (complete telemetry only) | `/api/estimation/biggest-misses` |
+| `get_bucket_accuracy()` | 022 | All 24 buckets (8 task types × 3 complexities) with calibration status | `/api/estimation/buckets` |
+| `get_calibration_readiness()` | 022 | Phase 2 schema-freeze gate + bucket eligibility summary | `/api/estimation/calibration` |
+
+`platform.apply_append_only_rls(schema, table)` — applies no-UPDATE/no-DELETE RLS to artifact tables.
+
+### Live Data (as of 2026-05-19)
+
+| Entity | Count | Notes |
+|---|---|---|
+| Runs | 52+ | 51 historical + Phase 1 runs |
+| Estimate artifacts | 2 | Both from code-review-agent run on 2026-05-19 |
+| Evaluation artifacts | 1 | code-review run: actual $0.775, estimated $0.033, +2,248% error |
+| Recommendation artifacts | 2 | Both passthrough mode |
+| Budget reservations | 2 | One settled (overrun), one active |
+| Settlement records | 1 | settlement_type: overrun, settlement_source: telemetry |
+| Raw events | — | RFC-003 telemetry events from all agent runs |
+
+**First live estimation miss (code-review-agent, 2026-05-19):**
+- Run ID: `59b10b4f-8551-42c1-8dd2-f7624bba9c8d`
+- Estimated p50: $0.033 | Estimated p95: $0.069 | Actual: $0.774942
+- Error: +2,248% (underestimated)
+- Root cause: `context_size_unknown` — feature snapshot has `prompt_chars=0` (ingest endpoint cannot observe actual LLM prompt). Input token estimate: 2,000. Actual: 217,364.
+- Replayability: PASS — valid calibration training point when bucket reaches 30 observations.
 
 ---
 

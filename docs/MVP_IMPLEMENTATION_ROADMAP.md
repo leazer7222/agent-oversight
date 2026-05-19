@@ -100,6 +100,10 @@ Interpretation guidance:
 
 # Phase Completion Status
 
+**Last updated: 2026-05-18**
+
+## Original MVP Phases
+
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | Phase 1 — Schema Stabilization | ✅ Complete | 2026-05-12 |
@@ -111,34 +115,59 @@ Interpretation guidance:
 | Phase 7 — Observability Hardening | ⏳ Deferred | — |
 | Phase 8 — Governance + Eval | ⏳ Deferred | — |
 
+## Adaptive Cost Risk Engine (added 2026-05)
+
+| Phase | Status | Completed |
+|-------|--------|-----------|
+| Phase 0 — Platform foundations | ✅ Complete | 2026-05-18 |
+| Phase 1 — Dark launch (deterministic estimates + telemetry) | ✅ Complete + LIVE | 2026-05-18 |
+| Estimation Dashboard Slice 1 — Run drilldown | ✅ Complete | 2026-05-18 |
+| Estimation Dashboard Slice 2 — Overview + biggest misses | ⏳ Pending | Build after ~5 more runs |
+| Estimation Dashboard Slice 3 — Bucket accuracy table | ⏳ Pending | — |
+| Estimation Dashboard Slice 4 — Calibration readiness gate | ⏳ Pending | — |
+| Phase 2 — Calibration (learned multipliers) | ⏳ Pending | Trigger: 30+ obs in first bucket |
+| Phase 3 — Budget enforcement | ⏳ Deferred | After Phase 2 |
+| Phase 4 — Intelligent routing | ⏳ Deferred | After Phase 3 |
+
 # Current System State
-## Confirmed current architecture
-- Python runtime with modular agents and orchestrator-based execution.
-- Next.js app with ingest API, project-state API, and 8 operational Read API endpoints.
-- Supabase as persistence layer (schema stabilized; migrations 001–007 applied or documented).
-- Telemetry/oversight layer: full run lifecycle + step events + error taxonomy.
-- `python-sdk/oversight.py`: RunContext, StepTimer, error categorization, cost estimation.
 
-## Current maturity level
-- Early-platform stage. Control-plane API surface is complete. Dashboard UI is the remaining gap.
-- Agent execution is functional and telemetry-emitting. Cost/token data is present in code but zero until LLM billing is enabled.
+**Last updated: 2026-05-18**
 
-## Strongest existing foundations
-- Stable schema contract (migrations as governance source of truth, live DB as operational reality).
-- Consistent telemetry (run lifecycle + step events + error taxonomy all implemented).
-- 8 operational Read API endpoints covering all MVP data needs.
-- Modular agent library with step-instrumented agents.
+## Architecture
 
-## Biggest gaps
-- No dashboard UI yet — operators cannot view agent/run/cost/error data without querying APIs directly.
-- LLM billing not enabled — token/cost columns are null in all current run rows.
-- No Supabase TypeScript generated types — Phase 3 routes use `as any[]` casts.
+- **Next.js (Vercel)** — Dashboard UI + all API routes
+- **Supabase** (`hdhovyrlnfojtkqbcegh`) — persistence layer, migrations 001–022 applied
+- **Python agents** — code-review-agent, contractor pipeline, agile team, marketing, context
+- **6 database schemas** — public, platform, cost_intelligence, telemetry, model_intelligence, runtime_governance
+- **10 SECURITY DEFINER functions** in public schema — all cross-schema reads/writes
+
+## Dashboard pages live
+
+| Page | Status |
+|---|---|
+| `/dashboard` | Overview — agent + run summary |
+| `/dashboard/agents` | Agent registry |
+| `/dashboard/hierarchy` | Agent topology tree |
+| `/dashboard/runs` | Run list |
+| `/dashboard/runs/[id]` | Run detail — lifecycle, events, outputs |
+| `/dashboard/errors` | Error taxonomy |
+| `/dashboard/costs` | Cost aggregation |
+| `/dashboard/ai-ops` | AI Ops / quota monitoring |
+| `/dashboard/invariants` | Phase 1 Class C monitoring |
+| `/dashboard/estimation/runs/[id]` | Estimation run drilldown (Slice 1) |
+
+## Biggest active gaps
+
+- Estimation Dashboard Slices 2–4 — DB functions exist (migration 022), API routes + pages not yet built
+- `unevaluated_estimates: 1` — second code-review run has no evaluation artifact; pipeline gap to investigate
+- `prompt_chars=0` in all Phase 1 feature snapshots — ingest endpoint limitation; Phase 2 enrichment needed
+- Phase 5 (Execution Queue) and Phase 6 (Controlled Execute) — deferred, not started
 
 ## Biggest remaining risks
-- LLM cost visibility blocked until billing is enabled
-- Execution fragility from synchronous orchestration (no queue — Phase 5)
-- No operator execution controls (Phase 6)
-- Secret handling not hardened (Vercel SSO, env var discipline)
+
+- Calibration system does not exist yet — all estimates are deterministic (flat heuristics). Will systematically underestimate large-context tasks until Phase 2.
+- No budget enforcement in Phase 1 — reservations are created but hard limits are not applied (by design)
+- Execution fragility from synchronous agent orchestration (no queue — Phase 5)
 
 # Lessons Already Learned
 1. Token exhaustion creates operational continuity problems.  

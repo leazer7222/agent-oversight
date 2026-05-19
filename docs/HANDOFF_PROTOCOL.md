@@ -1,3 +1,10 @@
+> **STATUS: Superseded as of 2026-05-15.**
+> This document was the session-continuity format when Codex, Claude, and Antigravity were collaborating on the repo.
+> It is now an archive. The active session protocol is `sessions/YYYY-MM-DD.md` (see `CLAUDE.md`).
+> Do not add new entries here. Read-only historical reference.
+
+---
+
 # Document Purpose
 This handoff protocol exists to provide durable operational continuity across multiple AI systems working in the same repository.
 

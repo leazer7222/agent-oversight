@@ -1,0 +1,42 @@
+#!/bin/sh
+# .githooks/pre-push — blocks bare git push from the CLI
+#
+# Activated by: git config core.hooksPath .githooks
+# (Run this once after cloning, or it is run automatically by scripts/setup.ps1)
+#
+# This hook fires whenever git push is called directly (not via scripts/push.ps1).
+# It blocks the push and redirects to the smart push script so docs are always
+# committed in the same push as code changes.
+#
+# To bypass in a genuine emergency:
+#   git push --no-verify
+#
+# To push normally:
+#   pwsh scripts/push.ps1
+
+# If being called from inside push.ps1 itself, allow through.
+# push.ps1 sets PUSH_SCRIPT_RUNNING=1 before calling git push.
+if [ "$PUSH_SCRIPT_RUNNING" = "1" ]; then
+    exit 0
+fi
+
+echo ""
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║            Direct git push is disabled in this repo          ║"
+echo "╠══════════════════════════════════════════════════════════════╣"
+echo "║                                                              ║"
+echo "║  Use the smart push script to push with doc sync:           ║"
+echo "║                                                              ║"
+echo "║    pwsh scripts/push.ps1                                     ║"
+echo "║                                                              ║"
+echo "║  It will:                                                    ║"
+echo "║    1. Run the migration linter on any new migrations         ║"
+echo "║    2. Stage + commit docs (sessions/, docs/, LESSONS_LEARNED)║"
+echo "║    3. Push — one commit, one push, docs always current       ║"
+echo "║                                                              ║"
+echo "║  Emergency bypass (skips doc sync):                          ║"
+echo "║    git push --no-verify                                      ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+
+exit 1

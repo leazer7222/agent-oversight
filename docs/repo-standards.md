@@ -264,6 +264,63 @@ The `agent_id` in `agent.json` must match the `agents.id` in Supabase.
 
 ---
 
+---
+
+## 13. Documentation Registry — What to Update and When
+
+This is the canonical list of platform documents. Every document has an explicit owner and update trigger. "Update every session" means it must be done before running `pwsh scripts/push.ps1`.
+
+### Tier 1 — Update every session (non-negotiable)
+
+| Document | What goes in it | Update trigger |
+|---|---|---|
+| `sessions/YYYY-MM-DD.md` | What was done, decisions, blockers, next steps | Create at session start; finalize at end |
+| `LESSONS_LEARNED.md` (root) | New rules learned from real incidents | Any new lesson, bug, or non-obvious decision |
+
+### Tier 2 — Update when the trigger fires
+
+| Document | Update trigger |
+|---|---|
+| `docs/LIVE_SUPABASE_SCHEMA_INVENTORY.md` | Any new migration, new DB function, or schema change |
+| `docs/LESSONS_LEARNED.md` | Sync from root `LESSONS_LEARNED.md` (same content) — done whenever root changes |
+| `AGENTS.md` (root) | New agent registered, agent status changes, agent decommissioned |
+| `docs/AGENTS.md` | Sync from root `AGENTS.md` |
+| `docs/MVP_IMPLEMENTATION_ROADMAP.md` | Phase status changes |
+| `memory/MEMORY.md` | Project status pointer becomes stale (not in git — update manually) |
+| `memory/project_cost_risk_engine.md` | Cost risk engine status, live run data, calibration state changes (not in git — update manually) |
+
+### Tier 3 — Rarely change (only on explicit scope changes)
+
+| Document | Update trigger |
+|---|---|
+| `CLAUDE.md` | Claude's operating instructions change |
+| `docs/PLATFORM_ARCHITECTURE.md` | Core platform architecture changes |
+| `docs/agent-standards.md` | Agent runtime contract evolves |
+| `docs/AI_AGENT_INFRASTRUCTURE_MASTER_DOCUMENT.md` | Strategic direction shifts |
+| `docs/workspaces/agent-oversight/PRODUCT.md` | Product scope or user definition changes |
+| `docs/workspaces/agent-oversight/KNOWN-RISKS.md` | New risks identified or risks resolved |
+
+### Never edit
+
+| Document | Reason |
+|---|---|
+| `docs/rfcs/RFC-*.md` | Immutable after publication — create a new RFC instead |
+| `docs/HANDOFF_PROTOCOL.md` | Superseded archive — use `sessions/` instead |
+
+### What `scripts/push.ps1` auto-stages
+
+The push script automatically stages and commits these paths before pushing:
+```
+sessions/           ← session logs
+docs/               ← all docs including LIVE_SUPABASE_SCHEMA_INVENTORY, LESSONS_LEARNED
+LESSONS_LEARNED.md  ← root lessons file
+AGENTS.md           ← root agent registry
+```
+
+Memory files (`memory/MEMORY.md`, `memory/project_cost_risk_engine.md`) are **not in git** — they live in `~/.claude/projects/` and must be updated manually during the session. The push script cannot stage them.
+
+---
+
 ## Enforcement
 
 The `optimization-agent` runs these checks automatically:

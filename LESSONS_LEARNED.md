@@ -328,6 +328,13 @@ Add new lessons at the end of each session.
 - Correct pattern for "create if not exists": `supabase.from('table').upsert({...}, { onConflict: 'col1,col2', ignoreDuplicates: true })`.
 - This generates `INSERT ... ON CONFLICT (col1, col2) DO NOTHING` — safe to call concurrently.
 
+### ROUND(float8, int) does not exist in Postgres — always cast to ::numeric
+- `AVG()`, `PERCENTILE_CONT()`, and arithmetic on `NUMERIC` columns often returns `double precision` (float8).
+- `ROUND(double precision, integer)` does not exist in Postgres — calling it gives: `function round(double precision, integer) does not exist`.
+- `ROUND(numeric, integer)` does exist. Fix: wrap the entire aggregate+FILTER expression in parentheses and cast: `ROUND((AVG(...) FILTER (...))::numeric, 1)`.
+- Migration 020 (`invariant_report`) already uses `::numeric` — apply the same pattern everywhere. Migration 022 had this bug; fixed via `CREATE OR REPLACE`.
+- The FILTER clause is part of the aggregate call and must sit inside the cast parentheses: `(AVG(x) FILTER (WHERE ...))::numeric`, not `AVG(x)::numeric FILTER (WHERE ...)`.
+
 ### PostgREST only exposes the public schema by default
 - `supabase.schema('cost_intelligence').from('task_types')` silently returns `{ data: null }` at runtime — PostgREST does not expose non-public schemas unless explicitly configured.
 - The `authenticator` role is reserved in Supabase and cannot be altered to expose schemas via SQL.
@@ -342,3 +349,68 @@ Add new lessons at the end of each session.
   - Fire-and-forget failure invisibility — Phase 2 observability work.
   - Double-EXECUTE pattern in `apply_append_only_rls()` — verify in DB rather than changing the already-applied migration; it worked correctly.
   - `any` casts on RPC responses — easy fix, address with the tenant UUID fix in the same commit.
+
+---
+
+## Estimation Dashboard Architecture
+
+### Three truth surfaces — never mix
+- `estimate_artifacts` = decision truth (what the estimator said before the run)
+- `evaluation_artifacts` = outcome truth (what actually happened)
+- `runs` + `agent_events` + `telemetry.raw_events` = execution truth
+- Never blend estimate and actual into a single "representative cost" figure in the UI.
+- Never exclude incomplete telemetry silently — always show the denominator ("N of M complete evaluations").
+
+### Canonical metric location split
+- **SQL-derived metrics** → `SECURITY DEFINER` functions in `public` schema (migration 022). Bucket status logic, calibration readiness, accuracy aggregates — all owned by the DB function.
+- **TypeScript-derived metrics** → `src/lib/cost-intelligence/estimation-metrics.ts`. Failure mode classification, signed error, band containment, replayability — all owned by this module.
+- **Never implement metric logic inline in a dashboard component.** If a component needs a derived value, it imports from `estimation-metrics.ts` or reads a SQL function result. This is the only protection against dashboard logic drift.
+
+### Dashboard logic drift — the primary long-term UI risk
+- TS-derived calculations, SQL-derived calculations, and artifact semantics can diverge gradually if metric logic is scattered.
+- Prevention: one module owns TS metrics (`estimation-metrics.ts`), one migration owns SQL metrics (022). If you add a metric, add it in exactly one place and import everywhere else.
+- `estimation-metrics.ts` is the single source of truth for: failure mode, signed error, band containment, token error %, replayability, error severity thresholds, failure mode labels, estimate explanation lines.
+
+### Failure mode is derived, never stored
+- `EstimationFailureMode` is computed at API response time from stored artifacts. It is never a DB column.
+- Phase 1 canonical failure modes: `context_size_unknown`, `output_expansion`, `complexity_mismatch`, `pricing_table_stale`, `context_window_pressure`, `within_tolerance`, `insufficient_data`, `unknown`.
+- The most common Phase 1 failure mode is `context_size_unknown`: `prompt_chars = 0` in the feature snapshot because the ingest endpoint cannot observe actual prompt content at `run_started` time. The estimator defaults to 250-token system overhead, which is catastrophically wrong for large-context tasks (e.g., a 365KB code diff = ~91,250 actual input tokens).
+
+### Telemetry completeness must be visible above the fold
+- Accuracy metrics computed on incomplete telemetry are worse than no metrics — they silently miscalibrate the system.
+- Always filter accuracy aggregates with `WHERE telemetry_status = 'complete'`.
+- Always show the completeness denominator: "Based on N complete evaluations of M total."
+- The telemetry completeness panel is not optional UX — it is a data integrity control.
+
+### Schema freeze gate logic
+- Schema freeze must be a deliberate manual declaration, not an automatic threshold crossing.
+- The gate checklist (in `public.get_calibration_readiness()`): missing_features = 0, all_recomputable, incomplete < 10%, no unevaluated estimates, ≥1 eligible bucket.
+- Showing a bucket as "eligible" in the UI does not trigger calibration. Phase 2 is a deliberate decision.
+
+### Counterfactual replay — do not build yet
+- "What would the estimate be using today's calibration?" is the most valuable future component.
+- Do not build until: ≥30 complete observations per bucket, stable calibration exists, and drift is measurable.
+- `is_recomputable = true` on evaluation artifacts is the precondition that makes replay possible when the time comes.
+
+### 5-hour usage limit — three-layer checkpoint system
+- The Claude Code usage limit can cut off a response mid-generation. The `Stop` hook does NOT fire when the limit hits mid-response — the response never completes, so the hook never triggers.
+- **Layer 1 — Stop hook:** `scripts/checkpoint.ps1` runs after every COMPLETE response (stages all changes, commits WIP, pushes). At worst, one turn of work is at risk.
+- **Layer 2 — Session guardian:** `scripts/start-guardian.ps1` starts a background job that runs `checkpoint.ps1` every 20 minutes independently of Claude Code. This catches mid-response cutoffs. Run at session start. At most 20 minutes of work at risk.
+- **Layer 3 — Limit-warning hook:** `scripts/hooks/detect-limit-warning.py` fires on first tool call in any response where the conversation mentions "approaching limit", "5 hour limit", "save progress", etc. Triggers `checkpoint.ps1 -Reason limit-warning` immediately before Claude does any other work.
+- **First push of a worktree branch:** `git push` fails if no upstream is set. `checkpoint.ps1` handles this by falling back to `git push --set-upstream origin <branch>` automatically.
+- **checkpoint.log:** `.claude/checkpoint.log` records every checkpoint event (timestamp, reason, branch, file count, push result). Review it to see what was committed and when. It is gitignored — local only.
+- **Commit message format:** `WIP: checkpoint HH:MM:SS [reason] N file(s)` — easy to identify and squash later.
+
+### Smart push script — never do bare git push from this repo
+- `scripts/push.ps1` is the canonical push path. It: (1) runs the migration linter if new migrations are in the diff, (2) stages and commits all modified doc files (sessions/, docs/, LESSONS_LEARNED.md, AGENTS.md), (3) runs git push. One workflow, one push.
+- A Claude Code PreToolUse hook (`scripts/hooks/check-git-push.py`) intercepts bare `git push` Bash calls and blocks them, redirecting to `push.ps1`. The hook outputs `{"decision":"block","reason":"..."}` JSON to stdout; Claude Code parses this and shows the reason text to Claude.
+- A git pre-push hook (`.githooks/pre-push`) blocks manual CLI pushes with the same redirect. Activated by `git config core.hooksPath .githooks`.
+- `PUSH_SCRIPT_RUNNING=1` env var signals to the git hook that it's being called from inside `push.ps1` — allows the internal `git push` through without recursion.
+- Bypass: `pwsh scripts/push.ps1 --no-doc-check` (emergencies) or `git push --no-verify` (skips git hook only).
+- PreToolUse hook fires on EVERY Bash call — the script exits 0 immediately if the command isn't a git push, so overhead is negligible.
+
+### Build order for estimation dashboard (vertical slices)
+1. Single run drilldown (`/dashboard/estimation/runs/[id]`) — build first, debug the live miss.
+2. Overview with headline metrics + biggest misses table — build second.
+3. Bucket accuracy table — build third.
+4. Calibration readiness page — build at Phase 2 gate.

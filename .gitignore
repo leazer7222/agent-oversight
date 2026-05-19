@@ -59,3 +59,8 @@ agents/instances/*/outputs/
 outputs/
 session-logs/
 *.log
+
+# Session guardian runtime files — local only
+.claude/guardian.pid
+.claude/checkpoint.log
+.claude/.limit_checkpoint_done

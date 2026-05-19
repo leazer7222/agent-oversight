@@ -252,3 +252,74 @@ Related documents:
 - **HubSpot stage must be explicitly wired into orchestrator end-state.** Completing research/append/catalog is not equivalent to “end-to-end to HubSpot.” The sync step must be a hard stage in the run chain.
 - **Writeback scoping must use runtime market, never hardcoded defaults.** HubSpot sync originally patched Supabase with `co-renovation` scope even for PT runs, causing successful HubSpot writes to appear unsynced in PT. Market-scoped writeback is mandatory.
 - **HubSpot eligibility is data-state driven.** Only rows with `extraction_status=extraction_completed` and `hubspot_sync_status=not_synced` are sync-ready. Backfilling extraction outcomes to Supabase is required before sync.
+
+## Adaptive Cost Risk Engine — Phase 1 Build (2026-05-15 to 2026-05-18)
+
+### Agent Definition / Instance Architecture
+- `agent_definitions` = reusable capability contract (tenant-neutral). `agents` = operational deployment (tenant-scoped). Keep these surfaces separate in the UI.
+- Instance-specific jurisdiction lives in `agents.config_overrides` as JSONB.
+- The hierarchy page displays instances only — definitions have no run history and no operational hierarchy position.
+
+### Supabase JS v2 — insert() vs upsert() for onConflict
+- `supabase.from('table').insert({...}, { onConflict: '...' })` causes a TypeScript compile error. `onConflict` is only valid on `upsert()`.
+- Correct pattern: `supabase.from('table').upsert({...}, { onConflict: 'col1,col2', ignoreDuplicates: true })`.
+
+### PostgREST only exposes the public schema by default
+- `supabase.schema('cost_intelligence').from('table')` silently returns `{ data: null }` at runtime.
+- Fix: create `SECURITY DEFINER` functions in `public` that query private schemas internally. Call via `supabase.rpc('fn_name', args)`.
+- Pattern established in migration 021, extended in 022. Never use `.schema().from()` for non-public schemas.
+
+### ROUND(float8, int) does not exist in Postgres — cast to ::numeric
+- `AVG()` and `PERCENTILE_CONT()` return `double precision` (float8). `ROUND(float8, int)` does not exist.
+- Fix: cast the full aggregate expression to numeric before ROUND: `ROUND((AVG(x) FILTER (...))::numeric, 1)`.
+- The FILTER clause is part of the aggregate — it must sit inside the cast parentheses.
+- Migration 020 used `::numeric` correctly; migration 022 initially missed it (fixed via CREATE OR REPLACE).
+
+### load_dotenv requires override=True inside Claude Code sessions
+- Claude Code injects some env vars as empty strings (`''`) — including `ANTHROPIC_API_KEY`.
+- `load_dotenv` defaults to `override=False`, skipping keys that already exist, even if empty.
+- Fix: always use `load_dotenv(find_dotenv(...), override=True)` in agent scripts.
+
+### Findings must cite sources or they are opinions
+- Every code review finding MUST populate at least one of: `principles`, `standards_refs`, `lessons_refs`.
+- A finding without a source is not contestable. `validate_artifact()` enforces this at write time.
+
+### Turbopack + Windows directory junctions
+- `cmd /c mklink /J node_modules ..\node_modules` works for webpack-based `next dev` but Turbopack panics with "Symlink points out of filesystem root" on Windows junctions.
+- Workaround: run `next dev --no-turbo` in launch.json `runtimeArgs` when using worktrees on Windows.
+
+## Estimation Dashboard Architecture (2026-05-18)
+
+### Three truth surfaces — never mix
+- `estimate_artifacts` = decision truth. `evaluation_artifacts` = outcome truth. `runs` + `agent_events` = execution truth.
+- Never blend estimate and actual into a single "representative cost" figure.
+- Never exclude incomplete telemetry silently — always show the denominator ("N of M complete evaluations").
+
+### Dashboard logic drift — the primary long-term UI risk
+- TS-derived calculations, SQL-derived calculations, and artifact semantics can diverge gradually if metric logic is scattered.
+- Prevention: one module owns TS metrics (`src/lib/cost-intelligence/estimation-metrics.ts`), one migration owns SQL metrics (022). If you add a metric, add it in exactly one place and import everywhere else.
+- `estimation-metrics.ts` owns: failure mode classification, signed error, band containment, token error %, replayability, error severity thresholds, failure mode labels, estimate explanation lines.
+
+### Failure mode is derived, never stored
+- `EstimationFailureMode` is computed at API response time from artifacts. Never a DB column.
+- Most common Phase 1 failure mode: `context_size_unknown` — `prompt_chars=0` because the ingest endpoint cannot observe actual prompt content at `run_started` time. Estimator defaults to 250-token overhead; a 365KB diff = ~91K actual input tokens.
+
+### Telemetry completeness must be visible above the fold
+- Filter all accuracy aggregates: `WHERE telemetry_status = 'complete'`.
+- Always show completeness denominator. The completeness panel is a data integrity control, not optional UX.
+
+### Schema freeze gate — always a deliberate decision
+- Showing a bucket as "eligible" (≥30 observations) does NOT trigger calibration automatically.
+- The gate checklist lives in `public.get_calibration_readiness()`. All 5 conditions must pass. Phase 2 is a deliberate decision, not a threshold crossing.
+
+### Counterfactual replay — do not build yet
+- "What would the estimate be using today's calibration?" — valuable but premature.
+- Precondition: ≥30 complete observations per bucket, stable calibration, measurable drift.
+- `is_recomputable=true` on evaluation artifacts is the precondition that makes this possible later.
+
+### Build estimation dashboard in vertical slices
+- Slice 1: single run drilldown (build first — debug the live miss)
+- Slice 2: overview metrics (after 3–5 more runs)
+- Slice 3: bucket accuracy table
+- Slice 4: calibration readiness page
+- DB functions for all slices are ready in migration 022. Only API routes + pages needed for 2–4.

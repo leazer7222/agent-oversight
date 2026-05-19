@@ -54,39 +54,31 @@ export async function POST(request: NextRequest) {
   const ev = parsed.data
   const supabase = createServiceRoleClient()
 
-  // Write to telemetry.raw_events.
-  // Deduplication: if event_id already exists, Postgres raises 23505 (unique_violation).
-  // Per RFC-003 §6: return 200 with duplicate:true — never 409.
-  const { error } = await supabase
-    .schema('telemetry')
-    .from('raw_events')
-    .insert({
-      id:              ev.event_id,
-      event_type:      ev.event_type,
-      schema_version:  ev.schema_version,
-      emitted_at:      ev.emitted_at,
-      sequence_number: ev.sequence_number ?? null,
-      trace_id:        ev.trace_id,
-      run_id:          ev.run_id ?? null,
-      parent_run_id:   ev.parent_run_id ?? null,
-      campaign_id:     ev.campaign_id ?? null,
-      tenant_id:       ev.tenant_id,
-      is_replay:       ev.is_replay,
-      replay_id:       ev.replay_id ?? null,
-      payload:         ev.payload,
-      // received_at and created_at default to now() — not set here
-    })
+  // Write via public SECURITY DEFINER RPC — accesses telemetry schema from inside Postgres.
+  // Returns true if newly inserted, false if duplicate (ON CONFLICT idempotency, RFC-003 §6).
+  const { data: isNew, error } = await supabase.rpc('ingest_telemetry_event', {
+    p_id:              ev.event_id,
+    p_event_type:      ev.event_type,
+    p_schema_version:  ev.schema_version,
+    p_emitted_at:      ev.emitted_at,
+    p_sequence_number: ev.sequence_number ?? null,
+    p_trace_id:        ev.trace_id,
+    p_run_id:          ev.run_id ?? null,
+    p_parent_run_id:   ev.parent_run_id ?? null,
+    p_campaign_id:     ev.campaign_id ?? null,
+    p_tenant_id:       ev.tenant_id,
+    p_is_replay:       ev.is_replay,
+    p_replay_id:       ev.replay_id ?? null,
+    p_payload:         ev.payload,
+  })
 
   if (error) {
-    if (error.code === '23505') {
-      // Duplicate event_id — idempotent, not an error (RFC-003 §6)
-      return Response.json(
-        { status: 'accepted', event_id: ev.event_id, duplicate: true },
-        { status: 200 }
-      )
-    }
-    console.error('[telemetry/ingest] insert failed:', error.message, { event_id: ev.event_id })
+    console.error('[telemetry/ingest] rpc failed:', error.message, { event_id: ev.event_id })
     return Response.json({ status: 'error' }, { status: 500 })
+  }
+
+  if (isNew === false) {
+    return Response.json({ status: 'accepted', event_id: ev.event_id, duplicate: true }, { status: 200 })
   }
 
   // Fan-out to consumers is async and happens after the INSERT commits.

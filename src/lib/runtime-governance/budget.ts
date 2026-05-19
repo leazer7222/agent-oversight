@@ -27,20 +27,17 @@ export async function ensureBudgetPeriod(
   tenantId:  string,
   periodKey: string,
 ): Promise<{ id: string; budget_usd: number; reserved_usd: number; consumed_usd: number } | null> {
-  // Try to create; silently skip if already exists (23505)
+  // Upsert with ignoreDuplicates — creates the period on first use, no-ops if it exists.
+  // onConflict targets the partial unique index uq_budget_period_default (no cost_center_id).
   await supabase
     .schema('runtime_governance')
     .from('budget_periods')
-    .insert({
+    .upsert({
       tenant_id:   tenantId,
       period_key:  periodKey,
       period_type: 'monthly',
       budget_usd:  9999.0000,
-    }, { onConflict: 'tenant_id,period_key' })
-    .select('id')
-    .maybeSingle()
-    // The above may fail with 42P10 if the unique index names differ from what
-    // PostgREST expects — fall through to the SELECT below in that case.
+    }, { onConflict: 'tenant_id,period_key', ignoreDuplicates: true })
 
   // Always re-read the row so we have current reserved/consumed values
   const { data, error } = await supabase

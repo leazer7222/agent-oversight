@@ -327,3 +327,18 @@ Add new lessons at the end of each session.
 - `onConflict` and `ignoreDuplicates` are options on `upsert()` only.
 - Correct pattern for "create if not exists": `supabase.from('table').upsert({...}, { onConflict: 'col1,col2', ignoreDuplicates: true })`.
 - This generates `INSERT ... ON CONFLICT (col1, col2) DO NOTHING` — safe to call concurrently.
+
+### PostgREST only exposes the public schema by default
+- `supabase.schema('cost_intelligence').from('task_types')` silently returns `{ data: null }` at runtime — PostgREST does not expose non-public schemas unless explicitly configured.
+- The `authenticator` role is reserved in Supabase and cannot be altered to expose schemas via SQL.
+- Fix: create `SECURITY DEFINER` functions in the `public` schema that internally query the private schemas. Call them via `supabase.rpc('fn_name', args)`. This is the same mechanism `invariant_report()` uses.
+- Pattern: one public function per cross-schema operation (`get_task_type_id`, `write_run_started_artifacts`, `ingest_telemetry_event`, etc.). Functions own the cross-schema logic; TypeScript just calls them.
+- Never fall back to a sentinel UUID (`000...000`) when a tenant/company ID is missing — skip the write instead and log clearly.
+
+### Code review agent findings triage (Phase 1 review)
+- The code review agent flagged 9 findings on the Phase 1 diff. Key dispositions:
+  - Sentinel tenant UUID (`000...000` fallback for null `company_id`) — always a real finding; fix immediately.
+  - Non-serializable financial updates — acceptable in Phase 1 dark launch; Phase 3 gate item.
+  - Fire-and-forget failure invisibility — Phase 2 observability work.
+  - Double-EXECUTE pattern in `apply_append_only_rls()` — verify in DB rather than changing the already-applied migration; it worked correctly.
+  - `any` casts on RPC responses — easy fix, address with the tenant UUID fix in the same commit.

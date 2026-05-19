@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { apiFetch } from '@/lib/api/fetch'
 import { formatDateTime } from '@/lib/utils'
+import type { EstimationFeatures } from '@/lib/cost-intelligence/types'
 import {
   formatErrorPct,
   formatUsd,

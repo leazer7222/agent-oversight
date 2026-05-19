@@ -392,6 +392,15 @@ Add new lessons at the end of each session.
 - Do not build until: ≥30 complete observations per bucket, stable calibration exists, and drift is measurable.
 - `is_recomputable = true` on evaluation artifacts is the precondition that makes replay possible when the time comes.
 
+### 5-hour usage limit — three-layer checkpoint system
+- The Claude Code usage limit can cut off a response mid-generation. The `Stop` hook does NOT fire when the limit hits mid-response — the response never completes, so the hook never triggers.
+- **Layer 1 — Stop hook:** `scripts/checkpoint.ps1` runs after every COMPLETE response (stages all changes, commits WIP, pushes). At worst, one turn of work is at risk.
+- **Layer 2 — Session guardian:** `scripts/start-guardian.ps1` starts a background job that runs `checkpoint.ps1` every 20 minutes independently of Claude Code. This catches mid-response cutoffs. Run at session start. At most 20 minutes of work at risk.
+- **Layer 3 — Limit-warning hook:** `scripts/hooks/detect-limit-warning.py` fires on first tool call in any response where the conversation mentions "approaching limit", "5 hour limit", "save progress", etc. Triggers `checkpoint.ps1 -Reason limit-warning` immediately before Claude does any other work.
+- **First push of a worktree branch:** `git push` fails if no upstream is set. `checkpoint.ps1` handles this by falling back to `git push --set-upstream origin <branch>` automatically.
+- **checkpoint.log:** `.claude/checkpoint.log` records every checkpoint event (timestamp, reason, branch, file count, push result). Review it to see what was committed and when. It is gitignored — local only.
+- **Commit message format:** `WIP: checkpoint HH:MM:SS [reason] N file(s)` — easy to identify and squash later.
+
 ### Smart push script — never do bare git push from this repo
 - `scripts/push.ps1` is the canonical push path. It: (1) runs the migration linter if new migrations are in the diff, (2) stages and commits all modified doc files (sessions/, docs/, LESSONS_LEARNED.md, AGENTS.md), (3) runs git push. One workflow, one push.
 - A Claude Code PreToolUse hook (`scripts/hooks/check-git-push.py`) intercepts bare `git push` Bash calls and blocks them, redirecting to `push.ps1`. The hook outputs `{"decision":"block","reason":"..."}` JSON to stdout; Claude Code parses this and shows the reason text to Claude.

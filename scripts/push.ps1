@@ -1,11 +1,11 @@
-# scripts/push.ps1 — Smart push with automatic documentation sync
+# scripts/push.ps1 - Smart push with automatic documentation sync
 #
 # This is the canonical way to push from this repo.
 # It ensures documentation is always current before the push lands in production.
 #
 # What it does, in order:
-#   1. Detect new/modified migration files → run linter, warn if unapplied
-#   2. Code review — if src/, agents/, or supabase/migrations/ changed, run the
+#   1. Detect new/modified migration files -> run linter, warn if unapplied
+#   2. Code review -- if src/, agents/, or supabase/migrations/ changed, run the
 #      code-review-agent. Blocks push if recommendation is BLOCK.
 #   3. Stage all modified doc files (sessions/, docs/, LESSONS_LEARNED.md, AGENTS.md)
 #   4. Commit them with a standard message if anything was staged
@@ -17,7 +17,7 @@
 #   pwsh scripts/push.ps1 --no-doc-check         # skip doc sync (emergencies only)
 #   pwsh scripts/push.ps1 --no-review            # skip code review (emergencies only)
 #
-# DO NOT run bare `git push` — the Claude Code hook will redirect you here.
+# DO NOT run bare `git push` -- the Claude Code hook will redirect you here.
 
 param(
     [string]$Remote   = "origin",
@@ -34,7 +34,7 @@ $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 Set-Location $ProjectRoot
 
-$Divider = "─" * 60
+$Divider = "-" * 60
 
 function Write-Step([string]$msg) {
     Write-Host "`n$Divider" -ForegroundColor DarkGray
@@ -42,11 +42,11 @@ function Write-Step([string]$msg) {
     Write-Host $Divider -ForegroundColor DarkGray
 }
 
-function Write-Ok([string]$msg)   { Write-Host "  ✓ $msg" -ForegroundColor Green }
-function Write-Warn([string]$msg) { Write-Host "  ⚠ $msg" -ForegroundColor Yellow }
-function Write-Fail([string]$msg) { Write-Host "  ✗ $msg" -ForegroundColor Red }
+function Write-Ok([string]$msg)   { Write-Host "  [OK]   $msg" -ForegroundColor Green }
+function Write-Warn([string]$msg) { Write-Host "  [WARN] $msg" -ForegroundColor Yellow }
+function Write-Fail([string]$msg) { Write-Host "  [FAIL] $msg" -ForegroundColor Red }
 
-# ── 0. Sanity check ──────────────────────────────────────────────────────────
+# -- 0. Sanity check ----------------------------------------------------------
 Write-Step "Pre-push checks"
 
 $currentBranch = git rev-parse --abbrev-ref HEAD 2>&1
@@ -57,14 +57,14 @@ if ($currentBranch -eq "main" -and -not $NoDocCheck) {
     Write-Warn "Pushing directly to main. Ensure all docs are current."
 }
 
-# ── 1. Migration linter ──────────────────────────────────────────────────────
+# -- 1. Migration linter ------------------------------------------------------
 Write-Step "Migration check"
 
 # Find migration files modified since last push (HEAD vs remote)
 $remoteBranch = if ($Branch) { "$Remote/$Branch" } else { "$Remote/$currentBranch" }
 $baseRef = git merge-base HEAD $remoteBranch 2>&1
 if ($LASTEXITCODE -ne 0) {
-    # No remote ref yet (first push) — compare against all committed migrations
+    # No remote ref yet (first push) -- compare against all committed migrations
     $baseRef = "HEAD~1"
 }
 
@@ -87,7 +87,7 @@ if ($changedMigrations) {
     Write-Ok "No new migrations in this push"
 }
 
-# ── 2. Code review ───────────────────────────────────────────────────────────
+# -- 2. Code review -----------------------------------------------------------
 if (-not $NoReview) {
     $reviewPaths = @("src", "agents", "supabase/migrations")
     $changedCode = git diff --name-only $baseRef HEAD -- $reviewPaths 2>&1 |
@@ -109,14 +109,14 @@ if (-not $NoReview) {
         Write-Ok "Code review passed"
     } else {
         Write-Step "Code review"
-        Write-Ok "No src/agents/migrations changes — skipping review"
+        Write-Ok "No src/agents/migrations changes -- skipping review"
     }
 } else {
     Write-Step "Code review"
     Write-Warn "--no-review: skipping code review"
 }
 
-# ── 3. Documentation sync ────────────────────────────────────────────────────
+# -- 3. Documentation sync ----------------------------------------------------
 if (-not $NoDocCheck) {
     Write-Step "Documentation sync"
 
@@ -134,7 +134,7 @@ if (-not $NoDocCheck) {
     $stagedDocs   = $statusOutput | Where-Object { $_ -match "^[AM]" }
 
     if ($unstagedDocs -or $stagedDocs) {
-        Write-Warn "Uncommitted documentation changes found — staging them now:"
+        Write-Warn "Uncommitted documentation changes found -- staging them now:"
         $statusOutput | Where-Object { $_ -ne "" } | ForEach-Object {
             Write-Host "    $_" -ForegroundColor DarkYellow
         }
@@ -155,7 +155,7 @@ if (-not $NoDocCheck) {
             $nowStaged | ForEach-Object { Write-Host "    + $_" -ForegroundColor DarkGreen }
         }
     } else {
-        Write-Ok "Documentation is current — nothing to commit"
+        Write-Ok "Documentation is current -- nothing to commit"
     }
 
     # Warn if today's session file doesn't exist
@@ -170,7 +170,7 @@ if (-not $NoDocCheck) {
     Write-Warn "--no-doc-check: skipping documentation sync"
 }
 
-# ── 4. Final status ───────────────────────────────────────────────────────────
+# -- 4. Final status ----------------------------------------------------------
 Write-Step "Pre-push summary"
 
 $ahead = git rev-list --count $remoteBranch..HEAD 2>&1
@@ -180,7 +180,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Ok "Commits ready to push (remote not yet fetched)"
 }
 
-# ── 5. Push ───────────────────────────────────────────────────────────────────
+# -- 5. Push ------------------------------------------------------------------
 Write-Step "Pushing to $Remote"
 
 $pushArgs = @("push", $Remote)

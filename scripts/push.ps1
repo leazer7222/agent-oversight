@@ -183,8 +183,8 @@ if ($LASTEXITCODE -eq 0) {
 # -- 5. Push ------------------------------------------------------------------
 Write-Step "Pushing to $Remote"
 
-$pushArgs = @("push", $Remote)
-if ($Branch)  { $pushArgs += $Branch }
+$pushBranch = if ($Branch) { $Branch } else { $currentBranch }
+$pushArgs = @("push", $Remote, $pushBranch)
 if ($Force)   { $pushArgs += "--force-with-lease" }
 
 Write-Host "  git $($pushArgs -join ' ')" -ForegroundColor DarkGray

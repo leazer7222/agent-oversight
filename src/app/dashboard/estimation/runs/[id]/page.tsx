@@ -299,19 +299,21 @@ export default async function EstimationRunDetailPage({
         <section className="space-y-3">
           <SectionHeader>Estimation Feature Snapshot</SectionHeader>
           <div className="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
-            {[
-              { key: 'feature_schema_version',       label: 'Feature schema version' },
-              { key: 'task_type_code',                label: 'Task type' },
-              { key: 'task_complexity_bucket',        label: 'Complexity bucket' },
-              { key: 'prompt_chars',                  label: 'Prompt chars' },
-              { key: 'context_ref_count',             label: 'Context refs' },
-              { key: 'artifact_ref_count',            label: 'Artifact refs' },
-              { key: 'declared_max_steps',            label: 'Declared max steps' },
-              { key: 'declared_child_runs',           label: 'Declared child runs' },
-              { key: 'context_window_requested_pct',  label: 'Context window requested' },
-              { key: 'tools_enabled',                 label: 'Tools enabled' },
-            ].map(({ key, label }) => {
-              const rawVal = (features as Record<string, unknown>)[key]
+            {(
+              [
+                { key: 'feature_schema_version',       label: 'Feature schema version' },
+                { key: 'task_type_code',                label: 'Task type' },
+                { key: 'task_complexity_bucket',        label: 'Complexity bucket' },
+                { key: 'prompt_chars',                  label: 'Prompt chars' },
+                { key: 'context_ref_count',             label: 'Context refs' },
+                { key: 'artifact_ref_count',            label: 'Artifact refs' },
+                { key: 'declared_max_steps',            label: 'Declared max steps' },
+                { key: 'declared_child_runs',           label: 'Declared child runs' },
+                { key: 'context_window_requested_pct',  label: 'Context window requested' },
+                { key: 'tools_enabled',                 label: 'Tools enabled' },
+              ] satisfies Array<{ key: keyof EstimationFeatures; label: string }>
+            ).map(({ key, label }) => {
+              const rawVal = features?.[key]
               const val = Array.isArray(rawVal)
                 ? rawVal.join(', ') || '(none)'
                 : String(rawVal ?? '—')

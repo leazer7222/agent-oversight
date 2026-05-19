@@ -57,9 +57,17 @@ if ($LASTEXITCODE -ne 0) {
 # ── Push ─────────────────────────────────────────────────────────────────────
 # --no-verify bypasses .githooks/pre-push (which redirects to push.ps1)
 # This is intentional — checkpoint is a safety net, not a production push
-git push --no-verify 2>&1 | Out-Null
 
+# Try normal push first; if it fails because upstream isn't set, set it and retry
+git push --no-verify 2>&1 | Out-Null
 $pushResult = $LASTEXITCODE
+
+if ($pushResult -ne 0) {
+    # Attempt to set upstream and push (handles first push of a new worktree branch)
+    $currentBranch = git rev-parse --abbrev-ref HEAD 2>&1
+    git push --no-verify --set-upstream origin $currentBranch 2>&1 | Out-Null
+    $pushResult = $LASTEXITCODE
+}
 
 # Log to a checkpoint log so sessions can see history
 $logFile = Join-Path $ProjectRoot ".claude\checkpoint.log"

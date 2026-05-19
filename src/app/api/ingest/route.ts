@@ -124,18 +124,21 @@ export async function POST(request: NextRequest) {
 
     if (insertErr) return Response.json({ error: insertErr.message }, { status: 500 })
 
-    // Fire-and-forget artifact writes via public RPC (handles recommendation + estimate + budget + reservation)
-    void supabase.rpc('write_run_started_artifacts', {
-      p_run_id:                 run_id,
-      p_tenant_id:              agent.company_id ?? '00000000-0000-0000-0000-000000000000',
-      p_model:                  'claude-sonnet-4-6',
-      p_provider:               'anthropic',
-      p_task_type_code:         resolvedCode,
-      p_task_complexity_bucket: task_complexity_bucket ?? 'medium',
-    }).then(({ data, error: rpcErr }) => {
-      if (rpcErr) console.error('[ingest/artifacts] write_run_started_artifacts failed:', rpcErr.message)
-      else if ((data as any)?.error) console.error('[ingest/artifacts] run_started artifacts error:', (data as any).error)
-    })
+    // Only write artifacts when the agent has a real company association.
+    // A sentinel/null tenant_id would contaminate artifact tables with invalid data (finding #3).
+    if (agent.company_id) {
+      void supabase.rpc('write_run_started_artifacts', {
+        p_run_id:                 run_id,
+        p_tenant_id:              agent.company_id,
+        p_model:                  'claude-sonnet-4-6',
+        p_provider:               'anthropic',
+        p_task_type_code:         resolvedCode,
+        p_task_complexity_bucket: task_complexity_bucket ?? 'medium',
+      }).then(({ data, error: rpcErr }: { data: { error?: string } | null; error: { message: string } | null }) => {
+        if (rpcErr) console.error('[ingest/artifacts] write_run_started_artifacts failed:', rpcErr.message)
+        else if (data?.error) console.error('[ingest/artifacts] run_started artifacts error:', data.error)
+      })
+    }
 
   } else {
     const hasCostData = cost_usd !== undefined && cost_usd !== null
@@ -156,20 +159,22 @@ export async function POST(request: NextRequest) {
 
     if (updateErr) return Response.json({ error: updateErr.message }, { status: 500 })
 
-    // Fire-and-forget evaluation + settlement via public RPC
-    void supabase.rpc('write_run_completed_artifacts', {
-      p_run_id:           run_id,
-      p_tenant_id:        agent.company_id ?? '00000000-0000-0000-0000-000000000000',
-      p_actual_cost_usd:  cost_usd   ?? null,
-      p_tokens_in:        tokens_in  ?? null,
-      p_tokens_out:       tokens_out ?? null,
-      p_started_at:       now,
-      p_completed_at:     now,
-      p_error_text:       error      ?? null,
-    }).then(({ data, error: rpcErr }) => {
-      if (rpcErr) console.error('[ingest/artifacts] write_run_completed_artifacts failed:', rpcErr.message)
-      else if ((data as any)?.error) console.error('[ingest/artifacts] run_completed artifacts error:', (data as any).error)
-    })
+    // Only write artifacts when the agent has a real company association (finding #3).
+    if (agent.company_id) {
+      void supabase.rpc('write_run_completed_artifacts', {
+        p_run_id:           run_id,
+        p_tenant_id:        agent.company_id,
+        p_actual_cost_usd:  cost_usd   ?? null,
+        p_tokens_in:        tokens_in  ?? null,
+        p_tokens_out:       tokens_out ?? null,
+        p_started_at:       now,
+        p_completed_at:     now,
+        p_error_text:       error      ?? null,
+      }).then(({ data, error: rpcErr }: { data: { error?: string } | null; error: { message: string } | null }) => {
+        if (rpcErr) console.error('[ingest/artifacts] write_run_completed_artifacts failed:', rpcErr.message)
+        else if (data?.error) console.error('[ingest/artifacts] run_completed artifacts error:', data.error)
+      })
+    }
   }
 
   if (agent.company_id) {

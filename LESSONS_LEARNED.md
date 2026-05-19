@@ -321,3 +321,9 @@ Add new lessons at the end of each session.
 - In Phase 1, there is no `run_requests` table. `estimate_artifacts.run_request_id` is an application-level reference to `runs.id`.
 - The DB FK to `run_requests.id` is intentionally deferred to Phase 3. Do not add it until that table exists.
 - The UNIQUE index `ON estimate_artifacts(run_request_id)` enforces one estimate per run without needing the FK.
+
+### Supabase JS v2 — insert() vs upsert() for onConflict
+- `supabase.from('table').insert({...}, { onConflict: '...' })` causes a TypeScript compile error — the `options` type for `insert()` only accepts `{ count }`.
+- `onConflict` and `ignoreDuplicates` are options on `upsert()` only.
+- Correct pattern for "create if not exists": `supabase.from('table').upsert({...}, { onConflict: 'col1,col2', ignoreDuplicates: true })`.
+- This generates `INSERT ... ON CONFLICT (col1, col2) DO NOTHING` — safe to call concurrently.

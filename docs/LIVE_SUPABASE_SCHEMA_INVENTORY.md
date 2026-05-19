@@ -1,11 +1,78 @@
 # Live Supabase Schema Inventory
-**Verified: 2026-05-12**
+**Last updated: 2026-05-19**
 **Supabase Project**: `hdhovyrlnfojtkqbcegh`
-**Verification method**: PostgREST REST API + OpenAPI spec introspection via Python scripts using service role key.
+**Verification method**: Direct SQL query via Supabase MCP.
 
 ---
 
-## Executive Summary
+## Current Schema State (2026-05-19)
+
+Migrations 012–020 applied. 37 tables across 6 schemas.
+
+### Schemas
+
+| Schema | Purpose | Migrations |
+|---|---|---|
+| `public` | Original agent oversight tables | 001–011 |
+| `platform` | Governance foundations (append-only enforcement, correction records) | 012 |
+| `cost_intelligence` | Pricing, taxonomy, estimates, evaluations | 013, 017, 019 |
+| `telemetry` | Raw event store (RFC-003 envelope) | 014 |
+| `model_intelligence` | Recommendation artifacts | 016 |
+| `runtime_governance` | Budget periods, reservations, settlements | 018 |
+
+### Tables by schema
+
+**`public`** (original operational tables)
+- `agent_definitions`, `agents`, `agent_events`, `agent_outputs`, `agent_qa_results`
+- `companies`, `projects`, `runs`, `policies`, `project_state`
+- `provider_accounts`, `provider_quota_snapshots`, `provider_health_snapshots`
+- `recommendation_events`, `recommendation_feedback`
+- `contractor_rows`, `contractor_approval_queue`, `contractor_evidence`, `contractor_sync_log`
+- `output_type_registry`, `event_type_registry`, `pipeline_config`, `audit_log`
+- `runs` has Phase 1 columns: `task_type_id` (FK), `task_complexity_bucket`, `task_classifier_version`, `secondary_task_type_id`
+
+**`platform`** (governance — append-only)
+- `schema_registry` — governance metadata for all artifact schemas
+- `correction_records` — immutable amendment records
+
+**`cost_intelligence`** (append-only artifact tables)
+- `pricing_table_versions` — per-model pricing (1 active: pricing-2026-05, 10 models)
+- `task_taxonomy_versions` — taxonomy versions (1 active: taxonomy-v1)
+- `task_types` — 8 task types with complexity_definition JSONB
+- `estimate_artifacts` — pre-run cost estimates (ART-001)
+- `evaluation_artifacts` — post-run actuals vs estimates (ART-002)
+
+**`telemetry`** (append-only)
+- `raw_events` — RFC-003 event envelope store
+
+**`model_intelligence`** (append-only)
+- `recommendation_artifacts` — model selection decisions (ART-007, passthrough mode in Phase 1)
+
+**`runtime_governance`** (mixed: budget_periods mutable, settlements append-only)
+- `budget_periods` — tenant budget allocations ($9999/month default)
+- `budget_reservations` — per-run budget holds (ART-005)
+- `settlement_records` — final cost accounting (ART-006, append-only)
+
+### Functions
+- `public.invariant_report()` — Phase 1 Class C monitoring, returns JSONB. Called by `/api/monitoring/invariants`.
+- `platform.apply_append_only_rls(schema, table)` — applies no-UPDATE/no-DELETE RLS to artifact tables.
+
+---
+
+## Pre-Phase 1 Notes (from 2026-05-12 audit — now historical)
+
+Several issues documented in the original audit have since been addressed:
+- Cost/token data was universally null → now tracked via evaluation_artifacts
+- No task classification → runs.task_type_id added (migration 015, backfilled)
+- Zombie runs → timeout_at column added (migration 007)
+
+The original full audit text is preserved below for historical reference.
+
+---
+
+## Original Audit (2026-05-12, pre-Phase 1)
+
+**Verified: 2026-05-12**
 
 All 11 expected tables exist in the live database. Three materialized views exist for cost aggregation. Zero tables are missing. Several critical schema differences exist between live DB and repo artifacts:
 

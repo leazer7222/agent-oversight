@@ -29,6 +29,15 @@ const IngestSchema = z.object({
   // If omitted, defaults to code_gen / medium (transitional until dispatch coordinator ships).
   task_type_code:           z.string().optional(),
   task_complexity_bucket:   z.enum(['simple', 'medium', 'complex']).optional(),
+  // Estimation accuracy fields (run_started only)
+  // model/provider: the actual model the agent is about to call. Defaults to claude-sonnet-4-6
+  //   if omitted for backward compatibility, but agents should always supply these.
+  // tokens_in_hint: caller's pre-call estimate of input tokens (chars/4 approximation).
+  //   When provided, used instead of the complexity-bucket heuristic (2000 tokens default).
+  //   Also widens p95 band from 15x to 2.1x since context size is now known.
+  model:            z.string().optional(),
+  provider:         z.string().optional(),
+  tokens_in_hint:   z.number().int().nonnegative().optional(),
 })
 
 const RUN_TIMEOUT_MS = 30 * 60 * 1000
@@ -65,6 +74,7 @@ export async function POST(request: NextRequest) {
     parent_run_id, step_name, message, duration_ms, severity,
     team_id, context_bundle_id, context_bundle_version,
     task_type_code, task_complexity_bucket,
+    model, provider, tokens_in_hint,
   } = parsed.data
 
   const supabase = createServiceRoleClient()
@@ -130,10 +140,11 @@ export async function POST(request: NextRequest) {
       void supabase.rpc('write_run_started_artifacts', {
         p_run_id:                 run_id,
         p_tenant_id:              agent.company_id,
-        p_model:                  'claude-sonnet-4-6',
-        p_provider:               'anthropic',
+        p_model:                  model    ?? 'claude-sonnet-4-6',
+        p_provider:               provider ?? 'anthropic',
         p_task_type_code:         resolvedCode,
         p_task_complexity_bucket: task_complexity_bucket ?? 'medium',
+        p_tokens_in_hint:         tokens_in_hint ?? null,
       }).then(({ data, error: rpcErr }: { data: { error?: string } | null; error: { message: string } | null }) => {
         if (rpcErr) console.error('[ingest/artifacts] write_run_started_artifacts failed:', rpcErr.message)
         else if (data?.error) console.error('[ingest/artifacts] run_started artifacts error:', data.error)

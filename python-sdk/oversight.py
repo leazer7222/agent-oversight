@@ -223,6 +223,12 @@ class OversightClient:
         context_bundle_id: Optional[str] = None,
         context_bundle_version: Optional[int] = None,
         parent_run_id: Optional[str] = None,
+        # Estimation accuracy fields (run_started only)
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        tokens_in_hint: Optional[int] = None,
+        task_type_code: Optional[str] = None,
+        task_complexity_bucket: Optional[str] = None,
     ) -> None:
         payload: Dict[str, Any] = {
             "agent_id": agent_id,
@@ -238,6 +244,11 @@ class OversightClient:
         if context_bundle_id      is not None: payload["context_bundle_id"]       = context_bundle_id
         if context_bundle_version is not None: payload["context_bundle_version"]  = context_bundle_version
         if parent_run_id          is not None: payload["parent_run_id"]           = parent_run_id
+        if model                  is not None: payload["model"]                   = model
+        if provider               is not None: payload["provider"]                = provider
+        if tokens_in_hint         is not None: payload["tokens_in_hint"]          = tokens_in_hint
+        if task_type_code         is not None: payload["task_type_code"]          = task_type_code
+        if task_complexity_bucket is not None: payload["task_complexity_bucket"]  = task_complexity_bucket
 
         self._post(payload)
 
@@ -251,6 +262,12 @@ class OversightClient:
         context_bundle_id: Optional[str] = None,
         context_bundle_version: Optional[int] = None,
         parent_run_id: Optional[str] = None,
+        # Estimation accuracy fields — pass these when known before the first LLM call
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        tokens_in_hint: Optional[int] = None,
+        task_type_code: Optional[str] = None,
+        task_complexity_bucket: Optional[str] = None,
     ) -> Generator[RunContext, None, None]:
         """Context manager that emits run_started / run_completed / run_failed."""
         run_id = run_id or str(uuid.uuid4())
@@ -265,6 +282,11 @@ class OversightClient:
             context_bundle_id=context_bundle_id,
             context_bundle_version=context_bundle_version,
             parent_run_id=parent_run_id,
+            model=model,
+            provider=provider,
+            tokens_in_hint=tokens_in_hint,
+            task_type_code=task_type_code,
+            task_complexity_bucket=task_complexity_bucket,
         )
 
         try:

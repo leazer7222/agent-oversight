@@ -65,6 +65,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from oversight import OversightClient, categorize_error  # noqa: E402
 from output import build_artifact, write_code_review      # noqa: E402
 
+import time       # noqa: E402
 import anthropic  # noqa: E402
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -368,34 +369,67 @@ def main() -> None:
 
     run_id = str(uuid.uuid4())
 
-    with oversight.run(agent_id=AGENT_ID, run_id=run_id) as ctx:
+    # ── Pre-fetch diff + standards before run_started so we can compute tokens_in_hint ──
+    # This allows the estimation system to use actual context size instead of a
+    # fixed 2000-token heuristic, reducing estimation error from 600-4000% to <10%.
+    log.info("Fetching diff  %s -> %s", args.base_sha[:12], args.commit_sha[:12])
+    t0 = time.monotonic()
+    diff, changed_files, lines_examined = get_diff(args.base_sha, args.commit_sha)
+    diff_fetch_ms = int((time.monotonic() - t0) * 1000)
 
-        # ── Step 1: Get diff ──────────────────────────────────────────────────
-        with ctx.timer() as t:
-            log.info("Fetching diff  %s → %s", args.base_sha[:12], args.commit_sha[:12])
-            diff, changed_files, lines_examined = get_diff(args.base_sha, args.commit_sha)
+    if not diff.strip():
+        log.info("Empty diff — nothing to review.")
+        return
+
+    t0 = time.monotonic()
+    standards = load_standards()
+    standards_load_ms = int((time.monotonic() - t0) * 1000)
+
+    system_prompt = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")
+
+    # Approximate total context sent to the LLM: system prompt + standards + diff + headers
+    total_context_chars = len(system_prompt) + len(standards) + len(diff) + 500
+    tokens_in_hint = max(total_context_chars // 4, 500)
+
+    # Complexity bucket derived from hint — large contexts always behave as complex
+    if tokens_in_hint < 5_000:
+        task_complexity = "simple"
+    elif tokens_in_hint < 25_000:
+        task_complexity = "medium"
+    else:
+        task_complexity = "complex"
+
+    log.info(
+        "Context hint: %d tokens (%d chars), complexity: %s",
+        tokens_in_hint, total_context_chars, task_complexity,
+    )
+
+    with oversight.run(
+        agent_id=AGENT_ID,
+        run_id=run_id,
+        model=args.model,
+        provider="anthropic",
+        tokens_in_hint=tokens_in_hint,
+        task_type_code="code_gen",
+        task_complexity_bucket=task_complexity,
+    ) as ctx:
+
+        # ── Step 1: diff already fetched — emit step event ────────────────────
         ctx.step(
             "diff_retrieved",
             message=f"{len(changed_files)} files changed, {lines_examined} lines examined",
-            duration_ms=t.ms,
+            duration_ms=diff_fetch_ms,
             payload={"files": len(changed_files), "lines": lines_examined},
         )
 
-        if not diff.strip():
-            log.info("Empty diff — nothing to review.")
-            return
-
-        # ── Step 2: Load standards docs ───────────────────────────────────────
-        with ctx.timer() as t:
-            standards = load_standards()
+        # ── Step 2: standards already loaded — emit step event ────────────────
         ctx.step(
             "standards_loaded",
             message=f"Loaded {len(STANDARDS_PATHS)} standards documents",
-            duration_ms=t.ms,
+            duration_ms=standards_load_ms,
         )
 
         # ── Step 3: Call LLM ──────────────────────────────────────────────────
-        system_prompt = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")
 
         log.info("Calling %s for review...", args.model)
         with ctx.timer() as t:

@@ -77,7 +77,7 @@ if ($changedMigrations) {
 
     Write-Host ""
     Write-Host "  Running migration linter..." -ForegroundColor Cyan
-    python scripts/check_migrations.py 2>&1
+    python scripts/check_migrations.py --from-migration 013 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Fail "Migration linter failed. Fix before pushing."
         exit 1

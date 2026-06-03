@@ -1,0 +1,9 @@
+{
+  "agent_id": "5927c32b-36f4-4e2b-8a8b-1e5f8f322e70",
+  "name": "ui-design-agent",
+  "description": "Transforms marketing blueprints into high-fidelity ReformAI Next.js components.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "model": "gemini-2.0-flash",
+  "mcp_dependencies": ["stitch", "nano-banana-2"]
+}

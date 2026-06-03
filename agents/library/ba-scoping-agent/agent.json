@@ -1,0 +1,46 @@
+{
+  "agent_id": "1232ef02-e83e-437a-a4a3-50b61090cb86",
+  "name": "ba-scoping-agent",
+  "display_name": "BA Scoping Agent",
+  "description": "Converts a feature idea into a scope-ready brief by resolving Concepts against existing product knowledge and codebase reality, surfacing high-divergence forks as blocking Questions, and capturing human answers as durable Decisions. A scoping and decision-extraction agent - not a PRD generator in v1.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "agent_type": "worker",
+  "instance_type": "stateless",
+  "capability_tags": [
+    "feature_scoping",
+    "requirements_engineering",
+    "decision_extraction",
+    "product_intelligence",
+    "graph_operations"
+  ],
+  "mcp_dependencies": [],
+  "schema_contracts": {
+    "input": "docs/schemas/codebase-context.schema.json",
+    "output": "docs/schemas/product-graph.schema.json"
+  },
+  "context_inputs": [
+    "docs/schemas/codebase-context.schema.json (validated codebase-context.json instance)",
+    "product_graph.graph_nodes (existing ratified product knowledge for the product_key)"
+  ],
+  "writes": {
+    "graph": "product_graph.graph_nodes, product_graph.graph_edges (via public.graph_* RPCs only)",
+    "artifact": "agent_outputs (output_type='product_graph_scope')",
+    "reads_only": "platform.cbc_identity_registry (via public.cbc_resolve) - never mints or mutates cbc:* identities"
+  },
+  "owns_identifiers": ["CON-*", "FEAT-*", "QST-*", "DEC-*", "maps_to_codebase[]"],
+  "never_owns": ["cbc:*", "cbc_identity_registry"],
+  "env_vars": {
+    "required": [
+      "OVERSIGHT_URL",
+      "AGENT_OVERSIGHT_SECRET",
+      "BA_SCOPING_AGENT_ID",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "provider_choice": "BA_LLM_PROVIDER (anthropic|openai|gemini, default: anthropic)",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": ["OPENAI_API_KEY", "OPENAI_MODEL (default: gpt-4o)"],
+    "gemini": ["GEMINI_API_KEY", "GEMINI_MODEL (default: gemini-2.0-flash-exp)"]
+  }
+}

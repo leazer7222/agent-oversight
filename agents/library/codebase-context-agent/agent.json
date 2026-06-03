@@ -1,0 +1,60 @@
+{
+  "agent_id": "93b45e81-a1e5-47d8-98b1-0575de49a21b",
+  "name": "codebase-context-agent",
+  "display_name": "Codebase Context Agent",
+  "description": "Analyzes an external target codebase read-only at a pinned commit and produces a structured codebase-context.json artifact describing code reality (entities, actors, capabilities, domain signals, glossary, coverage, evidence) for downstream BA scoping. Describes WHAT IS; never scopes WHAT SHOULD BE.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "agent_type": "worker",
+  "instance_type": "stateless",
+  "capability_tags": [
+    "codebase_analysis",
+    "code_intelligence",
+    "static_analysis",
+    "identity_registry",
+    "context_extraction"
+  ],
+  "mcp_dependencies": [],
+  "schema_contracts": {
+    "input": "agents/library/codebase-context-agent/docs/input-contract.md",
+    "output": "docs/schemas/codebase-context.schema.json"
+  },
+  "context_inputs": [
+    "target repo resolved via the target registry (target_key -> repo_url + read-only auth)",
+    "feature_intent (drives existence-check coverage and the human .md brief focus, never narrows the sweep)",
+    "concepts_to_check[] (optional, additive-only directed existence-check list)",
+    "platform.cbc_identity_registry (existing frozen cbc:* identities, via public.cbc_* RPCs)"
+  ],
+  "writes": {
+    "registry": "platform.cbc_identity_registry, platform.cbc_registry_events (via public.cbc_* RPCs only)",
+    "artifact": "agent_outputs (output_type='codebase_context'); codebase-context.md is a human-only render",
+    "reads_only": "the external target repository (read-only clone at a pinned commit_sha); never written"
+  },
+  "owns_identifiers": ["cbc:*", "cbc_identity_registry", "cbc_registry_events"],
+  "never_owns": [
+    "CON-*",
+    "FEAT-*",
+    "QST-*",
+    "DEC-*",
+    "Rule",
+    "Attribute",
+    "PRD",
+    "user-stories",
+    "acceptance-criteria",
+    "product-recommendations"
+  ],
+  "env_vars": {
+    "required": [
+      "OVERSIGHT_URL",
+      "AGENT_OVERSIGHT_SECRET",
+      "CODEBASE_CONTEXT_AGENT_ID",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "target_access": "GITHUB_CODEBASE_AGENT_TOKEN (read-only, single-repo-scoped fine-grained PAT or GitHub App token)",
+    "provider_choice": "CCA_LLM_PROVIDER (anthropic|openai|gemini, default: anthropic) - used for domain_signal and glossary extraction",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": ["OPENAI_API_KEY", "OPENAI_MODEL (default: gpt-4o)"],
+    "gemini": ["GEMINI_API_KEY", "GEMINI_MODEL (default: gemini-2.0-flash-exp)"]
+  }
+}

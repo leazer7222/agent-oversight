@@ -283,6 +283,33 @@ Add new lessons at the end of each session.
 - Human workflow (acknowledged / resolved / false positive / accepted risk) belongs in a separate `code_review_finding_states` table. That table is deferred from v1.
 - Design `finding_id` as a stable UUID per finding NOW so the lifecycle table can reference it later without a schema change.
 
+### Claude Code injects EMPTY ANTHROPIC_AUTH_TOKEN/CUSTOM_HEADERS — scrub them or the Anthropic SDK breaks
+- Inside a Claude Code session, child Python processes inherit `ANTHROPIC_AUTH_TOKEN=''` and `ANTHROPIC_CUSTOM_HEADERS=''` (empty strings), plus `ANTHROPIC_API_KEY=''` and a real `ANTHROPIC_BASE_URL`.
+- `load_dotenv(override=True)` restores `ANTHROPIC_API_KEY` from `.env.local`, but `.env.local` does NOT contain `ANTHROPIC_AUTH_TOKEN`, so the empty value survives. The Anthropic SDK then builds an illegal `Authorization: Bearer ` (empty) header and every call dies with `httpx.LocalProtocolError: Illegal header value b'Bearer '` / `APIConnectionError`.
+- Fix (right after load_dotenv in every Python agent that calls Anthropic):
+  ```python
+  for _k in ("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"):
+      if os.environ.get(_k, None) == "":
+          os.environ.pop(_k, None)
+  ```
+  And instantiate explicitly: `anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))`.
+
+### Applying DDL to Supabase — use the Management API, not the service-role key
+- `SUPABASE_SERVICE_ROLE_KEY` only reaches PostgREST (DML/RPC). It CANNOT run DDL (`CREATE TABLE`, `ALTER`, RLS, functions). There is no `DATABASE_URL` or Supabase PAT in `.env.local`.
+- `scripts/apply_sql.py` runs arbitrary SQL via the Supabase **Management API** (`POST https://api.supabase.com/v1/projects/<ref>/database/query`), authenticating with the `sbp_...` token already stored in `~/.claude.json` (read at runtime, never hard-coded). Project ref: `hdhovyrlnfojtkqbcegh`.
+- Pattern: run `scripts/check_migrations.py --from-migration NNN`, then `python scripts/apply_sql.py --file supabase/migrations/NNN_x.sql`, then verify with `to_regclass(...)`/`to_regprocedure(...)`.
+- Ingest returns `403 {"error":"Agent is not active"}` for agents whose `agents.status != 'active'`. A paused agent cannot emit telemetry — flip `status='active'` (+ `metadata.runtime_implemented=true`) only after the smoke test passes.
+
+### LLM tool_use silently drops trailing fields when max_tokens is hit
+- With `tool_choice` forcing a tool, reaching `max_tokens` truncates the tool-input JSON; the LAST-generated fields come back empty/missing — schema-valid but useless (e.g. empty `domain_signals` / `concept_resolution`).
+- Symptom: `output_tokens == max_tokens` exactly, highest-value (last-emitted) sections empty. Fix: generous `max_tokens` (CCA uses 20000) + instruct the model to prioritize critical sections and keep per-field detail short.
+
+### ReformAI product app (ReformAI-Inc/Reform-AI) is Drizzle/PostgreSQL, not Firestore
+- Turbo monorepo: Next.js `apps/web` + Express `apps/api`. Domain entities are Drizzle tables in `apps/api/src/database/schema/*.ts`. Firestore (`firestore.rules`) is ONLY messaging/notifications/support.
+- Roles: `admin`, `home_owner`, `home_buyer`, `service_provider`, `seller`. Single-market Colombia (COP/NIT/IVA/Wompi), no region partitioning beyond a `country` field.
+- A material catalog ALREADY EXISTS (`roomMaterialOptions`, `projectRoomMaterials`) but is room-scoped product selection, NOT supplier inventory. "Supplier" is net-new; sellers/serviceProviders exist.
+- gh CLI is authed as `reformai-admin` (org `ReformAI-Inc`, `read:org`+`repo`) — clone with `gh repo clone ReformAI-Inc/Reform-AI`.
+
 ### load_dotenv requires override=True inside Claude Code sessions
 - Claude Code injects some env vars as empty strings (`''`) into child processes — including `ANTHROPIC_API_KEY`.
 - `load_dotenv` defaults to `override=False`, so it silently skips a key that already exists in `os.environ`, even if the existing value is empty.

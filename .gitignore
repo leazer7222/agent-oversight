@@ -44,6 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Codebase Context Agent — ephemeral read-only clones of external target repos
+.workspace/
+
 # Claude worktrees — local only, never commit
 .claude/worktrees/
 # Claude Code local machine settings — never commit

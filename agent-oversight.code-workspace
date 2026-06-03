@@ -1,0 +1,34 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/CVS": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true,
+			"**/node_modules": true,
+			"**/.next": true,
+			"**/__pycache__": true,
+			"**/.pytest_cache": true,
+			"**/dist": true,
+			"**/build": true
+		},
+		"search.exclude": {
+			"**/node_modules": true,
+			"**/.next": true,
+			"**/bower_components": true,
+			"**/.git": true,
+			"**/__pycache__": true
+		},
+		"editor.formatOnSave": true,
+		"files.associations": {
+			"*.md": "markdown"
+		}
+	}
+}

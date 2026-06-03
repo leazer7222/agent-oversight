@@ -1,0 +1,1684 @@
+{
+  "schema_version": "1.0",
+  "artifact_type": "codebase_context",
+  "artifact_id": "c554835a-7a9d-49da-80d2-51d889460478",
+  "run_id": "b5dc622a-f92c-40e0-b4f0-315dec7b669b",
+  "repo": "reformai-product",
+  "commit_sha": "d768f3729d491236dda6dd87ceea84acf2c15485",
+  "ref_requested": "main",
+  "generated_at": "2026-06-03T17:12:09.105219+00:00",
+  "feature_intent": "Add a catalogue of materials for suppliers and service providers",
+  "generator": {
+    "agent": "reformai.codebase-context-agent",
+    "version": "1.0.0",
+    "model": "claude-opus-4-5"
+  },
+  "inputs": {
+    "target_key": "reformai-product",
+    "ref_requested": "main",
+    "feature_intent": "Add a catalogue of materials for suppliers and service providers",
+    "concepts_to_check": [
+      "Material",
+      "Catalogue",
+      "Supplier",
+      "ServiceProvider",
+      "Seller",
+      "Market",
+      "Project",
+      "Subscription"
+    ]
+  },
+  "entities": [
+    {
+      "id": "cbc:entity:user",
+      "name": "users",
+      "exists": true,
+      "source": "table:users",
+      "description": "Core user identity table with Firebase auth integration, account status, and subscription tracking",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "firebaseId",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "email",
+          "semantic_hint": "email"
+        },
+        {
+          "name": "accountStatus",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "subscriptionStatus",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "onboardingCompleted",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "country",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "preferredLanguage",
+          "semantic_hint": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:service_provider",
+          "kind": "one-to-one",
+          "via": "serviceProviders.userId"
+        },
+        {
+          "to": "cbc:entity:seller",
+          "kind": "one-to-one",
+          "via": "sellers.userId"
+        },
+        {
+          "to": "cbc:entity:project",
+          "kind": "one-to-many",
+          "via": "projects.userId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/users.ts",
+          "lines": "1-80"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:role",
+      "name": "roles",
+      "exists": true,
+      "source": "table:roles",
+      "description": "System roles including admin, user, home_owner, home_buyer, service_provider, sellers",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "roleName",
+          "semantic_hint": "text"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/roles.ts",
+          "lines": "1-30"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:service_provider",
+      "name": "serviceProviders",
+      "exists": true,
+      "source": "table:service_providers",
+      "description": "Contractors/service providers with business profile, verification status, NIT (tax ID), and onboarding state",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "userId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "businessName",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "status",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "nit",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "isVerified",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "profileCompleted",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "preferredClientType",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "yearsOfExperience",
+          "semantic_hint": "enum"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:user",
+          "kind": "many-to-one",
+          "via": "userId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "1-80"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:seller",
+      "name": "sellers",
+      "exists": true,
+      "source": "table:sellers",
+      "description": "Seller profile for real estate listings with onboarding workflow and agreement acceptance tracking",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "userId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "businessName",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "status",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "profileCompleted",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "agreementAccepted",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "onboardingStep",
+          "semantic_hint": "quantity"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:user",
+          "kind": "many-to-one",
+          "via": "userId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/sellers.ts",
+          "lines": "1-40"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:project",
+      "name": "projects",
+      "exists": true,
+      "source": "table:projects",
+      "description": "Renovation/construction projects owned by homeowners, supporting residential and commercial types",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "userId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "status",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "projectType",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "projectKind",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "budgetRange",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "budget",
+          "semantic_hint": "money"
+        },
+        {
+          "name": "isDraft",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "isArchived",
+          "semantic_hint": "boolean"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:user",
+          "kind": "many-to-one",
+          "via": "userId"
+        },
+        {
+          "to": "cbc:entity:project_room_material",
+          "kind": "one-to-many"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "1-200"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:project_room_material",
+      "name": "projectRoomMaterials",
+      "exists": true,
+      "source": "table:project_room_materials",
+      "description": "Material selections per room within a project - links to room material options catalog",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "projectId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "renovationArea",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "commercialSpaceArea",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "materialCategory",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "material",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "optionName",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "estimatedCost",
+          "semantic_hint": "text"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:project",
+          "kind": "many-to-one",
+          "via": "projectId"
+        },
+        {
+          "to": "cbc:entity:room_material_option",
+          "kind": "many-to-one",
+          "via": "composite key"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "350-380"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:room_material_option",
+      "name": "roomMaterialOptions",
+      "exists": true,
+      "source": "table:room_material_options",
+      "description": "Catalog of available material options per room type and category - populates frontend dropdowns",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "renovationArea",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "commercialSpaceArea",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "materialCategory",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "material",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "optionName",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "estimatedCostRange",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "is_active",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "order",
+          "semantic_hint": "quantity"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:project_room_material",
+          "kind": "one-to-many"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "200-230"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:room_design_element_option",
+      "name": "roomDesignElementOptions",
+      "exists": true,
+      "source": "table:room_design_element_options",
+      "description": "Catalog of available design element options per room type and category",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "renovationArea",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "commercialSpaceArea",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "designElementCategory",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "designElement",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "optionName",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "estimatedCostRange",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "is_active",
+          "semantic_hint": "boolean"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "230-260"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:service",
+      "name": "services",
+      "exists": true,
+      "source": "table:services",
+      "description": "Catalog of services that service providers can offer (linked via junction table)",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "description",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "isActive",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "order",
+          "semantic_hint": "quantity"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "130-145"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:specialization",
+      "name": "specializations",
+      "exists": true,
+      "source": "table:specializations",
+      "description": "Provider specialization areas (linked via junction table)",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "isActive",
+          "semantic_hint": "boolean"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "100-115"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:plan",
+      "name": "plans",
+      "exists": true,
+      "source": "table:plans",
+      "description": "Subscription tiers with feature limits (AI renders for homeowners, bids for providers)",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "code",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "aiLimit",
+          "semantic_hint": "quantity"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/subscriptions.ts",
+          "lines": "1-25"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:usage_ledger",
+      "name": "usageLedger",
+      "exists": true,
+      "source": "table:usage_ledger",
+      "description": "Tracks quota usage per feature (AI renders, bids) per user or device",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "userId",
+          "semantic_hint": "foreign_key",
+          "nullable": true
+        },
+        {
+          "name": "deviceId",
+          "semantic_hint": "foreign_key",
+          "nullable": true
+        },
+        {
+          "name": "feature",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "usedCount",
+          "semantic_hint": "quantity"
+        },
+        {
+          "name": "limitCount",
+          "semantic_hint": "quantity"
+        },
+        {
+          "name": "resetAt",
+          "semantic_hint": "timestamp",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:user",
+          "kind": "many-to-one",
+          "via": "userId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/subscriptions.ts",
+          "lines": "35-60"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:property_listing",
+      "name": "propertyListings",
+      "exists": true,
+      "source": "table:property_listings",
+      "description": "Real estate marketplace listings with pricing, property details, and partner associations",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "slug",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "price",
+          "semantic_hint": "money"
+        },
+        {
+          "name": "listingStatusId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "postedByUserId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "isFeatured",
+          "semantic_hint": "boolean"
+        },
+        {
+          "name": "partner",
+          "semantic_hint": "text",
+          "nullable": true
+        },
+        {
+          "name": "partnerProjectDetailsId",
+          "semantic_hint": "foreign_key",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:user",
+          "kind": "many-to-one",
+          "via": "postedByUserId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/marketplace.ts",
+          "lines": "60-140"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:partner",
+      "name": "partners",
+      "exists": true,
+      "source": "table:partners",
+      "description": "Partner organizations (developers, brokers) with tier and status tracking",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "slug",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "tier",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "status",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "contactPersonId",
+          "semantic_hint": "foreign_key",
+          "nullable": true
+        },
+        {
+          "name": "managedByUserId",
+          "semantic_hint": "foreign_key",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:user",
+          "kind": "many-to-one",
+          "via": "contactPersonId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/partneredProjects.ts",
+          "lines": "1-60"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:design_style",
+      "name": "designStyles",
+      "exists": true,
+      "source": "table:design_styles",
+      "description": "Global design style catalog used across projects and provider profiles",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "imageUrl",
+          "semantic_hint": "url"
+        },
+        {
+          "name": "isActive",
+          "semantic_hint": "boolean"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/preferences.ts",
+          "lines": "60-75"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:country",
+      "name": "countries",
+      "exists": true,
+      "source": "table:countries",
+      "description": "Country reference table for legal documents and user country selection",
+      "fields": [
+        {
+          "name": "code",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "name",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "isActive",
+          "semantic_hint": "boolean"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/preferences.ts",
+          "lines": "105-115"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:wompi_transaction",
+      "name": "wompiTransactions",
+      "exists": true,
+      "source": "table:wompi_transactions",
+      "description": "Payment transactions via Wompi gateway with COP currency",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "wompiTransactionId",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "amountInCents",
+          "semantic_hint": "money"
+        },
+        {
+          "name": "currency",
+          "semantic_hint": "text"
+        },
+        {
+          "name": "status",
+          "semantic_hint": "enum"
+        }
+      ],
+      "relationships": [],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/payments.ts",
+          "lines": "40-80"
+        }
+      ]
+    },
+    {
+      "id": "cbc:entity:project_invoice",
+      "name": "projectInvoices",
+      "exists": true,
+      "source": "table:project_invoices",
+      "description": "Project invoices with FX rate support (COP conversion), platform fees, IVA tax",
+      "fields": [
+        {
+          "name": "id",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "projectId",
+          "semantic_hint": "foreign_key"
+        },
+        {
+          "name": "invoiceNumber",
+          "semantic_hint": "identifier"
+        },
+        {
+          "name": "totalAmount",
+          "semantic_hint": "money"
+        },
+        {
+          "name": "totalAmountCop",
+          "semantic_hint": "money"
+        },
+        {
+          "name": "fxRateUsed",
+          "semantic_hint": "quantity"
+        },
+        {
+          "name": "status",
+          "semantic_hint": "enum"
+        },
+        {
+          "name": "ivaAmount",
+          "semantic_hint": "money"
+        },
+        {
+          "name": "platformFee",
+          "semantic_hint": "money"
+        }
+      ],
+      "relationships": [
+        {
+          "to": "cbc:entity:project",
+          "kind": "many-to-one",
+          "via": "projectId"
+        },
+        {
+          "to": "cbc:entity:service_provider",
+          "kind": "many-to-one",
+          "via": "serviceProviderId"
+        }
+      ],
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projectDetails.ts",
+          "lines": "180-250"
+        }
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "id": "cbc:actor:admin",
+      "name": "admin",
+      "exists": true,
+      "auth_role": "admin",
+      "source": "role:admin in roles table + route files",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/types/role.types.ts",
+          "lines": "45-50"
+        },
+        {
+          "path": "apps/api/src/routes/admin-users.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/admin-projects.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/admin-finance.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:actor:home_owner",
+      "name": "home_owner",
+      "exists": true,
+      "auth_role": "home_owner",
+      "source": "role:home_owner in roles table",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/types/role.types.ts",
+          "lines": "45-50"
+        },
+        {
+          "path": "ARCHITECTURE.md",
+          "lines": "Section 8"
+        }
+      ]
+    },
+    {
+      "id": "cbc:actor:service_provider",
+      "name": "service_provider",
+      "exists": true,
+      "auth_role": "service_provider",
+      "source": "role:service_provider in roles table + serviceProviders table",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/types/role.types.ts",
+          "lines": "45-50"
+        },
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts"
+        },
+        {
+          "path": "apps/api/src/routes/service-provider.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:actor:seller",
+      "name": "sellers",
+      "exists": true,
+      "auth_role": "sellers",
+      "source": "role:sellers in roles table + sellers table",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "apps/api/src/types/role.types.ts",
+          "lines": "45-50"
+        },
+        {
+          "path": "apps/api/src/database/schema/sellers.ts"
+        },
+        {
+          "path": "apps/api/src/routes/seller.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/seller-marketplace.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:actor:home_buyer",
+      "name": "home_buyer",
+      "exists": true,
+      "auth_role": "home_buyer",
+      "source": "role:home_buyer in roles table",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "path": "apps/api/src/types/role.types.ts",
+          "lines": "45-50"
+        }
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "cbc:capability:marketplace",
+      "name": "marketplace",
+      "description": "Property listing management, search, leads, favorites",
+      "entities": [
+        "cbc:entity:property_listing"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/marketplace.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:project_management",
+      "name": "project-management",
+      "description": "Project creation, bidding, agreements, milestones workflow",
+      "entities": [
+        "cbc:entity:project"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/project.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/project-details.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:service_provider_profile",
+      "name": "service-provider-profile",
+      "description": "Provider onboarding, portfolio, services, specializations management",
+      "entities": [
+        "cbc:entity:service_provider",
+        "cbc:entity:service",
+        "cbc:entity:specialization"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/service-provider.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/portfolio.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:seller_management",
+      "name": "seller-management",
+      "description": "Seller profile and property listing management",
+      "entities": [
+        "cbc:entity:seller",
+        "cbc:entity:property_listing"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/seller.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/seller-marketplace.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:payment",
+      "name": "payments",
+      "description": "Wompi payment processing, invoicing, payouts to providers",
+      "entities": [
+        "cbc:entity:wompi_transaction",
+        "cbc:entity:project_invoice"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/wompi.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/bank-details.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:subscriptions_quota",
+      "name": "subscriptions-quota",
+      "description": "Plan-based feature quotas (AI renders, bids) with usage ledger",
+      "entities": [
+        "cbc:entity:plan",
+        "cbc:entity:usage_ledger"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/quota.routes.ts"
+        },
+        {
+          "path": "apps/api/src/routes/admin-subscription.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:ai_visualization",
+      "name": "ai-visualization",
+      "description": "AI-powered room visualization and image transformations",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/visualization.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:reviews_moderation",
+      "name": "reviews-moderation",
+      "description": "Provider reviews with AI-based risk flagging via Gemini",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/reviews.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:dispute",
+      "name": "disputes",
+      "description": "Milestone dispute handling with admin resolution",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/disputes.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:partnered_project",
+      "name": "partnered-projects",
+      "description": "Partner developer/broker project listings with tiers",
+      "entities": [
+        "cbc:entity:partner"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/partnered-projects.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:support_messaging",
+      "name": "support-messaging",
+      "description": "User-admin support conversations with Firestore sync",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/support-messaging.routes.ts"
+        }
+      ]
+    },
+    {
+      "id": "cbc:capability:notification",
+      "name": "notifications",
+      "description": "In-app and push notifications with delivery tracking",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/routes/notifications.routes.ts"
+        }
+      ]
+    }
+  ],
+  "domain_signals": [
+    {
+      "signal": "Single-tenant platform with Colombia focus (COP currency, NIT tax ID, Wompi payments)",
+      "implication_hint": "New features should assume Colombian market context; currency/tax handling is COP-specific; NIT validation may be required for suppliers",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:service_provider",
+        "cbc:entity:wompi_transaction",
+        "cbc:entity:project_invoice"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "nit field"
+        },
+        {
+          "path": "apps/api/src/database/schema/payments.ts",
+          "lines": "currency default COP"
+        },
+        {
+          "path": "apps/api/src/database/schema/projectDetails.ts",
+          "lines": "totalAmountCop, ivaCop fields"
+        }
+      ]
+    },
+    {
+      "signal": "Multi-role user model with role-based workflows",
+      "implication_hint": "Users can hold multiple roles (home_owner, service_provider, seller); a supplier role would be additive via userRoles junction",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:user",
+        "cbc:entity:role"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/users.ts",
+          "lines": "userRoles junction"
+        },
+        {
+          "path": "apps/api/src/types/role.types.ts",
+          "lines": "RoleName type"
+        }
+      ]
+    },
+    {
+      "signal": "Status-driven workflows with enumerated states",
+      "implication_hint": "Entities use pgEnum for status (serviceProviderStatusEnum, projectStatusEnum, agreementStatusEnum, sellerStatusEnum); new catalogue would likely need similar activation/approval states",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:service_provider",
+        "cbc:entity:project",
+        "cbc:entity:seller"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "serviceProviderStatusEnum"
+        },
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "projectStatusEnum"
+        },
+        {
+          "path": "apps/api/src/database/schema/sellers.ts",
+          "lines": "sellerStatusEnum"
+        }
+      ]
+    },
+    {
+      "signal": "Soft-delete pattern via isArchived boolean",
+      "implication_hint": "Projects and bids use isArchived for soft-delete; new catalogue entities should follow same pattern",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:project"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "isArchived: boolean"
+        },
+        {
+          "path": "apps/api/src/database/schema/projectDetails.ts",
+          "lines": "isArchived on projectBids"
+        }
+      ]
+    },
+    {
+      "signal": "isActive pattern for catalog/reference data",
+      "implication_hint": "Reference tables (services, specializations, designStyles, roomMaterialOptions) use isActive boolean for soft-disable; supplier catalogue would follow this pattern",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:service",
+        "cbc:entity:specialization",
+        "cbc:entity:design_style",
+        "cbc:entity:room_material_option"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "isActive on services, specializations"
+        },
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "is_active on roomMaterialOptions"
+        }
+      ]
+    },
+    {
+      "signal": "Existing material catalog is room-scoped and project-bound",
+      "implication_hint": "roomMaterialOptions defines material choices per renovation area; NOT linked to suppliers/providers - it is a product selection catalog, not a supplier inventory system",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:room_material_option",
+        "cbc:entity:project_room_material"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/projects.ts",
+          "lines": "roomMaterialOptions, materialCategoryEnum, materialEnum"
+        }
+      ]
+    },
+    {
+      "signal": "Translation support via entity_translations polymorphic table",
+      "implication_hint": "i18n is supported via entityTranslations table keyed by entityType+entityId+langCode; catalogue items could leverage this pattern",
+      "confidence": "high",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/translations.ts"
+        }
+      ]
+    },
+    {
+      "signal": "Partner tier model (basic/premium/enterprise)",
+      "implication_hint": "Partners have tiered access; if suppliers become partners or have tiers, similar enum pattern exists",
+      "confidence": "medium",
+      "entities": [
+        "cbc:entity:partner"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/partneredProjects.ts",
+          "lines": "partnerTierEnum"
+        }
+      ]
+    },
+    {
+      "signal": "Onboarding workflow tracking via step counters",
+      "implication_hint": "serviceProviders and sellers have profileSetupStep/onboardingStep integers; new supplier onboarding would follow same pattern",
+      "confidence": "high",
+      "entities": [
+        "cbc:entity:service_provider",
+        "cbc:entity:seller",
+        "cbc:entity:user"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "profileSetupStep"
+        },
+        {
+          "path": "apps/api/src/database/schema/sellers.ts",
+          "lines": "onboardingStep"
+        },
+        {
+          "path": "apps/api/src/database/schema/users.ts",
+          "lines": "onboardingStep"
+        }
+      ]
+    },
+    {
+      "signal": "No explicit Market/Region scoping beyond country field",
+      "implication_hint": "Users have a country field and legalDocuments are scoped by country code, but there is no marketplace regional partitioning; the platform appears to be a single-market (Colombia) system",
+      "confidence": "medium",
+      "entities": [
+        "cbc:entity:user",
+        "cbc:entity:country"
+      ],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/users.ts",
+          "lines": "country field"
+        },
+        {
+          "path": "apps/api/src/database/schema/preferences.ts",
+          "lines": "countries table, legalDocuments.country"
+        }
+      ]
+    },
+    {
+      "signal": "Junction tables for many-to-many relationships follow consistent pattern",
+      "implication_hint": "serviceProviderToServices, serviceProviderToSpecializations, projectRoomMaterials use composite primary keys or separate id; new supplier-material links would follow same pattern",
+      "confidence": "high",
+      "entities": [],
+      "evidence": [
+        {
+          "path": "apps/api/src/database/schema/serviceProviders.ts",
+          "lines": "junction table definitions"
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Service Provider",
+      "aka": [
+        "Contractor",
+        "Provider"
+      ],
+      "maps_to": "cbc:entity:service_provider"
+    },
+    {
+      "term": "Homeowner",
+      "aka": [
+        "Home Owner"
+      ],
+      "maps_to": "cbc:actor:home_owner"
+    },
+    {
+      "term": "Seller",
+      "aka": [
+        "Property Seller"
+      ],
+      "maps_to": "cbc:entity:seller"
+    },
+    {
+      "term": "Project",
+      "aka": [
+        "Renovation Project"
+      ],
+      "maps_to": "cbc:entity:project"
+    },
+    {
+      "term": "Material",
+      "aka": [
+        "Room Material"
+      ],
+      "maps_to": "cbc:entity:room_material_option"
+    },
+    {
+      "term": "NIT",
+      "aka": [
+        "Tax ID",
+        "N\u00famero de Identificaci\u00f3n Tributaria"
+      ]
+    },
+    {
+      "term": "IVA",
+      "aka": [
+        "VAT",
+        "Value Added Tax"
+      ]
+    },
+    {
+      "term": "COP",
+      "aka": [
+        "Colombian Peso"
+      ]
+    }
+  ],
+  "concept_resolution": [
+    {
+      "requested_noun": "Material",
+      "cbc_ids": [
+        "cbc:entity:room_material_option",
+        "cbc:entity:project_room_material"
+      ],
+      "exists": true,
+      "note": "Materials exist as a catalog of options (roomMaterialOptions) scoped by renovation area and category, selected into projects via projectRoomMaterials. Generic material types defined via materialEnum (granite, wooden, marble, etc.). This is project selection catalog, NOT supplier inventory."
+    },
+    {
+      "requested_noun": "Catalogue",
+      "cbc_ids": [
+        "cbc:entity:room_material_option",
+        "cbc:entity:room_design_element_option",
+        "cbc:entity:service",
+        "cbc:entity:specialization",
+        "cbc:entity:design_style"
+      ],
+      "exists": true,
+      "note": "Multiple catalogs exist: roomMaterialOptions/roomDesignElementOptions for project selections, services/specializations for provider capabilities, designStyles for style preferences. No unified 'catalogue' entity - these are separate reference tables."
+    },
+    {
+      "requested_noun": "Supplier",
+      "cbc_ids": [],
+      "exists": false,
+      "note": "No 'Supplier' entity exists in the codebase. Service providers (contractors) exist but are not material suppliers. There is no supplier model, supplier catalog linkage, or supplier-material relationship in current schema."
+    },
+    {
+      "requested_noun": "ServiceProvider",
+      "cbc_ids": [
+        "cbc:entity:service_provider"
+      ],
+      "exists": true,
+      "note": "serviceProviders table represents contractors who bid on and execute renovation projects. They have services, specializations, portfolios, and bank details. They are NOT material suppliers - they consume/specify materials for projects."
+    },
+    {
+      "requested_noun": "Seller",
+      "cbc_ids": [
+        "cbc:entity:seller"
+      ],
+      "exists": true,
+      "note": "sellers table represents real estate property sellers (not material sellers). Linked to users via userId, has onboarding workflow, posts property listings. Distinct from service providers."
+    },
+    {
+      "requested_noun": "Market",
+      "cbc_ids": [],
+      "exists": false,
+      "note": "No 'Market' entity exists. Platform operates in single market (Colombia) based on currency (COP), payment provider (Wompi), and tax (NIT/IVA) evidence. No regional marketplace partitioning in schema."
+    },
+    {
+      "requested_noun": "Project",
+      "cbc_ids": [
+        "cbc:entity:project"
+      ],
+      "exists": true,
+      "note": "projects table is the central renovation/construction project entity owned by homeowners. Supports residential/commercial types, budget ranges, status workflow, material/design element selections. Links to bids, agreements, milestones."
+    },
+    {
+      "requested_noun": "Subscription",
+      "cbc_ids": [
+        "cbc:entity:plan",
+        "cbc:entity:usage_ledger"
+      ],
+      "exists": true,
+      "note": "Subscription system exists via plans table (tiers like HOMEOWNER_FREE, PROVIDER_PRO), usageLedger for quota tracking (AI renders, bids), and addOnPurchases for credit purchases. Users have subscriptionStatus field."
+    }
+  ],
+  "registry_events": [
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:user",
+      "current_name": "users"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:role",
+      "current_name": "roles"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:service_provider",
+      "current_name": "serviceProviders"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:seller",
+      "current_name": "sellers"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:project",
+      "current_name": "projects"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:project_room_material",
+      "current_name": "projectRoomMaterials"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:room_material_option",
+      "current_name": "roomMaterialOptions"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:room_design_element_option",
+      "current_name": "roomDesignElementOptions"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:service",
+      "current_name": "services"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:specialization",
+      "current_name": "specializations"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:plan",
+      "current_name": "plans"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:usage_ledger",
+      "current_name": "usageLedger"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:property_listing",
+      "current_name": "propertyListings"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:partner",
+      "current_name": "partners"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:design_style",
+      "current_name": "designStyles"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:country",
+      "current_name": "countries"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:wompi_transaction",
+      "current_name": "wompiTransactions"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:entity:project_invoice",
+      "current_name": "projectInvoices"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:actor:admin",
+      "current_name": "admin"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:actor:home_owner",
+      "current_name": "home_owner"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:actor:service_provider",
+      "current_name": "service_provider"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:actor:seller",
+      "current_name": "sellers"
+    },
+    {
+      "type": "minted",
+      "cbc_id": "cbc:actor:home_buyer",
+      "current_name": "home_buyer"
+    }
+  ],
+  "coverage": {
+    "scanned_paths": [
+      "ARCHITECTURE.md",
+      "apps/api/src/database/schema/agreements.ts",
+      "apps/api/src/database/schema/audit.ts",
+      "apps/api/src/database/schema/disputes.ts",
+      "apps/api/src/database/schema/index.ts",
+      "apps/api/src/database/schema/inquiries.ts",
+      "apps/api/src/database/schema/marketplace.ts",
+      "apps/api/src/database/schema/notifications.ts",
+      "apps/api/src/database/schema/partneredProjects.ts",
+      "apps/api/src/database/schema/payments.ts",
+      "apps/api/src/database/schema/preferences.ts",
+      "apps/api/src/database/schema/projectDetails.ts",
+      "apps/api/src/database/schema/projects.ts",
+      "apps/api/src/database/schema/providerProject.ts",
+      "apps/api/src/database/schema/renovation-game.ts",
+      "apps/api/src/database/schema/reviews.ts",
+      "apps/api/src/database/schema/roles.ts",
+      "apps/api/src/database/schema/sellers.ts",
+      "apps/api/src/database/schema/serviceProviders.ts",
+      "apps/api/src/database/schema/subscriptions.ts",
+      "apps/api/src/database/schema/supportMessaging.ts",
+      "apps/api/src/database/schema/translations.ts",
+      "apps/api/src/database/schema/users.ts",
+      "firestore.rules",
+      "apps/api/src/types/role.types.ts",
+      "apps/api/src/types/marketplace.types.ts",
+      "apps/api/src/routes/admin-finance.routes.ts",
+      "apps/api/src/routes/admin-projects.routes.ts",
+      "apps/api/src/routes/admin-settings.routes.ts",
+      "apps/api/src/routes/admin-subscription.routes.ts",
+      "apps/api/src/routes/admin-users.routes.ts",
+      "apps/api/src/routes/agreements.routes.ts",
+      "apps/api/src/routes/auth.routes.ts",
+      "apps/api/src/routes/bank-details.routes.ts",
+      "apps/api/src/routes/disputes.routes.ts",
+      "apps/api/src/routes/index.ts",
+      "apps/api/src/routes/inspiration-hub.routes.ts",
+      "apps/api/src/routes/marketplace.routes.ts",
+      "apps/api/src/routes/milestones.routes.ts",
+      "apps/api/src/routes/notifications.routes.ts",
+      "apps/api/src/routes/onboarding.routes.ts",
+      "apps/api/src/routes/partnered-projects.routes.ts",
+      "apps/api/src/routes/portfolio.routes.ts",
+      "apps/api/src/routes/preferences.routes.ts",
+      "apps/api/src/routes/project-details.routes.ts",
+      "apps/api/src/routes/project.routes.ts",
+      "apps/api/src/routes/property.routes.ts",
+      "apps/api/src/routes/provider-projects.routes.ts",
+      "apps/api/src/routes/quota.routes.ts",
+      "apps/api/src/routes/renovation-game.routes.ts",
+      "apps/api/src/routes/reviews.routes.ts",
+      "apps/api/src/routes/role.routes.ts",
+      "apps/api/src/routes/security.routes.ts",
+      "apps/api/src/routes/seller-marketplace.routes.ts",
+      "apps/api/src/routes/seller.routes.ts",
+      "apps/api/src/routes/service-provider-settings.routes.ts",
+      "apps/api/src/routes/service-provider.routes.ts",
+      "apps/api/src/routes/sofabrain.routes.ts",
+      "apps/api/src/routes/support-messaging.routes.ts",
+      "apps/api/src/routes/upload.routes.ts",
+      "apps/api/src/routes/user.routes.ts",
+      "apps/api/src/routes/visualization.routes.ts",
+      "apps/api/src/routes/wompi.routes.ts"
+    ],
+    "omitted": [
+      "apps/web frontend components",
+      "functions/ (Firebase functions)",
+      "background jobs / webhooks",
+      "non-schema service internals"
+    ],
+    "confidence": "medium",
+    "files_scanned": 63,
+    "files_total": 1071,
+    "note": "Schema + roles + routes scanned; 37 route files enumerated. Frontend and function internals not parsed in v1."
+  }
+}

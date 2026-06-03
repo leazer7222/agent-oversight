@@ -1,0 +1,12 @@
+{
+  "agent_id": "1ba970fb-caba-4c4d-9e91-0f07135c1a70",
+  "name": "optimization-agent",
+  "display_name": "Repo Optimization Agent",
+  "description": "Scans the agent-oversight repo for standards compliance, organizational issues, and structural gaps, then synthesizes a prioritized improvement report via LLM.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "model": "gemini-2.5-flash",
+  "capability_tags": ["audit", "optimization", "standards", "quality"],
+  "instance_type": "stateless",
+  "mcp_dependencies": []
+}

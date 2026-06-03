@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reformai/schemas/ba-scoping-input.schema.json",
+  "title": "BA Scoping Agent Invocation",
+  "description": "The invocation envelope for the BA Scoping Agent (ba-scoping-agent). Validated before any graph access. Distinct from the consumed codebase-context.json (referenced by codebase_context) and from the produced product-graph.schema.json artifact. A run is one of two passes: 'scope' (propose Feature/Concepts/Questions, compute readiness) or 'ratify' (capture human answers as Decisions, recompute readiness, render brief).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["feature_intent", "product_key", "tenant", "codebase_context"],
+  "properties": {
+    "feature_intent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The raw feature idea. Becomes the FEAT-* node title."
+    },
+    "product_key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Product/repo scope, e.g. 'reformai-product'. Mirrors codebase-context target_key and graph_nodes.product_key."
+    },
+    "tenant": {
+      "description": "Company selector. EXACTLY ONE of name or id. Resolved to app.current_tenant_id. Never resolved by LIMIT 1 (multiple companies exist: ReformAI, AfterGlow, Personal).",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": { "name": { "type": "string", "minLength": 1 } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": { "id": { "type": "string", "format": "uuid" } }
+        }
+      ]
+    },
+    "codebase_context": {
+      "description": "A validated codebase-context.json instance. MUST validate against codebase-context.schema.json before use; abort with validation_error otherwise. The agent never reads source code - this artifact is its only view of IS-state.",
+      "$ref": "codebase-context.schema.json"
+    },
+    "concepts_to_check": {
+      "type": "array",
+      "description": "Directed existence-check list forwarded to the Codebase Context Agent. Additive only: directs existence-checking, never narrows domain_signals or coverage. Plain nouns or {noun, expected_kind}.",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["noun"],
+            "properties": {
+              "noun": { "type": "string" },
+              "expected_kind": { "enum": ["entity", "actor", "capability"] }
+            }
+          }
+        ]
+      }
+    },
+    "pass": {
+      "enum": ["scope", "ratify"],
+      "default": "scope",
+      "description": "'scope' = Pass A (propose nodes, generate Questions, compute readiness). 'ratify' = Pass B (capture human_answers as Decisions, recompute readiness, render brief)."
+    },
+    "human_answers": {
+      "type": "array",
+      "description": "Required for pass='ratify'. Each answer may produce MULTIPLE Decisions when it resolves multiple forks - the agent decomposes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question_key", "answer_text", "ratified_by"],
+        "properties": {
+          "question_key": {
+            "type": "string",
+            "pattern": "^QST-[A-Za-z0-9-]+$",
+            "description": "The QST-* node this answer resolves."
+          },
+          "answer_text": { "type": "string", "minLength": 1 },
+          "ratified_by": { "type": "string", "minLength": 1, "description": "Human operator id stamped onto resulting accepted Decisions." }
+        }
+      }
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Optional caller-supplied telemetry run_id. Generated if absent."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "pass": { "const": "ratify" } }, "required": ["pass"] },
+      "then": { "required": ["human_answers"] }
+    }
+  ]
+}

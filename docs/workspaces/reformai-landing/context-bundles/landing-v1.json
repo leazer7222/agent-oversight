@@ -1,0 +1,30 @@
+{
+  "bundle_id": "landing-v1",
+  "version": 1,
+  "workspace_id": "reformai-landing",
+  "team_id": "agile",
+  "description": "Baseline context bundle for the ReformAI persona landing-pages workspace. v1 covers the canonical product/domain/risk docs that drive persona copy and page builds. The authoritative source of these docs is the reformAI-home repo (docs/); this folder is a synced mirror for oversight agents.",
+  "docs": [
+    {
+      "path": "docs/workspaces/reformai-landing/PRODUCT.md",
+      "role": "product_context",
+      "required": true,
+      "description": "What the landing pages are, who they serve, what they do NOT do (no funnel), key brand/stack/wow decisions."
+    },
+    {
+      "path": "docs/workspaces/reformai-landing/DOMAIN.md",
+      "role": "domain_glossary",
+      "required": true,
+      "description": "Persona definitions, design terms (bento, signature moment, AEO), source-of-truth tiers, and brand business rules."
+    },
+    {
+      "path": "docs/workspaces/reformai-landing/KNOWN-RISKS.md",
+      "role": "risk_register",
+      "required": true,
+      "description": "Risks to avoid during build: WebGL perf, scope creep into the funnel, brand drift, i18n gaps, copy plausibility trap."
+    }
+  ],
+  "staleness_threshold_hours": 48,
+  "created_at": "2026-05-30",
+  "notes": "Authoritative source: reformAI-home/docs/{PRODUCT,DOMAIN,KNOWN-RISKS}.md. Re-copy here whenever the source changes (see reformAI-home/docs/DOC-REGISTRY.md). v1 is copy-context only; the landing pages have no agent runtime yet."
+}

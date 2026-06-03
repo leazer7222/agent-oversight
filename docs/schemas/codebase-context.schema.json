@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reformai/schemas/codebase-context.schema.json",
+  "title": "Codebase Context Artifact",
+  "description": "Output of the Codebase Context Agent. Describes WHAT IS in an external target repo at a pinned commit. Consumed by the BA Agent, which owns product Concepts (CON-*) and holds the CON-* -> [cbc:*] join. This artifact never names a product Concept; it emits code-side cbc:* identities only. Canonical body is stored in oversight agent_outputs (output_type='codebase_context'); codebase-context.md is a human-only render of this JSON. The BA never reads the .md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "artifact_id",
+    "repo",
+    "commit_sha",
+    "ref_requested",
+    "generated_at",
+    "feature_intent",
+    "inputs",
+    "entities",
+    "actors",
+    "capabilities",
+    "domain_signals",
+    "glossary",
+    "concept_resolution",
+    "coverage"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "artifact_type": { "const": "codebase_context" },
+    "artifact_id": { "type": "string", "format": "uuid" },
+    "run_id": { "type": "string", "format": "uuid", "description": "Oversight telemetry run_id for this analysis run." },
+
+    "repo": { "type": "string", "description": "Target repo identifier, e.g. 'reformai-product'." },
+    "commit_sha": { "type": "string", "minLength": 7, "description": "Resolved commit the analysis is pinned to. All evidence paths/lines are at this SHA." },
+    "ref_requested": { "type": "string", "description": "The branch/tag/sha originally requested before resolution." },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "feature_intent": { "type": "string", "minLength": 1, "description": "Required. Drives existence-checking coverage and the human .md brief focus. Does NOT narrow the comprehensive entity/signal sweep." },
+
+    "generator": {
+      "type": "object",
+      "properties": {
+        "agent": { "type": "string" },
+        "version": { "type": "string" },
+        "model": { "type": "string" }
+      }
+    },
+
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Echo of the invocation inputs for reproducibility.",
+      "required": ["target_key", "ref_requested", "feature_intent"],
+      "properties": {
+        "target_key": { "type": "string" },
+        "ref_requested": { "type": "string" },
+        "feature_intent": { "type": "string" },
+        "concepts_to_check": {
+          "type": "array",
+          "description": "Directed existence-check list. Additive only: directs existence-checking, never narrows domain_signals or coverage. Entries are plain nouns or {noun, expected_kind}.",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["noun"],
+                "properties": {
+                  "noun": { "type": "string" },
+                  "expected_kind": { "enum": ["entity", "actor", "capability"] }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+
+    "entities": {
+      "type": "array",
+      "description": "Comprehensive code-side entity inventory (not narrowed by feature_intent). Includes exists:false negative findings for requested nouns with no code representation.",
+      "items": { "$ref": "#/$defs/entity" }
+    },
+
+    "actors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/actor" }
+    },
+
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/capability" }
+    },
+
+    "domain_signals": {
+      "type": "array",
+      "description": "Non-obvious cross-cutting facts with implication hints (market-scoping, multi-tenancy, currency/locale, soft-delete, etc.). The highest-value output. Always swept in full regardless of concepts_to_check.",
+      "items": { "$ref": "#/$defs/domain_signal" }
+    },
+
+    "glossary": {
+      "type": "array",
+      "description": "Code-derived term map with aliases. Drives BA alias resolution; absence causes duplicate Concepts. Terms are code-side; maps_to references a cbc:* identity.",
+      "items": { "$ref": "#/$defs/glossary_entry" }
+    },
+
+    "concept_resolution": {
+      "type": "array",
+      "description": "One entry per requested noun in concepts_to_check (and per feature_intent-derived noun). Closes the loop: every requested noun returns resolved (cbc_ids non-empty) or explicitly unresolved (empty = genuinely new). cbc_ids is plural: one noun may resolve to multiple code-side identities.",
+      "items": { "$ref": "#/$defs/concept_resolution_item" }
+    },
+
+    "registry_events": {
+      "type": "array",
+      "description": "cbc identity registry transitions emitted this run: renames, absent->present implementations, collisions, and divergent-name possible_realization candidates for BA/human confirmation.",
+      "items": { "$ref": "#/$defs/registry_event" }
+    },
+
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scanned_paths", "omitted", "confidence", "files_scanned", "files_total"],
+      "properties": {
+        "scanned_paths": { "type": "array", "items": { "type": "string" } },
+        "omitted": { "type": "array", "items": { "type": "string" } },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "files_scanned": { "type": "integer", "minimum": 0 },
+        "files_total": { "type": "integer", "minimum": 0 },
+        "note": { "type": "string" }
+      }
+    }
+  },
+
+  "$defs": {
+    "confidence": { "enum": ["high", "medium", "low"] },
+
+    "cbc_id": {
+      "type": "string",
+      "pattern": "^cbc:(entity|actor|capability):[a-z0-9_]+$",
+      "description": "Opaque, registry-frozen identity. Minted once via lowercase->snake_case->singularize->strip-non-alphanumerics; frozen for life thereafter. Name follows the CODE identifier when the entity exists; for absent entities it is provisionally minted from the normalized requested noun and frozen on consumption."
+    },
+
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "description": "Repo-relative path at commit_sha." },
+        "lines": { "type": "string", "description": "e.g. '14' or '12-40'. Implicitly at commit_sha." }
+      }
+    },
+
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "semantic_hint": {
+          "type": "string",
+          "description": "Code-reality hint only (not an Attribute node; the BA owns Attributes). Common values: money, enum, timestamp, foreign_key, identifier, email, url, boolean, quantity, text, json."
+        },
+        "nullable": { "type": "boolean" }
+      }
+    },
+
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["to", "kind"],
+      "properties": {
+        "to": { "$ref": "#/$defs/cbc_id" },
+        "kind": { "enum": ["one-to-one", "one-to-many", "many-to-one", "many-to-many"] },
+        "via": { "type": "string", "description": "FK column or join table." }
+      }
+    },
+
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "exists", "source"],
+      "properties": {
+        "id": { "$ref": "#/$defs/cbc_id" },
+        "name": { "type": "string", "description": "current_name from the registry (code identifier when present; requested noun when absent)." },
+        "exists": { "type": "boolean" },
+        "source": { "type": "string", "description": "e.g. 'table:public.vendors', 'model:Material', or 'none' for exists:false." },
+        "description": { "type": "string" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "relationships": { "type": "array", "items": { "$ref": "#/$defs/relationship" } },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "exists"],
+      "properties": {
+        "id": { "$ref": "#/$defs/cbc_id" },
+        "name": { "type": "string" },
+        "exists": { "type": "boolean" },
+        "auth_role": { "type": "string", "description": "Code-side role string if one exists." },
+        "source": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/cbc_id" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "entities": { "type": "array", "items": { "$ref": "#/$defs/cbc_id" } },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+
+    "domain_signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "implication_hint", "confidence"],
+      "properties": {
+        "signal": { "type": "string" },
+        "entities": { "type": "array", "items": { "$ref": "#/$defs/cbc_id" } },
+        "implication_hint": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    },
+
+    "glossary_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term"],
+      "properties": {
+        "term": { "type": "string", "description": "Code-side term." },
+        "aka": { "type": "array", "items": { "type": "string" } },
+        "maps_to": { "$ref": "#/$defs/cbc_id" }
+      }
+    },
+
+    "concept_resolution_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested_noun", "cbc_ids", "exists"],
+      "properties": {
+        "requested_noun": { "type": "string" },
+        "cbc_ids": {
+          "type": "array",
+          "description": "Plural. Empty array = no code-side identity, genuinely new.",
+          "items": { "$ref": "#/$defs/cbc_id" }
+        },
+        "exists": { "type": "boolean" },
+        "note": { "type": "string" }
+      }
+    },
+
+    "registry_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "cbc_id"],
+      "properties": {
+        "type": { "enum": ["minted", "rename", "implemented", "collision", "possible_realization"] },
+        "cbc_id": { "$ref": "#/$defs/cbc_id" },
+        "previous_name": { "type": "string", "description": "For rename events." },
+        "current_name": { "type": "string" },
+        "candidate_for": { "$ref": "#/$defs/cbc_id", "description": "For possible_realization: the still-absent id this code entity might realize; awaits BA/human merge confirmation." },
+        "note": { "type": "string" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      }
+    }
+  }
+}

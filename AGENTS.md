@@ -62,17 +62,19 @@ Template to copy from: `/agents/library/_template/`
 - **ba-scoping-agent** ([library](agents/library/ba-scoping-agent/))
     - Purpose: Converts a feature idea into a scope-ready brief by resolving Concepts against product knowledge and codebase reality, surfacing high-divergence forks as blocking Questions, and capturing human answers as durable Decisions. Scoping and decision-extraction agent (NOT a PRD generator in v1).
     - agent_id (definition): `1232ef02-e83e-437a-a4a3-50b61090cb86` | Instance: `reformai.ba-scoping-agent` (`0cc9bf15-49a5-4667-9985-77c31877490b`)
-    - Status: **Registered (DB), runtime pending** - instance `status=paused` (no `agent.py` yet; not operationally active) | Owner: `reformai` | Type: `worker`
-    - Paired with: Codebase Context Agent. BA owns `CON-*`/`FEAT-*`/`QST-*`/`DEC-*` and `maps_to_codebase[]`; never reads source code or mutates `cbc:*`.
+    - Status: **Active** - instance `status=active`, `metadata.runtime_implemented=true`; runtime `agent.py` (Pass A scope) implemented and smoke-tested against `reformai-product` @ `d768f37` | Owner: `reformai` | Type: `worker`
+    - Paired with: Codebase Context Agent. BA owns `CON-*`/`FEAT-*`/`QST-*`/`DEC-*` and `maps_to_codebase[]`; never reads source code or mutates `cbc:*`. Loads IS-state via `public.get_latest_codebase_context('reformai-product')`.
+    - Run: `python agents/library/ba-scoping-agent/agent.py --feature-intent "..." --product-key reformai-product --tenant ReformAI`
     - Schemas: input `docs/schemas/ba-scoping-input.schema.json` -> consumes `docs/schemas/codebase-context.schema.json` -> output `docs/schemas/product-graph.schema.json`
-    - Storage: `product_graph.graph_nodes` / `graph_edges` (migration 024) + `cbc_identity_registry` (025) - **authored, NOT yet applied**
+    - Storage: `product_graph.graph_nodes` / `graph_edges` - migrations 024 (+ 029 output_type, 030 readiness fix) **APPLIED** to `hdhovyrlnfojtkqbcegh`
 - **codebase-context-agent** ([library](agents/library/codebase-context-agent/))
     - Purpose: Analyzes an external target codebase read-only at a pinned commit and produces a structured `codebase-context.json` artifact describing code reality (entities, actors, capabilities, domain signals, glossary, coverage, evidence) for downstream BA scoping. Describes WHAT IS; never scopes WHAT SHOULD BE. Owns the `cbc:*` identity registry.
     - agent_id (definition): `93b45e81-a1e5-47d8-98b1-0575de49a21b` | Instance: `reformai.codebase-context-agent` (`b118d9e1-c3ff-49c3-bb8b-f3c1bb985d2a`)
-    - Status: **Registered (DB), runtime pending** - instance `status=paused`, `metadata.runtime_implemented=false` (no `agent.py` yet; not operationally active) | Owner: `reformai` | Type: `worker`
+    - Status: **Active** - instance `status=active`, `metadata.runtime_implemented=true`; runtime `agent.py` (LLM-assisted, v1 local-path mode) implemented and smoke-tested against ReformAI-Inc/Reform-AI @ `d768f37` | Owner: `reformai` | Type: `worker`
     - Paired with: BA Scoping Agent. CCA owns `cbc:*` / `cbc_identity_registry` and is the only agent that reads source code; never emits `CON-*`/Decisions/Questions/Rules/PRDs/recommendations.
+    - Run: `python agents/library/codebase-context-agent/agent.py --repo-path <local clone> --target-key reformai-product --feature-intent "..." --concepts-to-check Material Supplier ...`
     - Schemas: input `agents/library/codebase-context-agent/docs/input-contract.md` -> output `docs/schemas/codebase-context.schema.json`
-    - Storage: `platform.cbc_identity_registry` / `cbc_registry_events` (migration 025) - **authored, NOT yet applied**
+    - Storage: `platform.cbc_identity_registry` / `cbc_registry_events` (migration 025) + `agent_outputs.output_type='codebase_context'` (migration 027) - **APPLIED** to `hdhovyrlnfojtkqbcegh`
 
 
 ## Required at runtime

@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { CostLabel } from '@/components/dashboard/CostLabel'
 import { EmptyState } from '@/components/dashboard/EmptyState'
 import { ProviderQuotaStrip } from '@/components/dashboard/ProviderQuotaStrip'
+import { ModelQuotaCard } from '@/components/dashboard/ModelQuotaCard'
 import { assembleSignals } from '@/lib/ai-ops/signals'
 import { Bot, Play, DollarSign, AlertCircle } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
@@ -46,8 +47,11 @@ export default async function OverviewPage() {
         <KpiCard icon={AlertCircle} label="Failed Runs" value={totalErrors} highlight={totalErrors > 0} />
       </div>
 
-      {/* Provider quota strip */}
-      {signals.length > 0 && <ProviderQuotaStrip signals={signals} />}
+      {/* Model Quota - Specific View */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ModelQuotaCard />
+        {signals.length > 0 && <ProviderQuotaStrip signals={signals} />}
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Agents table */}

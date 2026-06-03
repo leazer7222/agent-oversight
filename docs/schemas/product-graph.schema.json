@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reformai/schemas/product-graph.schema.json",
+  "title": "Product Graph Scope Artifact",
+  "description": "Output of the BA Agent (v1). Describes WHAT SHOULD BE for one feature: the process-plane Feature plus the proposed/ratified knowledge-plane nodes and edges produced while scoping it. The BA Agent owns product Concepts (CON-*) and holds the CON-* -> [cbc:*] join via concept.maps_to_codebase; the Codebase Context Agent owns cbc:* and never reads this artifact. This is the on-disk mirror of the product_graph.graph_nodes / graph_edges tables (migration 024) and the write contract for the public.graph_* RPCs. Column/field names match the migration exactly. Epistemic status and scope readiness are DERIVED (public.graph_node_epistemic_status / public.graph_feature_readiness), never stored — readiness is echoed here for convenience only. v1 primitives: Feature, Concept, Question, Decision. Rule and Attribute are DEFERRED but pre-stubbed inside decision.node_attributes (implies_rules / implies_attributes) so they promote by migration, not rescoping.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "artifact_id",
+    "product_key",
+    "generated_at",
+    "feature_key",
+    "scoped_against",
+    "inputs",
+    "nodes",
+    "edges",
+    "readiness"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "artifact_type": { "const": "product_graph_scope" },
+    "artifact_id": { "type": "string", "format": "uuid" },
+    "run_id": { "type": "string", "format": "uuid", "description": "Oversight telemetry run_id for this BA scoping run." },
+
+    "product_key": { "type": "string", "description": "Product/repo scope, mirrors codebase-context target_key, e.g. 'reformai-product'. Matches graph_nodes.product_key." },
+    "tenant_id": { "type": "string", "format": "uuid", "description": "Company isolation id. Matches graph_nodes.tenant_id. Set as app.current_tenant_id when writing via RPC. See LESSONS: never resolve company via LIMIT 1." },
+    "generated_at": { "type": "string", "format": "date-time" },
+
+    "feature_key": {
+      "type": "string",
+      "pattern": "^FEAT-[a-z0-9-]+$",
+      "description": "The FEAT-* node this artifact scopes. Present in nodes[] as node_type=feature."
+    },
+
+    "scoped_against": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The codebase-context artifact this scoping consumed. Records the IS-state reality the SHOULD-BE was scoped against, for staleness detection.",
+      "required": ["repo", "commit_sha"],
+      "properties": {
+        "repo": { "type": "string" },
+        "commit_sha": { "type": "string", "minLength": 7, "description": "Mirrored into feature node_attributes.scoped_against_commit." },
+        "codebase_context_artifact_id": { "type": "string", "format": "uuid", "description": "The consumed codebase_context artifact_id." }
+      }
+    },
+
+    "generator": {
+      "type": "object",
+      "properties": {
+        "agent": { "type": "string" },
+        "version": { "type": "string" },
+        "model": { "type": "string" }
+      }
+    },
+
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Echo of the invocation inputs for reproducibility.",
+      "required": ["product_key", "feature_intent"],
+      "properties": {
+        "product_key": { "type": "string" },
+        "feature_intent": { "type": "string", "minLength": 1, "description": "The raw feature idea. Becomes the feature node title." }
+      }
+    },
+
+    "nodes": {
+      "type": "array",
+      "description": "All graph_nodes produced/touched this run (feature + concepts + questions + decisions). One-to-one with product_graph.graph_nodes rows. Write via public.graph_upsert_node.",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/feature_node" },
+          { "$ref": "#/$defs/concept_node" },
+          { "$ref": "#/$defs/question_node" },
+          { "$ref": "#/$defs/decision_node" }
+        ]
+      }
+    },
+
+    "edges": {
+      "type": "array",
+      "description": "All graph_edges produced this run. One-to-one with product_graph.graph_edges rows. Write via public.graph_add_edge. Endpoints are node_key values resolved to ids by the RPC.",
+      "items": { "$ref": "#/$defs/edge" }
+    },
+
+    "readiness": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Convenience echo of public.graph_feature_readiness(product_key, feature_key). DERIVED, never stored. The DB function is authoritative; this snapshot is for human/brief consumption only.",
+      "required": ["scope_ready"],
+      "properties": {
+        "scope_ready": { "type": "boolean" },
+        "gate_open_blocking_questions": { "type": "integer", "minimum": 0 },
+        "gate_open_high_divergence": { "type": "integer", "minimum": 0 },
+        "gate_unresolved_concepts": { "type": "integer", "minimum": 0 },
+        "gate_contradiction_check": { "const": "deferred_v1", "description": "Gate 4 is a known v1 gap; contradiction detection arrives with a later migration." }
+      }
+    },
+
+    "brief_markdown": {
+      "type": "string",
+      "description": "The rendered Feature Brief — a projection over the nodes/edges above. Disposable presentation layer; never a source of truth. Only rendered when readiness.scope_ready is true (or marked PROVISIONAL otherwise)."
+    }
+  },
+
+  "$defs": {
+    "cbc_id": {
+      "type": "string",
+      "pattern": "^cbc:(entity|actor|capability):[a-z0-9_]+$",
+      "description": "Code-side identity owned by the Codebase Context Agent (registry-frozen). Pattern is identical to codebase-context.schema.json by contract. The BA never mints these — it reads them from concept_resolution[].cbc_ids and stores them in concept.maps_to_codebase."
+    },
+
+    "node_common": {
+      "type": "object",
+      "description": "Columns shared by every graph_nodes row.",
+      "properties": {
+        "node_key":   { "type": "string" },
+        "node_type":  { "enum": ["feature", "concept", "question", "decision"] },
+        "title":      { "type": "string", "minLength": 1, "description": "intent | concept name | question text | decision statement." },
+        "status":     { "type": "string" },
+        "created_by": { "type": "string", "description": "'ba-agent' or a human operator id." },
+        "ratified_by": { "type": "string", "description": "Set only on transition into accepted/handed_off (via public.graph_ratify_node)." },
+        "ratified_at": { "type": "string", "format": "date-time" },
+        "node_attributes": { "type": "object", "description": "Type-specific JSONB. See per-type defs." }
+      }
+    },
+
+    "feature_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_key", "node_type", "title", "status", "created_by"],
+      "properties": {
+        "node_key":   { "type": "string", "pattern": "^FEAT-[a-z0-9-]+$" },
+        "node_type":  { "const": "feature" },
+        "title":      { "type": "string", "minLength": 1, "description": "The feature intent." },
+        "status":     { "enum": ["scoping", "ready", "handed_off", "shelved"] },
+        "created_by": { "type": "string" },
+        "ratified_by": { "type": "string" },
+        "ratified_at": { "type": "string", "format": "date-time" },
+        "node_attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scoped_against_commit": { "type": "string", "description": "The commit_sha from scoped_against." },
+            "notes": { "type": "array", "items": { "type": "string" }, "description": "Low-divergence non-blocking assumptions, captured as notes (Assumption-as-node is deferred in v1)." }
+          }
+        }
+      }
+    },
+
+    "concept_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_key", "node_type", "title", "status", "created_by"],
+      "properties": {
+        "node_key":   { "type": "string", "pattern": "^CON-[a-z0-9-]+$" },
+        "node_type":  { "const": "concept" },
+        "title":      { "type": "string", "minLength": 1, "description": "Canonical concept name (product noun, not the code identifier)." },
+        "status":     { "enum": ["proposed", "accepted", "rejected", "deprecated"] },
+        "kind":       { "type": "string", "description": "Emergent, human-ratified vocabulary: actor | entity | workflow | event | integration | ... Open set; new kinds require ratification, not migration." },
+        "maps_to_codebase": {
+          "type": "array",
+          "description": "Plural. cbc:* identities this concept binds to (e.g. an actor backed by both an auth role and a table). The drift-detection join key. Frozen on consumption: once stored, the cbc_id is authoritative even if the code later renames. GIN-indexed in graph_nodes.",
+          "items": { "$ref": "#/$defs/cbc_id" }
+        },
+        "aliases": {
+          "type": "array",
+          "description": "Synonyms folded into this concept (anti-duplicate). The BA resolves incoming nouns against title + aliases before minting a new concept.",
+          "items": { "type": "string" }
+        },
+        "created_by": { "type": "string" },
+        "ratified_by": { "type": "string" },
+        "ratified_at": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "question_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_key", "node_type", "title", "status", "blocking", "divergence", "created_by"],
+      "properties": {
+        "node_key":   { "type": "string", "pattern": "^QST-[A-Za-z0-9-]+$" },
+        "node_type":  { "const": "question" },
+        "title":      { "type": "string", "minLength": 1, "description": "The clarifying question text." },
+        "status":     { "enum": ["open", "answered", "deferred"] },
+        "blocking":   { "type": "boolean", "description": "Only blocking + high-divergence questions gate scope readiness." },
+        "divergence": { "enum": ["low", "medium", "high"], "description": "How much the answer changes the design. Only 'high' blocks." },
+        "created_by": { "type": "string" }
+      }
+    },
+
+    "decision_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_key", "node_type", "title", "status", "created_by", "node_attributes"],
+      "properties": {
+        "node_key":   { "type": "string", "pattern": "^DEC-[A-Za-z0-9-]+$" },
+        "node_type":  { "const": "decision" },
+        "title":      { "type": "string", "minLength": 1, "description": "The decision statement (the ratified choice). A rejected alternative is a separate decision_node with status=rejected." },
+        "status":     { "enum": ["proposed", "accepted", "rejected", "superseded"] },
+        "created_by": { "type": "string" },
+        "ratified_by": { "type": "string", "description": "The human who accepted/rejected. Decisions are the only fact-minting node and are immutable once accepted — supersede, never edit." },
+        "ratified_at": { "type": "string", "format": "date-time" },
+        "node_attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rationale"],
+          "properties": {
+            "rationale": { "type": "string", "minLength": 1, "description": "Why this choice. Irreplaceable — decisions are the least-recoverable asset." },
+            "implies_rules": {
+              "type": "array",
+              "description": "Forward-compat stub. Plain-language rule statements this decision establishes. Promoted to Rule nodes by a later migration; unused by the v1 brief.",
+              "items": { "type": "string" }
+            },
+            "implies_attributes": {
+              "type": "array",
+              "description": "Forward-compat stub. Concept field sets this decision implies. Promoted to non-sovereign Attribute components by a later migration.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["concept", "fields"],
+                "properties": {
+                  "concept": { "type": "string", "pattern": "^CON-[a-z0-9-]+$", "description": "Owning concept node_key." },
+                  "fields": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edge_type", "src_key", "dst_key", "created_by"],
+      "properties": {
+        "edge_type": {
+          "enum": ["references", "resolves", "supersedes", "derived_from"],
+          "description": "references: any node -> concept (traceability/citation). resolves: decision -> question|assumption-equivalent. supersedes: node -> same-type node (versioning). derived_from: provenance."
+        },
+        "src_key": { "type": "string", "description": "Source node_key. Resolved to id by public.graph_add_edge." },
+        "dst_key": { "type": "string", "description": "Destination node_key." },
+        "created_by": { "type": "string" },
+        "edge_attributes": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Edge-type-specific. For references, nature carries impact without a new edge type.",
+          "properties": {
+            "nature": { "enum": ["touches", "creates", "modifies"], "description": "references edges only." }
+          }
+        }
+      }
+    }
+  }
+}

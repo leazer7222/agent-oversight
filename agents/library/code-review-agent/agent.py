@@ -110,6 +110,75 @@ def _estimate_cost(model: str, tokens_in: int, tokens_out: int) -> float:
     return round((tokens_in * 3.00 + tokens_out * 15.00) / 1_000_000, 6)
 
 
+# ── Cost guardrail (pre-flight) ────────────────────────────────────────────────
+# A runaway diff once cost $5.58 on opus (350k input tokens) and still failed. Count
+# tokens EXACTLY before the call (chars/4 undercounted ~2.3x) and apply zones:
+#   - above DOWNGRADE_TOKENS: auto-route opus -> cheaper model
+#   - above HARD_MAX_TOKENS or COST_CEILING_USD: refuse (exit 1) unless overridden
+# All env-tunable. Set CODE_REVIEW_ALLOW_LARGE=1 to override a refusal.
+DOWNGRADE_TOKENS   = int(os.environ.get("CODE_REVIEW_DOWNGRADE_TOKENS", "60000"))
+HARD_MAX_TOKENS    = int(os.environ.get("CODE_REVIEW_MAX_TOKENS", "500000"))
+COST_CEILING_USD   = float(os.environ.get("CODE_REVIEW_COST_CEILING_USD", "3.00"))
+DOWNGRADE_MODEL    = os.environ.get("CODE_REVIEW_DOWNGRADE_MODEL", "claude-sonnet-4-5")
+ALLOW_LARGE        = os.environ.get("CODE_REVIEW_ALLOW_LARGE", "") == "1"
+_EXPECTED_OUTPUT_TOKENS = 4096  # call_llm max_tokens; cost upper bound
+
+
+def _build_review_kwargs(*, system_prompt: str, standards: str, diff: str,
+                         commit_sha: str, base_sha: str, branch: str, model: str) -> dict:
+    """Single source of truth for the review request (used by count_tokens AND create)."""
+    return dict(
+        model=model,
+        max_tokens=_EXPECTED_OUTPUT_TOKENS,
+        system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
+        tools=[_SUBMIT_REVIEW_TOOL],
+        tool_choice={"type": "tool", "name": "submit_review"},
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": f"# Standards and Architecture Documents\n\n{standards}",
+             "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": (
+                f"# Diff to Review\n\n**Commit:** `{commit_sha}`  \n**Base:**   `{base_sha}`  \n"
+                f"**Branch:** `{branch or '(not specified)'}`\n\n```diff\n{diff}\n```\n\n"
+                "Review this diff against the standards above. Submit your findings using the "
+                "`submit_review` tool. If the diff is clean, submit an empty findings array with "
+                "recommendation='approve'.")},
+        ]}],
+    )
+
+
+def preflight_cost_gate(*, system_prompt: str, standards: str, diff: str,
+                        commit_sha: str, base_sha: str, branch: str, model: str) -> tuple[str, int, float]:
+    """Count input tokens exactly and apply cost zones.
+    Returns (chosen_model, input_tokens, est_cost). Raises SystemExit(1) on RED refusal."""
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    kwargs = _build_review_kwargs(system_prompt=system_prompt, standards=standards, diff=diff,
+                                  commit_sha=commit_sha, base_sha=base_sha, branch=branch, model=model)
+    counted = client.messages.count_tokens(
+        model=kwargs["model"], system=kwargs["system"], tools=kwargs["tools"], messages=kwargs["messages"])
+    in_tok = counted.input_tokens
+
+    chosen = model
+    if in_tok > DOWNGRADE_TOKENS and "opus" in model.lower():
+        chosen = DOWNGRADE_MODEL
+    est = _estimate_cost(chosen, in_tok, _EXPECTED_OUTPUT_TOKENS)
+    if chosen != model:
+        log.warning("Large diff (%s tokens) -> downgrading %s to %s (est <= $%.2f).",
+                    f"{in_tok:,}", model, chosen, est)
+    else:
+        log.info("Pre-flight: %s input tokens, est <= $%.2f on %s.", f"{in_tok:,}", est, chosen)
+
+    if in_tok > HARD_MAX_TOKENS or est > COST_CEILING_USD:
+        if not ALLOW_LARGE:
+            log.error(
+                "Review REFUSED by cost gate: %s tokens, est $%.2f on %s exceeds limits "
+                "(max %s tokens, ceiling $%.2f). Narrow the diff (avoid `git add -A`), or set "
+                "CODE_REVIEW_ALLOW_LARGE=1 to override.",
+                f"{in_tok:,}", est, chosen, f"{HARD_MAX_TOKENS:,}", COST_CEILING_USD)
+            raise SystemExit(1)
+        log.warning("Cost gate OVERRIDDEN (CODE_REVIEW_ALLOW_LARGE=1): proceeding at est $%.2f.", est)
+    return chosen, in_tok, est
+
+
 # ── Git utilities ─────────────────────────────────────────────────────────────
 
 def get_diff(base_sha: str, commit_sha: str) -> tuple[str, list[str], int]:
@@ -281,47 +350,10 @@ def call_llm(
     """
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-    response = client.messages.create(
-        model=model,
-        max_tokens=4096,
-        system=[
-            {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            },
-        ],
-        tools=[_SUBMIT_REVIEW_TOOL],
-        tool_choice={"type": "tool", "name": "submit_review"},
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        # Standards docs cached — same for all reviews of this repo
-                        "type": "text",
-                        "text": f"# Standards and Architecture Documents\n\n{standards}",
-                        "cache_control": {"type": "ephemeral"},
-                    },
-                    {
-                        # The diff is unique per call — not cached
-                        "type": "text",
-                        "text": (
-                            f"# Diff to Review\n\n"
-                            f"**Commit:** `{commit_sha}`  \n"
-                            f"**Base:**   `{base_sha}`  \n"
-                            f"**Branch:** `{branch or '(not specified)'}`\n\n"
-                            f"```diff\n{diff}\n```\n\n"
-                            f"Review this diff against the standards above. "
-                            f"Submit your findings using the `submit_review` tool. "
-                            f"If the diff is clean, submit an empty findings array "
-                            f"with recommendation='approve'."
-                        ),
-                    },
-                ],
-            }
-        ],
-    )
+    response = client.messages.create(**_build_review_kwargs(
+        system_prompt=system_prompt, standards=standards, diff=diff,
+        commit_sha=commit_sha, base_sha=base_sha, branch=branch, model=model,
+    ))
 
     tokens_in  = response.usage.input_tokens
     tokens_out = response.usage.output_tokens
@@ -394,11 +426,15 @@ def main() -> None:
 
     system_prompt = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")
 
-    # Approximate total context sent to the LLM: system prompt + standards + diff + headers
-    total_context_chars = len(system_prompt) + len(standards) + len(diff) + 500
-    tokens_in_hint = max(total_context_chars // 4, 500)
+    # Pre-flight cost gate: count tokens EXACTLY and apply zones BEFORE creating a run or
+    # spending on the LLM. Refuses (exit 1) in the RED zone; may downgrade the model. This runs
+    # before oversight.run() so a refusal never creates a dangling/wasted run record.
+    review_model, tokens_in_hint, est_cost = preflight_cost_gate(
+        system_prompt=system_prompt, standards=standards, diff=diff,
+        commit_sha=args.commit_sha, base_sha=args.base_sha, branch=args.branch, model=args.model,
+    )
 
-    # Complexity bucket derived from hint — large contexts always behave as complex
+    # Exact token count beats the old chars/4 hint (which undercounted ~2.3x).
     if tokens_in_hint < 5_000:
         task_complexity = "simple"
     elif tokens_in_hint < 25_000:
@@ -406,15 +442,10 @@ def main() -> None:
     else:
         task_complexity = "complex"
 
-    log.info(
-        "Context hint: %d tokens (%d chars), complexity: %s",
-        tokens_in_hint, total_context_chars, task_complexity,
-    )
-
     with oversight.run(
         agent_id=AGENT_ID,
         run_id=run_id,
-        model=args.model,
+        model=review_model,
         provider="anthropic",
         tokens_in_hint=tokens_in_hint,
         task_type_code="code_gen",
@@ -438,7 +469,7 @@ def main() -> None:
 
         # ── Step 3: Call LLM ──────────────────────────────────────────────────
 
-        log.info("Calling %s for review...", args.model)
+        log.info("Calling %s for review...", review_model)
         with ctx.timer() as t:
             llm_output, tokens_in, tokens_out = call_llm(
                 system_prompt=system_prompt,
@@ -447,9 +478,9 @@ def main() -> None:
                 commit_sha=args.commit_sha,
                 base_sha=args.base_sha,
                 branch=args.branch,
-                model=args.model,
+                model=review_model,
             )
-        cost = _estimate_cost(args.model, tokens_in, tokens_out)
+        cost = _estimate_cost(review_model, tokens_in, tokens_out)
         ctx.report(tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=cost)
         ctx.step(
             "llm_complete",

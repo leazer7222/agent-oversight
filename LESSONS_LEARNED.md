@@ -5,6 +5,15 @@ Add new lessons at the end of each session.
 
 ---
 
+## Code Style
+
+### No emojis
+- No emojis anywhere in new code, documentation, scripts, SQL, comments, or commit messages.
+- Use plain ASCII alternatives: [OK], [WARN], [FAIL], [INFO], ->, <-, etc.
+- This applies to everything written going forward. Existing files are not retroactively cleaned.
+
+---
+
 ## Next.js / React
 
 ### Server vs Client Components
@@ -414,3 +423,51 @@ Add new lessons at the end of each session.
 2. Overview with headline metrics + biggest misses table — build second.
 3. Bucket accuracy table — build third.
 4. Calibration readiness page — build at Phase 2 gate.
+
+---
+
+## Agent Agile Force — Lifecycle Coordinator
+
+### The agile orchestrator is a full-lifecycle coordinator, not a scoping pipeline
+- `agile-team-orchestrator` (`b2c3d4e5-...`) coordinates idea -> production: PCA -> [Persona
+  Validation] -> CCA -> BA -> Gate A -> [Sprint Planning] -> UX Design -> Gate B -> Engineering
+  -> Gate C -> Code Review -> Gate D -> Release. Full design: `docs/agent-agile-force-lifecycle.md`.
+- It makes no LLM calls. Pattern per stage: load -> run -> validate against schema -> persist
+  artifact pointer -> gate -> advance.
+- CCA and BA are a locked pair (BA cannot run without CCA's schema-validated
+  `codebase-context.json`); never schedule them independently.
+- Implementation is phased; current scope is Phase 2 = PCA -> CCA -> BA -> Gate A.
+
+### Storage split: spine vs artifacts (never blend)
+- `platform.feature_lifecycle` stores FSM **state + references only** — `artifact_pointers`
+  jsonb holds `{ output_type: agent_output_id }`. NEVER copy an artifact body into the spine.
+- Stage artifacts stay immutable in `agent_outputs`. Human gate decisions are lifecycle state
+  (`platform.gate_decisions`), not artifacts.
+- `lifecycle_events` is the append-only audit of every transition (use `apply_append_only_rls`).
+- `feature_lifecycle` is hybrid-mutability: freeze `feature_id`/`tenant_id`/`created_at` via a
+  BEFORE UPDATE trigger; do NOT use `apply_append_only_rls` on it (it blocks the UPDATEs you need).
+
+### Closed CHECK enums: enumerate ALL future states at first authoring
+- `feature_lifecycle.current_state` is a closed CHECK enumeration. A transition into a value
+  not in the list raises a constraint violation — so a new lifecycle stage = a CHECK amendment.
+- Enumerate the FULL state set (all phases, even unbuilt ones) in the initial migration so later
+  phases add ZERO DDL. Migration 026 lists all 19 states though Phase 2 drives only 5 + Gate A.
+- Amending a CHECK enum is zero-cost ONLY while the migration is authored-not-applied. Once
+  applied it needs a real ALTER. Add the values before first apply.
+
+### No-rewrite orchestrator engine = declarative stage descriptors
+- The FSM engine loop is stage-agnostic. A stage = `{ id, agent_id, kind, input_adapter,
+  output_type, output_schema, on_block, next, gate }`. Adding a phase = append a descriptor +
+  one pure `input_adapter` + (for new artifacts) a JSON schema. The loop never changes.
+- `input_adapter` is the ONLY place that knows how to turn upstream artifacts into a stage's
+  input — these are the BA->UX, UX->Eng, Eng->CodeReview transforms. Downstream stages may need
+  MULTIPLE upstream artifacts (Engineering needs UX brief + BA scope + codebase context), which
+  is why the lifecycle row carries pointers to ALL prior artifacts, not just the previous one.
+
+### Eng -> Code Review is the cleanest seam (reuse the existing agent)
+- `reformai.code-review-agent` already exists/operational and consumes exactly
+  `diff`/`commit_sha`/`base_sha`/`branch`/`changed_files`. Design the Engineering artifact
+  (`engineering_change`) to carry those fields so the adapter is near-identity.
+- The existing `ui-design-agent` (marketing-blueprint -> React code) is the WRONG contract for
+  the lifecycle design stage — keep it separate; build a dedicated `ux-design-agent` that
+  consumes the Feature Scope Brief and emits a UX/design brief (no code).

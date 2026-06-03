@@ -21,14 +21,19 @@ Template to copy from: `/agents/library/_template/`
 
 ### Agile Team
 - **agile-team-orchestrator** ([teams/agile](agents/teams/agile/run.py))
-    - Purpose: Deterministic Team Orchestrator for the Agile Team. Enforces staleness gate, assembles context bundle, calls specialist agents in sequence, validates schema, saves artifacts.
+    - Purpose: **Lifecycle coordinator for the full product-delivery process (idea -> production)**, not just a scoping pipeline. Owns the lifecycle FSM, sequences agent stages, enforces human review gates, validates each stage artifact, threads upstream artifacts downstream. Makes no LLM calls. Phase 1 (current) is a single-worker (PCA) runner; the full design is the lifecycle coordinator below.
     - agent_id: `b2c3d4e5-f6a7-8901-bcde-f12345678901`
     - Status: Active | Owner: `reformai` | Type: `orchestrator`
+    - **Design spec:** [docs/agent-agile-force-lifecycle.md](docs/agent-agile-force-lifecycle.md) (Agent Agile Force lifecycle)
+    - **Lifecycle spine:** `platform.feature_lifecycle` / `lifecycle_events` / `gate_decisions` (migration 026 - **authored, NOT applied**); 19-state FSM + 4 human gates enumerated for no-later-DDL extensibility.
+    - **Target lifecycle:** Idea -> PCA -> [Persona Validation: optional] -> CCA -> BA -> Gate A -> [Sprint Planning] -> UX Design -> Gate B -> Engineering -> Gate C -> Code Review -> Gate D -> Release.
+    - **Implementation phasing:** P1 (done) PCA · **P2 (v1 target)** PCA->CCA->BA + Gate A + FSM spine · P2.5 Persona Validation (optional) · P3 Sprint Planning · P4 UX Design · P5 Engineering · P6 Code Review · P7 Release.
 - **product-clarification-agent** ([library](agents/library/product-clarification-agent/))
-    - Purpose: Converts fuzzy product goals into structured Clarification Briefs conforming to `docs/schemas/clarification-brief.schema.json`.
+    - Purpose: Converts fuzzy product goals into structured Clarification Briefs conforming to `docs/schemas/clarification-brief.schema.json`. Lifecycle stage 1 (`clarifying`).
     - agent_id: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
     - Status: Active | Owner: `reformai` | Type: `worker`
     - Run: `python agents/teams/agile/run.py --goal "your goal"`
+- **Planned lifecycle agents** (design only - see lifecycle spec): `reformai.persona-validation-agent` (P2.5, NEW) · `reformai.sprint-planning-team` (P3, NEW team/sub-orchestrator) · `reformai.ux-design-agent` (P4, NEW dedicated; distinct from the existing marketing `ui-design-agent`) · `reformai.engineering-agent` (P5, NEW) · `reformai.code-review-agent` (P6, exists/operational) · `reformai.release-coordinator` (P7, NEW thin/deterministic over `scripts/push.ps1`).
 
 ### Contractor Pipeline
 - **contractor-pipeline-orchestrator** (`ReformAI_Agents/Contractor_Orchestrator_Agent/run_contractor_pipeline.py`)
@@ -52,6 +57,22 @@ Template to copy from: `/agents/library/_template/`
 - **marketing-agent** ([library](agents/library/marketing-agent/))
     - Purpose: Strategic marketing executive; produces UI-ready blueprints.
     - Status: Active | Owner: `reformai`
+
+### Product Intelligence
+- **ba-scoping-agent** ([library](agents/library/ba-scoping-agent/))
+    - Purpose: Converts a feature idea into a scope-ready brief by resolving Concepts against product knowledge and codebase reality, surfacing high-divergence forks as blocking Questions, and capturing human answers as durable Decisions. Scoping and decision-extraction agent (NOT a PRD generator in v1).
+    - agent_id (definition): `1232ef02-e83e-437a-a4a3-50b61090cb86` | Instance: `reformai.ba-scoping-agent` (`0cc9bf15-49a5-4667-9985-77c31877490b`)
+    - Status: **Registered (DB), runtime pending** - instance `status=paused` (no `agent.py` yet; not operationally active) | Owner: `reformai` | Type: `worker`
+    - Paired with: Codebase Context Agent. BA owns `CON-*`/`FEAT-*`/`QST-*`/`DEC-*` and `maps_to_codebase[]`; never reads source code or mutates `cbc:*`.
+    - Schemas: input `docs/schemas/ba-scoping-input.schema.json` -> consumes `docs/schemas/codebase-context.schema.json` -> output `docs/schemas/product-graph.schema.json`
+    - Storage: `product_graph.graph_nodes` / `graph_edges` (migration 024) + `cbc_identity_registry` (025) - **authored, NOT yet applied**
+- **codebase-context-agent** ([library](agents/library/codebase-context-agent/))
+    - Purpose: Analyzes an external target codebase read-only at a pinned commit and produces a structured `codebase-context.json` artifact describing code reality (entities, actors, capabilities, domain signals, glossary, coverage, evidence) for downstream BA scoping. Describes WHAT IS; never scopes WHAT SHOULD BE. Owns the `cbc:*` identity registry.
+    - agent_id (definition): `93b45e81-a1e5-47d8-98b1-0575de49a21b` | Instance: `reformai.codebase-context-agent` (`b118d9e1-c3ff-49c3-bb8b-f3c1bb985d2a`)
+    - Status: **Registered (DB), runtime pending** - instance `status=paused`, `metadata.runtime_implemented=false` (no `agent.py` yet; not operationally active) | Owner: `reformai` | Type: `worker`
+    - Paired with: BA Scoping Agent. CCA owns `cbc:*` / `cbc_identity_registry` and is the only agent that reads source code; never emits `CON-*`/Decisions/Questions/Rules/PRDs/recommendations.
+    - Schemas: input `agents/library/codebase-context-agent/docs/input-contract.md` -> output `docs/schemas/codebase-context.schema.json`
+    - Storage: `platform.cbc_identity_registry` / `cbc_registry_events` (migration 025) - **authored, NOT yet applied**
 
 
 ## Required at runtime

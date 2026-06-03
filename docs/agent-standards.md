@@ -251,6 +251,10 @@ kind. The CHECK constraint enforces the allowed set.
 | `context_snapshot` | context-agent | Project context snapshot |
 | `ui_components` | ui-design-agent | React component specifications |
 | `code_review` | code-review-agent | Immutable findings artifact with severity taxonomy |
+| `codebase_context` | codebase-context-agent | IS-state codebase description (`cbc:*` entities, signals, glossary) |
+| `product_graph_scope` | ba-scoping-agent | Feature scope graph (Concepts/Questions/Decisions) + readiness |
+| `intake_assessment` | product-clarification-agent | Intake classifier decision: coverage, scores, blocking gaps, proceed/clarify/block |
+| `clarification_brief` | product-clarification-agent | Finalized clarification brief + downstream handoff (feature_intent, concepts_to_check) |
 | `other` | any | Catch-all for non-standard outputs |
 
 **Important semantic distinction:**

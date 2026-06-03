@@ -55,6 +55,13 @@ try:
 except ImportError:
     pass  # python-dotenv optional; rely on env vars being set externally
 
+# Claude Code injects EMPTY ANTHROPIC_AUTH_TOKEN/CUSTOM_HEADERS into child processes,
+# producing an illegal 'Authorization: Bearer ' header. Scrub the empty ones. (See LESSONS_LEARNED.)
+import os as _os  # noqa: E402
+for _k in ("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"):
+    if _os.environ.get(_k, None) == "":
+        _os.environ.pop(_k, None)
+
 # ── Resolve repo root and inject path deps ───────────────────────────────────
 # agent.py lives at: <repo>/agents/library/code-review-agent/agent.py
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -272,7 +279,7 @@ def call_llm(
 
     Returns (tool_input_dict, tokens_in, tokens_out).
     """
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
     response = client.messages.create(
         model=model,

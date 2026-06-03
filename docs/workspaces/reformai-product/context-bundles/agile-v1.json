@@ -1,0 +1,31 @@
+{
+  "bundle_id": "agile-v1",
+  "version": 1,
+  "workspace_id": "reformai-product",
+  "team_id": "agile",
+  "description": "Product grounding bundle for the Agile Team running against the reformai-product target. v1 grounds the Product Clarification Agent (intake normalization) with PRODUCT.md + DOMAIN.md + the shared STORY-READY standard. This is product knowledge for clarifying intake; the Codebase Context Agent supplies code reality downstream.",
+  "docs": [
+    {
+      "path": "docs/workspaces/reformai-product/PRODUCT.md",
+      "role": "product_context",
+      "required": true,
+      "description": "What the ReformAI product is, who it serves (roles), and what it does not do. The PCA grounds target_user and scope fit against this."
+    },
+    {
+      "path": "docs/workspaces/reformai-product/DOMAIN.md",
+      "role": "domain_glossary",
+      "required": true,
+      "description": "Colombian-market and renovation domain terms + business rules. The PCA applies these in domain_terms and flags net-new terms (e.g. Supplier)."
+    },
+    {
+      "path": "docs/teams/agile/STORY-READY.md",
+      "role": "story_standard",
+      "required": true,
+      "description": "Definition of Ready - the standard the PCA's Brief must set up downstream stages to meet."
+    }
+  ],
+  "staleness_threshold_hours": 48,
+  "schema_version": "clarification-brief.schema.json",
+  "created_at": "2026-06-03",
+  "notes": "v1 - reformai-product grounding for PCA intake normalization. Increment version when CCA/BA grounding or new stages are added."
+}

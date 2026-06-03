@@ -29,7 +29,8 @@
         "workspace_id":            { "type": "string", "minLength": 1 },
         "team_id":                 { "type": "string", "const": "agile" },
         "context_bundle_id":       { "type": "string", "minLength": 1 },
-        "context_bundle_version":  { "type": "integer", "minimum": 1 }
+        "context_bundle_version":  { "type": "integer", "minimum": 1 },
+        "intake_assessment_artifact_id": { "type": "string", "description": "Optional audit link to the intake_assessment artifact that produced this brief." }
       }
     },
 
@@ -89,9 +90,9 @@
         "minLength": 15,
         "description": "Each question must be non-obvious (not answerable from the original input), must unlock a scope or acceptance-criteria decision, and must be specific enough for the human to answer concisely."
       },
-      "minItems": 1,
+      "minItems": 0,
       "maxItems": 5,
-      "description": "Must be answered by the human before this Brief moves to Story Structuring. More than 5 questions indicates the input was too underspecified — set context_integrity.rating to red."
+      "description": "The blocking gaps the human must answer (the clarify branch). EMPTY on a proceed_direct brief, where the intake already satisfied the contract. More than 5 indicates the intake was too underspecified — set context_integrity.rating to red."
     },
 
     "domain_terms": {
@@ -131,6 +132,32 @@
           "type": "string",
           "minLength": 20,
           "description": "Why this rating was assigned. What would need to change to reach green."
+        }
+      }
+    },
+
+    "handoff": {
+      "type": "object",
+      "description": "Downstream handoff to CCA/BA. Present on a FINAL brief (proceed_direct or post-Pass-B); absent on a draft.",
+      "required": ["feature_intent", "concepts_to_check"],
+      "additionalProperties": false,
+      "properties": {
+        "feature_intent":    { "type": "string", "minLength": 20, "description": "The finalized restated_goal, passed as CCA/BA --feature-intent." },
+        "concepts_to_check": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Salient entity nouns seeding CCA's existence sweep. Additive; never narrows CCA's full sweep." }
+      }
+    },
+
+    "design_inputs": {
+      "type": "array",
+      "description": "Carried-forward references to rich intake (e.g. Figma/screenshots) for the UX Design stage. Phase 2 populated. PCA references, never re-models, these.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string" },
+          "ref":  { "type": "string" },
+          "note": { "type": "string" }
         }
       }
     }

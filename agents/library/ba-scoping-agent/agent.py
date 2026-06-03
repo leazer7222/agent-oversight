@@ -275,13 +275,17 @@ def call_llm(model: str, feature_intent: str, context_text: str) -> tuple[dict, 
 # ── Graph writes ──────────────────────────────────────────────────────────────
 
 def scope_to_graph(raw: dict, *, tenant: str, product: str, feature_intent: str, commit_sha: str,
-                   name_to_cbc: dict, noun_to_cbc: dict, created_by: str) -> tuple[str, list[dict], list[dict]]:
+                   name_to_cbc: dict, noun_to_cbc: dict, created_by: str,
+                   clarification_artifact_id: str | None = None) -> tuple[str, list[dict], list[dict]]:
     """Write Feature + Concepts + Questions + edges. Returns (feature_key, nodes[], edges[])."""
     nodes: list[dict] = []
     edges: list[dict] = []
 
     notes = [n for n in raw.get("feature_notes", []) if isinstance(n, str)]
-    feat_attrs = {"scoped_against_commit": commit_sha, **({"notes": notes} if notes else {})}
+    # clarification_brief_artifact_id is the field the Scoping dashboard reads to surface the PCA panel.
+    feat_attrs = {"scoped_against_commit": commit_sha,
+                  **({"notes": notes} if notes else {}),
+                  **({"clarification_brief_artifact_id": clarification_artifact_id} if clarification_artifact_id else {})}
     fk = sb_rpc("graph_next_key", {"p_product": product, "p_node_type": "feature"})
     sb_rpc("graph_upsert_node", {"p_tenant": tenant, "p_product": product, "p_node_type": "feature",
         "p_node_key": fk, "p_title": feature_intent, "p_status": "scoping", "p_created_by": created_by,
@@ -366,6 +370,8 @@ def main() -> None:
     p.add_argument("--product-key", default="reformai-product")
     p.add_argument("--tenant", default="ReformAI", help="company name or explicit UUID")
     p.add_argument("--model", default=os.environ.get("BA_SCOPING_MODEL", "claude-opus-4-5"))
+    p.add_argument("--clarification-artifact-id", default=None,
+                   help="link this feature to a PCA clarification_brief artifact (stamped on the feature node; surfaced in the Scoping dashboard)")
     p.add_argument("--no-persist", action="store_true", help="skip the agent_outputs artifact write")
     args = p.parse_args()
 
@@ -415,7 +421,8 @@ def main() -> None:
 
         fk, nodes, edges = scope_to_graph(raw, tenant=tenant, product=args.product_key,
             feature_intent=args.feature_intent, commit_sha=commit_sha,
-            name_to_cbc=name_to_cbc, noun_to_cbc=noun_to_cbc, created_by=AGENT_INSTANCE)
+            name_to_cbc=name_to_cbc, noun_to_cbc=noun_to_cbc, created_by=AGENT_INSTANCE,
+            clarification_artifact_id=args.clarification_artifact_id)
         tctx.step("graph_written", message=f"{len(nodes)} nodes, {len(edges)} edges, feature {fk}")
 
         readiness = sb_rpc("graph_feature_readiness",

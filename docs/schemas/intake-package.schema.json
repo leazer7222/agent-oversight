@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intake-package.schema.json",
+  "title": "IntakePackage",
+  "description": "Canonical, intent-level representation produced by PCA intake adapters. Every intake form (idea, paragraph, PRD, ticket, feedback, bug, text workflow; Phase 2: Figma/screenshot/Loom/diagram) normalizes into this single shape. Intent only - what the intake ASSERTS. Never code reality (CCA) and never authored design (UX agent). Embedded in the intake_assessment artifact for audit.",
+  "type": "object",
+  "required": ["sources", "normalized_text", "extracted_signals", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per raw intake artifact ingested.",
+      "items": {
+        "type": "object",
+        "required": ["source_type", "origin_ref", "adapter", "ingested_at"],
+        "additionalProperties": false,
+        "properties": {
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "idea", "paragraph", "prd", "jira_text", "customer_feedback",
+              "bug_enhancement", "text_workflow",
+              "figma", "screenshot", "loom", "workflow_diagram", "mixed"
+            ],
+            "description": "Phase 1 = the text types; figma/screenshot/loom/workflow_diagram are Phase 2."
+          },
+          "origin_ref":   { "type": "string", "minLength": 1, "description": "Where it came from (file path, URL, ticket key)." },
+          "content_hash": { "type": "string", "description": "Optional hash of the raw content for provenance." },
+          "adapter":      { "type": "string", "minLength": 1, "description": "The adapter that normalized this source." },
+          "ingested_at":  { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "normalized_text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unified, normalized statement of intent across all sources."
+    },
+
+    "extracted_signals": {
+      "type": "object",
+      "description": "ASSERTED intent extracted from the intake, used to fill Brief fields + seed the handoff. Each key is always present (possibly empty).",
+      "required": ["explicit_goals", "actors", "workflows", "states", "entities", "stated_rules", "constraints"],
+      "additionalProperties": false,
+      "properties": {
+        "explicit_goals": { "type": "array", "items": { "type": "string" } },
+        "actors":         { "type": "array", "items": { "type": "string" }, "description": "Roles the intake mentions (intent, not code actors)." },
+        "workflows":      { "type": "array", "items": { "type": "string" }, "description": "Flows/steps the intake describes." },
+        "states":         { "type": "array", "items": { "type": "string" }, "description": "Conditions/states the intake implies." },
+        "entities":       { "type": "array", "items": { "type": "string" }, "description": "Nouns/objects; seeds handoff.concepts_to_check." },
+        "stated_rules":   { "type": "array", "items": { "type": "string" }, "description": "Business rules explicit in the intake." },
+        "constraints":    { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "attachments": {
+      "type": "array",
+      "description": "References to rich intake carried forward for later stages (Phase 2 populated). Referenced, never re-modeled.",
+      "items": {
+        "type": "object",
+        "required": ["kind", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "description": "e.g. figma_flow, screenshot, loom, diagram" },
+          "ref":  { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "required": ["source_count", "modalities", "mixed"],
+      "additionalProperties": false,
+      "properties": {
+        "source_count": { "type": "integer", "minimum": 1 },
+        "modalities":   { "type": "array", "items": { "type": "string" }, "description": "e.g. text, image, video, design" },
+        "mixed":        { "type": "boolean", "description": "True when intake combines multiple source artifacts." }
+      }
+    }
+  }
+}

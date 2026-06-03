@@ -67,3 +67,5 @@ session-logs/
 .claude/guardian.pid
 .claude/checkpoint.log
 .claude/.limit_checkpoint_done
+src/app/seller-test/
+src/app/seller-v7/

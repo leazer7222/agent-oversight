@@ -52,6 +52,45 @@ _VALID_CATEGORIES = {
 }
 
 
+def _finding_problems(f: dict) -> list[str]:
+    """Per-finding validity problems. Empty list means the finding is emittable."""
+    probs: list[str] = []
+    if f.get("severity") not in _VALID_SEVERITIES:
+        probs.append(f"invalid severity '{f.get('severity')}'")
+    if f.get("confidence") not in _VALID_CONFIDENCES:
+        probs.append(f"invalid confidence '{f.get('confidence')}'")
+    if f.get("category") not in _VALID_CATEGORIES:
+        probs.append(f"invalid category '{f.get('category')}'")
+    if not f.get("title"):
+        probs.append("missing title")
+    if not f.get("explanation"):
+        probs.append("missing explanation")
+    if not f.get("remediation"):
+        probs.append("missing remediation")
+    has_citation = bool(f.get("principles")) or bool(f.get("standards_refs")) or bool(f.get("lessons_refs"))
+    if not has_citation:
+        probs.append("uncited (no principles/standards_refs/lessons_refs)")
+    return probs
+
+
+def sanitize_findings(findings: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Split findings into (emittable, dropped).
+
+    Policy (per LESSONS): an uncited or malformed finding is an opinion, not a contestable
+    finding - drop it rather than aborting the whole review. Returns kept findings and a list of
+    {title, reasons} for the dropped ones so the caller can log what was removed (no silent drops).
+    """
+    kept: list[dict] = []
+    dropped: list[dict] = []
+    for f in findings:
+        probs = _finding_problems(f)
+        if probs:
+            dropped.append({"title": f.get("title", "untitled"), "reasons": probs})
+        else:
+            kept.append(f)
+    return kept, dropped
+
+
 def validate_artifact(artifact: dict) -> list[str]:
     """Return a list of validation errors. Empty list means valid."""
     errors: list[str] = []
@@ -209,6 +248,17 @@ def build_artifact(
             "docs/agent-standards.md",
         ]
 
+    # Drop uncited / malformed findings rather than aborting the whole review.
+    # A single bad finding must not crash the artifact write (it previously did).
+    findings, dropped = sanitize_findings(findings)
+    gov_flags = list(governance_flags or [])
+    if dropped:
+        for d in dropped:
+            logger.warning("Dropped finding '%s': %s", d["title"], "; ".join(d["reasons"]))
+        gov_flags.append(
+            f"{len(dropped)} finding(s) dropped before write (uncited or malformed); see run logs"
+        )
+
     severity_counts = {"critical": 0, "warning": 0, "info": 0}
     category_counts: dict[str, int] = {}
 
@@ -260,6 +310,6 @@ def build_artifact(
         "severity_counts": severity_counts,
         "category_counts": category_counts,
         "recommendation": recommendation,
-        "governance_flags": governance_flags or [],
+        "governance_flags": gov_flags,
         "summary": summary,
     }

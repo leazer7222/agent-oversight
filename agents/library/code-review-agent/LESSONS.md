@@ -33,3 +33,8 @@ Per-agent standing rules. Read at the start of every session involving this agen
 - `code-review-agent`: structured pre-push safety check; specific output schema with severity
   taxonomy, confidence levels, principle references. output_type = `code_review`.
   These are distinct agents with distinct operational records in the ledger.
+
+---
+
+- [2026-06-03] | One uncited finding aborted the whole review (crashed the push gate) | `validate_artifact` treated an uncited/malformed finding as a hard error, so `write_code_review` raised and the run died - blocking every push, not just the bad finding. Fix: `sanitize_findings()` in output.py drops uncited/malformed findings (logged + recorded in `governance_flags`, no silent drops) inside `build_artifact` before validation. `validate_artifact` stays strict as the contract checker, but it now only ever sees emittable findings. A single bad finding must never abort the review.
+- [2026-06-03] | The reviewer crashed on the empty-Bearer header inside Claude Code | Scrub empty `ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_CUSTOM_HEADERS` after load_dotenv and pass `api_key=` explicitly to `anthropic.Anthropic()` (same guard the BA/CCA agents use).

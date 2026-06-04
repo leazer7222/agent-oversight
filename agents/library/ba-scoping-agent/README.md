@@ -84,13 +84,16 @@ See [docs/codebase-context-handoff.md](docs/codebase-context-handoff.md).
 
 ---
 
-## Graph model (v1)
+## Graph model
 
 **Process plane:** `Feature` (FEAT-), `Question` (QST-)
-**Knowledge plane:** `Concept` (CON-), `Decision` (DEC-)
+**Knowledge plane:** `Concept` (CON-), `Decision` (DEC-), `Rule` (RULE-), `Attribute` (ATR-)
 
-Deferred: `Rule`, `Attribute`, `Assumption`. Decisions preserve `implies_rules[]` and
-`implies_attributes[]` so Phase 2 promotion is a migration, not a rescoping.
+`Rule` and `Attribute` were promoted to first-class node types in **P2** (migrations 039-044): a
+`Decision --establishes--> Rule|Attribute` and a `Concept --owns--> Attribute`. Decisions still carry
+`implies_rules[]` / `implies_attributes[]` (now auto-promoted to nodes on creation; retained as
+provenance). `Assumption` remains deferred. `AcceptanceCriterion` is derived from Rules (promote to a
+node at the QA stage). See `docs/p2-rule-attribute-gate-a-plan.md`.
 
 Epistemic status (`fact | claim | assumption`) and scope readiness are **derived, never stored**
 (`public.graph_node_epistemic_status`, `public.graph_feature_readiness`). See

@@ -92,7 +92,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ fea
   // Attributes: owns(concept->ATR) + establishes(DEC->ATR). Shape: [{ concept, fields:[...] }].
   const impliedAttrs: { concept: string; fields: string[] }[] =
     (Array.isArray(body.implies_attributes) ? body.implies_attributes : [])
-      .filter((a: any) => a && typeof a.concept === 'string' && Array.isArray(a.fields))
+      .filter((a: unknown): a is { concept: string; fields: string[] } =>
+        typeof a === 'object' && a !== null
+        && typeof (a as { concept?: unknown }).concept === 'string'
+        && Array.isArray((a as { fields?: unknown }).fields))
   let attrCount = 0
   for (const a of impliedAttrs) {
     for (const field of a.fields) {

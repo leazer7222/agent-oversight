@@ -112,6 +112,65 @@ function QuestionAnswer({
   )
 }
 
+function GateAPanel({ feature, onDone }: { feature: string; onDone: () => void }) {
+  const [priority, setPriority] = useState('')
+  const [metric, setMetric] = useState('')
+  const [by, setBy] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string[]>([])
+  const [ok, setOk] = useState<{ snapshot_id: string; content_hash: string } | null>(null)
+
+  async function approve() {
+    setBusy(true); setErr([]); setOk(null)
+    const res = await fetch(`/api/scoping/${feature}/gate-a`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ratified_by: by || 'human',
+        pm_layer: { priority, success_metrics: metric } }),
+    })
+    const j = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (!res.ok) { setErr(j.hard_failures?.length ? j.hard_failures : [j.error || 'failed']); return }
+    setOk({ snapshot_id: j.snapshot_id, content_hash: j.content_hash }); onDone()
+  }
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Gate A - approve &amp; snapshot</CardTitle></CardHeader>
+      <CardContent className="space-y-2">
+        {ok ? (
+          <div className="text-sm text-emerald-300">
+            Approved. Immutable snapshot <span className="font-mono">{ok.snapshot_id}</span>
+            <div className="text-xs text-zinc-500 mt-1">content hash {ok.content_hash?.slice(0, 16)}...</div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <input className="rounded-md bg-zinc-900 border border-zinc-700 p-2 text-sm text-zinc-100"
+                     placeholder="Approver (ratified_by)" value={by} onChange={(e) => setBy(e.target.value)} />
+              <input className="rounded-md bg-zinc-900 border border-zinc-700 p-2 text-sm text-zinc-100"
+                     placeholder="PM priority (optional)" value={priority} onChange={(e) => setPriority(e.target.value)} />
+              <input className="rounded-md bg-zinc-900 border border-zinc-700 p-2 text-sm text-zinc-100"
+                     placeholder="Success metric (optional)" value={metric} onChange={(e) => setMetric(e.target.value)} />
+            </div>
+            {err.length > 0 && (
+              <ul className="list-disc pl-5 text-xs text-red-400">
+                {err.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            )}
+            <Button size="sm" disabled={busy || !by} onClick={approve}>
+              {busy ? 'Approving...' : 'Approve Gate A + snapshot'}
+            </Button>
+            <p className="text-xs text-zinc-500">
+              Validates internal graph consistency (ratified nodes, cited rules, owned attributes, codebase
+              provenance) and freezes an immutable Feature Spec snapshot.
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function ScopingReview({ feature, detail, readiness, upstream }: Props) {
   const router = useRouter()
   const refresh = () => router.refresh()
@@ -391,6 +450,9 @@ export function ScopingReview({ feature, detail, readiness, upstream }: Props) {
           </pre>
         </CardContent>
       </Card>
+
+      {/* Gate A approval */}
+      <GateAPanel feature={feature} onDone={refresh} />
 
       {/* Feature notes */}
       {notes.length > 0 && (

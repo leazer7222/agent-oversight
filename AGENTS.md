@@ -25,6 +25,7 @@ Template to copy from: `/agents/library/_template/`
     - agent_id: `b2c3d4e5-f6a7-8901-bcde-f12345678901`
     - Status: Active | Owner: `reformai` | Type: `orchestrator`
     - **Design spec:** [docs/agent-agile-force-lifecycle.md](docs/agent-agile-force-lifecycle.md) (Agent Agile Force lifecycle)
+    - **Entry points:** [agents/teams/agile/run.py](agents/teams/agile/run.py) (CLI) and [agents/teams/agile/worker.py](agents/teams/agile/worker.py) (queue executor for the in-app trigger at `/dashboard/agile`, backed by `public.agile_intake_jobs`, migration 034). Both emit orchestrator telemetry and thread `parent_run_id` into the PCA child run. The worker is the orchestrator's execution arm (not a separately registered agent). Package docs: [agents/teams/agile/README.md](agents/teams/agile/README.md).
     - **Lifecycle spine:** `platform.feature_lifecycle` / `lifecycle_events` / `gate_decisions` (migration 026 - **authored, NOT applied**); 19-state FSM + 4 human gates enumerated for no-later-DDL extensibility.
     - **Target lifecycle:** Idea -> PCA -> [Persona Validation: optional] -> CCA -> BA -> Gate A -> [Sprint Planning] -> UX Design -> Gate B -> Engineering -> Gate C -> Code Review -> Gate D -> Release.
     - **Implementation phasing:** P1 (done) PCA · **P2 (v1 target)** PCA->CCA->BA + Gate A + FSM spine · P2.5 Persona Validation (optional) · P3 Sprint Planning · P4 UX Design · P5 Engineering · P6 Code Review · P7 Release.

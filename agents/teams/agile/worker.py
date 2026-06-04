@@ -17,6 +17,7 @@ worker later, run this exact script on a server/cron; no other change.
 import os
 import sys
 import time
+import uuid
 import signal
 import importlib.util as ilu
 from pathlib import Path
@@ -35,10 +36,16 @@ for _k in ("ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS"):
         os.environ.pop(_k, None)
 
 import requests  # noqa: E402
+from oversight import OversightClient  # noqa: E402
 
 POLL_SECONDS = float(os.environ.get("AGILE_WORKER_POLL_SECONDS", "5"))
 MODEL = os.environ.get("PCA_MODEL", "claude-sonnet-4-6")
+# The worker is the orchestrator's execution arm: it emits an orchestrator run per job under the
+# agile-team-orchestrator identity and threads parent_run_id into the PCA child run (same as run.py).
+ORCH_AGENT_ID = os.environ.get("AGILE_ORCHESTRATOR_AGENT_ID", "b2c3d4e5-f6a7-8901-bcde-f12345678901")
 _STATUS = {"proceed_direct": "done", "clarify": "clarify", "block": "blocked"}
+_NEXT_STATE = {"proceed_direct": "context_scanning", "clarify": "clarification_blocked",
+               "block": "clarification_blocked"}
 
 
 def _load_pca():
@@ -79,22 +86,57 @@ def patch_job(job_id: str, fields: dict) -> None:
         print(f"[warn] patch job {job_id[:8]} failed: {r.status_code} {r.text}", file=sys.stderr)
 
 
-def process(job: dict) -> None:
+def _client() -> OversightClient:
+    return OversightClient(
+        url=os.environ.get("OVERSIGHT_URL", "https://agent-oversight.vercel.app"),
+        secret=(os.environ.get("AGENT_OVERSIGHT_SECRET") or os.environ.get("OVERSIGHT_SECRET")
+                or os.environ.get("INGEST_SECRET") or ""))
+
+
+def _emit(client: OversightClient, **kw) -> None:
+    try:
+        client.emit(**kw)
+    except Exception as e:  # telemetry must never break the worker
+        print(f"[warn] worker telemetry: {str(e)[:120]}", file=sys.stderr)
+
+
+def process(job: dict, client: OversightClient) -> None:
     jid = job["id"]
+    orch_run_id = str(uuid.uuid4())
+    _emit(client, agent_id=ORCH_AGENT_ID, event="run_started", run_id=orch_run_id, team_id="agile",
+          metadata={"stage": "clarifying", "trigger": "worker", "job_id": jid,
+                    "product_key": job["product_key"], "workspace_id": job["workspace_id"], "pass": job["pass"]})
     print(f"[run]  job {jid[:8]} pass={job['pass']} product={job['product_key']} "
-          f"sources={len(job.get('intake') or [])}")
-    grounding = pca.load_grounding(job["workspace_id"])
-    entries = [f"{s['source_type']}:{s['text']}" for s in (job.get("intake") or [])]
-    sources, sources_text = pca.build_sources(entries, None)
-    result = pca.run_intake(
-        sources=sources, sources_text=sources_text, product_key=job["product_key"],
-        tenant=job["company_id"], workspace_id=job["workspace_id"], grounding=grounding,
-        model=MODEL, pass_=job["pass"], answers=job.get("answers"), no_persist=False)
+          f"sources={len(job.get('intake') or [])}  orch_run={orch_run_id[:8]}")
+    try:
+        grounding = pca.load_grounding(job["workspace_id"])
+        entries = [f"{s['source_type']}:{s['text']}" for s in (job.get("intake") or [])]
+        sources, sources_text = pca.build_sources(entries, None)
+        result = pca.run_intake(
+            sources=sources, sources_text=sources_text, product_key=job["product_key"],
+            tenant=job["company_id"], workspace_id=job["workspace_id"], grounding=grounding,
+            model=MODEL, pass_=job["pass"], answers=job.get("answers"), no_persist=False,
+            parent_run_id=orch_run_id)
+    except Exception as exc:
+        _emit(client, agent_id=ORCH_AGENT_ID, event="run_failed", run_id=orch_run_id,
+              error=f"[worker_error] {exc}",
+              metadata={"team_id": "agile", "stage": "clarifying", "job_id": jid})
+        raise
+
     patch_job(jid, {
         "status": _STATUS.get(result["decision"], "error"),
         "decision": result["decision"], "assessment_id": result.get("assessment_id"),
         "brief_id": result.get("brief_id"), "pca_run_id": result.get("run_id"),
         "finished_at": _now()})
+    handoff = result.get("handoff") or {}
+    _emit(client, agent_id=ORCH_AGENT_ID, event="run_completed", run_id=orch_run_id,
+          metadata={"team_id": "agile", "stage": "clarifying", "job_id": jid,
+                    "decision": result["decision"], "next_state": _NEXT_STATE.get(result["decision"]),
+                    "intake_assessment_artifact_id": result.get("assessment_id"),
+                    "clarification_brief_artifact_id": result.get("brief_id"),
+                    "feature_intent": handoff.get("feature_intent"),
+                    "concepts_to_check": handoff.get("concepts_to_check"),
+                    "pca_run_id": result.get("run_id")})
     print(f"[done] job {jid[:8]} decision={result['decision']} "
           f"assessment={result.get('assessment_id')} brief={result.get('brief_id')}")
 
@@ -109,6 +151,7 @@ def main() -> None:
     except Exception:
         pass
 
+    client = _client()
     print(f"agile worker online (model={MODEL}, poll={POLL_SECONDS}s){' [--once]' if once else ''}. "
           "Ctrl-C to stop.")
     while not stop["v"]:
@@ -127,7 +170,7 @@ def main() -> None:
             time.sleep(POLL_SECONDS)
             continue
         try:
-            process(job)
+            process(job, client)
         except Exception as e:
             patch_job(job["id"], {"status": "error", "error": str(e)[:500], "finished_at": _now()})
             print(f"[error] job {job['id'][:8]}: {str(e)[:180]}", file=sys.stderr)

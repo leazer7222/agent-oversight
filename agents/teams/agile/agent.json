@@ -1,0 +1,44 @@
+{
+  "agent_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+  "name": "agile-team-orchestrator",
+  "display_name": "Agile Team Orchestrator",
+  "description": "Lifecycle coordinator for the Agile Team (Agent Agile Force). Drives the product-delivery lifecycle (idea -> production); Phase 2 runs the clarifying stage (PCA intake normalization). Makes no LLM calls itself - it sequences agent stages, enforces human gates, validates artifacts, and threads the handoff downstream. run.py is the CLI entry; worker.py is the queue-driven execution arm for the in-app trigger.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "agent_type": "orchestrator",
+  "instance_type": "stateless",
+  "capability_tags": [
+    "lifecycle_coordination",
+    "intake_orchestration",
+    "agile",
+    "product_delivery"
+  ],
+  "mcp_dependencies": [],
+  "entry_points": {
+    "cli": "agents/teams/agile/run.py",
+    "worker": "agents/teams/agile/worker.py (polls public.agile_intake_jobs; the in-app trigger's executor)"
+  },
+  "drives": [
+    "reformai.product-clarification-agent (clarifying stage; via pca.run_intake with parent_run_id)"
+  ],
+  "writes": {
+    "telemetry": "run_started / run_completed / run_failed to /api/ingest under this agent_id (one orchestrator run per job; PCA child links via parent_run_id)",
+    "queue": "public.agile_intake_jobs status + result pointers (worker only)"
+  },
+  "design_spec": "docs/agent-agile-force-lifecycle.md",
+  "integration_plan": "docs/agile-pca-integration-plan.md",
+  "env_vars": {
+    "required": [
+      "OVERSIGHT_URL",
+      "AGENT_OVERSIGHT_SECRET",
+      "AGILE_ORCHESTRATOR_AGENT_ID",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "ANTHROPIC_API_KEY"
+    ],
+    "optional": [
+      "PCA_MODEL (default claude-sonnet-4-6)",
+      "AGILE_WORKER_POLL_SECONDS (default 5)"
+    ]
+  }
+}

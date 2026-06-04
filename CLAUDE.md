@@ -7,7 +7,7 @@
 1. Read the most recent file in `sessions/` to understand exactly where we left off.
 2. Read `LESSONS_LEARNED.md` and apply every rule — do not repeat past mistakes.
 3. If no session file exists yet, create one before doing any work.
-4. **Start the session guardian:** `pwsh scripts/start-guardian.ps1`
+4. **Start the session guardian:** `powershell -ExecutionPolicy Bypass -File scripts/start-guardian.ps1`
    This runs a background checkpoint every 20 minutes. If the 5-hour limit hits
    mid-response, at most 20 minutes of work is at risk. Without it, the entire
    session's uncommitted work can be lost.
@@ -21,14 +21,14 @@ Update the session file as work progresses — key decisions, blockers hit, fixe
 
 **Automatic checkpoints are running.** After every complete response, `checkpoint.ps1`
 commits and pushes all staged changes as a WIP snapshot. You do not need to manually
-manage this — but you can run `pwsh scripts/checkpoint.ps1 -Reason manual` at any time.
+manage this — but you can run `powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -Reason manual` at any time.
 
 ## If approaching the 5-hour usage limit
 When the user mentions "approaching limit", "save progress", or similar:
-1. **First action before anything else:** `pwsh scripts/checkpoint.ps1 -Reason limit-warning`
+1. **First action before anything else:** `powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -Reason limit-warning`
    This is also triggered automatically by the `detect-limit-warning.py` hook.
 2. Update the session file with current state, what's in-progress, what's next.
-3. Run `pwsh scripts/push.ps1` for a full production push with doc sync.
+3. Run `powershell -ExecutionPolicy Bypass -File scripts/push.ps1` for a full production push with doc sync.
 4. Leave a clear "RESUME FROM HERE" note at the bottom of the session file.
 
 The limit-warning hook fires automatically when it detects "approaching limit",
@@ -40,8 +40,8 @@ to be told to run it explicitly.
    - What was completed
    - What is pending / next steps
    - Any new lessons learned (add to `LESSONS_LEARNED.md`)
-2. Run `pwsh scripts/push.ps1` to do a full push with doc sync.
-3. Run `pwsh scripts/start-guardian.ps1 -Stop` to stop the background guardian.
+2. Run `powershell -ExecutionPolicy Bypass -File scripts/push.ps1` to do a full push with doc sync.
+3. Run `powershell -ExecutionPolicy Bypass -File scripts/start-guardian.ps1 -Stop` to stop the background guardian.
 
 ## Checkpoint system overview
 
@@ -50,6 +50,6 @@ to be told to run it explicitly.
 | Stop hook | `checkpoint.ps1` after every response | End of every Claude turn |
 | Guardian | `checkpoint.ps1` every 20 min | Time-based, independent of Claude |
 | Limit-warning hook | `checkpoint.ps1` immediately | When limit keywords detected in conversation |
-| Manual | `pwsh scripts/checkpoint.ps1 -Reason manual` | Explicitly |
+| Manual | `powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -Reason manual` | Explicitly |
 
 **Checkpoint log:** `.claude/checkpoint.log` — review this to see what was committed when.

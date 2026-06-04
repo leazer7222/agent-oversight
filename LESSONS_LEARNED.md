@@ -498,3 +498,42 @@ Add new lessons at the end of each session.
 - The existing `ui-design-agent` (marketing-blueprint -> React code) is the WRONG contract for
   the lifecycle design stage — keep it separate; build a dedicated `ux-design-agent` that
   consumes the Feature Scope Brief and emits a UX/design brief (no code).
+
+---
+
+## Checkpoint / Guardian system was DEAD on this machine (pwsh not installed)
+
+### Root cause: every checkpoint mechanism invoked `pwsh`, which is NOT installed here
+- This machine has only **Windows PowerShell 5.1** (`powershell.exe`). **`pwsh` (PowerShell Core) is NOT installed.**
+- The Stop hook (`.claude/settings.json`), the guardian (`scripts/start-guardian.ps1`), and the
+  limit-warning hook (`scripts/hooks/detect-limit-warning.py`) ALL invoked `pwsh ...`. Since `pwsh`
+  doesn't exist, every one failed **silently** (hooks don't surface errors to Claude or the user).
+- Result: the entire "three-layer checkpoint system" never ran once. An entire session's work sat
+  uncommitted and unpushed - `.claude/checkpoint.log` and `.claude/guardian.pid` never existed.
+- The CLAUDE.md protocol also said `pwsh scripts/...`, so even running it manually would have failed.
+
+### Second bug: the guardian used Start-Job (session-bound) and saved a Job ID, not a PID
+- `start-guardian.ps1` used `Start-Job`, whose background job DIES when its host shell exits - so
+  launching it from a transient tool call could never persist. It also saved `$job.Id` to the pid
+  file, while `-Stop`/`-Status` used `Get-Process -Id` (a real PID) - mutually inconsistent.
+
+### Fix
+- All PowerShell invocations now **detect pwsh-or-powershell**: `$psExe = if (Get-Command pwsh -EA
+  SilentlyContinue) { "pwsh" } else { "powershell" }` (PS), `shutil.which("pwsh") or
+  shutil.which("powershell")` (Python). Works now (powershell), still works if pwsh is later installed.
+- The Stop hook and CLAUDE.md commands use `powershell -NoProfile -ExecutionPolicy Bypass -File ...`.
+- The scripts are PS 5.1-compatible (no ternary `?:`, `??`, `?.`) - verified `checkpoint.ps1` exits 0 under 5.1.
+- The guardian now launches a **detached `Start-Process` worker** (`-Worker` self-relaunch) that
+  outlives the launching shell, and saves the **real PID** so `-Stop`/`-Status` work.
+
+### Diagnostic: if nothing is auto-committing, check IN THIS ORDER
+1. `where pwsh` / `Get-Command pwsh` - is it even installed? (Here it is NOT.)
+2. Does `.claude/checkpoint.log` exist? (If never, the hook never ran.)
+3. Does `.claude/guardian.pid` exist + is that PID a live process (`Get-Process -Id`)?
+4. `grep -rn pwsh .claude/ scripts/` - any invocation hard-coded to a missing binary.
+5. Run `powershell -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -Reason test` manually - it must exit 0.
+
+### Standing rule
+- NEVER hard-code `pwsh` in a hook/script on a Windows machine without a pwsh-or-powershell fallback.
+  Hooks fail silently; a missing-binary hook gives you ZERO auto-save and you won't find out until you
+  check git and see nothing committed. Start the guardian AND verify `checkpoint.log` grows.

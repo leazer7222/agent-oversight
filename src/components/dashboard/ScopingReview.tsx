@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { renderFeatureSpec } from '@/lib/scoping/render-feature-spec'
 
 type Node = Record<string, any>
 type Edge = { edge_type: string; src: string; dst: string; edge_attributes?: Record<string, any> }
@@ -121,6 +122,10 @@ export function ScopingReview({ feature, detail, readiness, upstream }: Props) {
   const concepts = nodes.filter((n) => n.node_type === 'concept')
   const questions = nodes.filter((n) => n.node_type === 'question')
   const decisions = nodes.filter((n) => n.node_type === 'decision')
+  const rules = nodes.filter((n) => n.node_type === 'rule')
+  const attributes = nodes.filter((n) => n.node_type === 'attribute')
+  const ownerOf = (attrKey: string) =>
+    (detail.edges || []).find((e) => e.edge_type === 'owns' && e.dst === attrKey)?.src ?? '-'
   const ready = !!readiness?.scope_ready
   const notes: string[] = feat?.node_attributes?.notes || []
 
@@ -316,6 +321,74 @@ export function ScopingReview({ feature, detail, readiness, upstream }: Props) {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Rules */}
+      <Card>
+        <CardHeader><CardTitle>Functional Requirements / Rules ({rules.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {rules.length === 0 && <div className="text-sm text-zinc-500">No rules yet. Promoted from Decisions.</div>}
+          {rules.map((r) => (
+            <div key={r.node_key} className="border-b border-zinc-800 pb-3 last:border-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-zinc-500">{r.node_key}</span>
+                  {r.kind && <Badge variant="outline">{r.kind}</Badge>}
+                  {r.node_attributes?.normative_force && <Badge variant="secondary">{r.node_attributes.normative_force}</Badge>}
+                  {statusBadge(r.status)}
+                </div>
+                {r.status === 'proposed' && (
+                  <div className="flex gap-2">
+                    <Button size="xs" onClick={() => ratify(r.node_key, 'accepted')}>Accept</Button>
+                    <Button size="xs" variant="destructive" onClick={() => ratify(r.node_key, 'rejected')}>Reject</Button>
+                  </div>
+                )}
+              </div>
+              <div className="text-sm text-zinc-200 mt-1">{r.node_attributes?.statement ?? r.title}</div>
+              <div className="text-xs text-zinc-500 mt-1">
+                cites {refsFor(r.node_key).join(', ') || '-'}
+                {Array.isArray(r.maps_to_codebase) && r.maps_to_codebase.length
+                  ? ` · code ${r.maps_to_codebase.join(', ')}` : ''}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Attributes */}
+      {attributes.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Data Specification / Attributes ({attributes.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {attributes.map((a) => (
+              <div key={a.node_key} className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="text-zinc-200">{a.title}</span>
+                  <span className="text-zinc-500"> ({ownerOf(a.node_key)}{a.node_attributes?.data_type ? `, ${a.node_attributes.data_type}` : ''})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {statusBadge(a.status)}
+                  {a.status === 'proposed' && (
+                    <>
+                      <Button size="xs" onClick={() => ratify(a.node_key, 'accepted')}>Accept</Button>
+                      <Button size="xs" variant="destructive" onClick={() => ratify(a.node_key, 'rejected')}>Reject</Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Feature Spec preview - live projection from the graph */}
+      <Card>
+        <CardHeader><CardTitle>Feature Spec (live projection)</CardTitle></CardHeader>
+        <CardContent>
+          <pre className="whitespace-pre-wrap text-xs text-zinc-300 font-mono leading-relaxed">
+            {renderFeatureSpec(detail)}
+          </pre>
         </CardContent>
       </Card>
 

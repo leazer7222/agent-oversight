@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ feat
   if (!tenant) return Response.json({ error: `tenant '${tenantName}' not resolved` }, { status: 400 })
 
   const [detail, readiness, backlog] = await Promise.all([
-    sb.rpc('graph_feature_detail', { p_tenant: tenant, p_product: product, p_feature_key: feature }),
+    sb.rpc('graph_feature_graph', { p_tenant: tenant, p_product: product, p_feature_key: feature }),
     sb.rpc('graph_feature_readiness', { p_tenant: tenant, p_product: product, p_feature_key: feature }),
     sb.rpc('graph_backlog', { p_tenant: tenant, p_product: product }),
   ])

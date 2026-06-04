@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Calculator,
   ClipboardList,
+  Inbox,
 } from 'lucide-react'
 
 const nav = [
@@ -21,6 +22,7 @@ const nav = [
   { href: '/dashboard/agents',      label: 'Agents',      icon: Bot },
   { href: '/dashboard/hierarchy',   label: 'Hierarchy',   icon: Network },
   { href: '/dashboard/runs',        label: 'Runs',        icon: Play },
+  { href: '/dashboard/agile',       label: 'Agile Intake', icon: Inbox },
   { href: '/dashboard/scoping',     label: 'Scoping',     icon: ClipboardList },
   { href: '/dashboard/errors',      label: 'Errors',      icon: AlertCircle },
   { href: '/dashboard/costs',       label: 'Costs',       icon: DollarSign },

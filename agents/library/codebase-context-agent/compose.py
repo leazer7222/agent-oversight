@@ -41,6 +41,42 @@ def _ba_ids(ids: list[str]) -> list[str]:
     return out
 
 
+# Verb keywords that signal reusable FUNCTIONALITY a feature might otherwise be scoped as net-new.
+_ACTION_RE = re.compile(r"(import|upload|bulk|export|sync|generate|webhook|ingest|batch|migrate|"
+                        r"process|publish|approve|reject|verify|onboard|invite|transform|render)", re.I)
+
+
+def _rel_path(path: str) -> str:
+    return re.sub(r"^/api/v\d+", "", path) or "/"
+
+
+def _capability_routes(slug: str, routes: list) -> list:
+    """Routes mounted under a capability's prefix (the capability slug == route-group mount prefix)."""
+    seg = "/" + slug.strip("/")
+    return [r for r in routes if _rel_path(r.get("path", "")) == seg
+            or _rel_path(r.get("path", "")).startswith(seg + "/")]
+
+
+def _capability_description(slug: str, routes: list) -> str:
+    """Deterministic capability description = route count + the ACTION routes (the reuse signals).
+    Without this, capabilities reach the BA as a bare slug and existing functionality (e.g. a bulk
+    property importer) is invisible, so the BA scopes it net-new. See LESSONS / the Excel-loader test."""
+    rts = _capability_routes(slug, routes)
+    if not rts:
+        return ""
+    # PRIORITIZE keyword-action routes (import/bulk/upload/sync/...) - the strong reuse signals -
+    # over generic mutating routes, so the highest-value endpoint is never truncated away.
+    keyword  = [f"{r['method'].upper()} {r['path']}" for r in rts if _ACTION_RE.search(r.get("path", ""))]
+    mutating = [f"{r['method'].upper()} {r['path']}" for r in rts
+                if r.get("method", "get").lower() != "get" and not _ACTION_RE.search(r.get("path", ""))]
+    shown = keyword[:15] + mutating[: max(0, 15 - len(keyword))]
+    desc = f"{len(rts)} routes"
+    if shown:
+        more = (len(keyword) + len(mutating)) - len(shown)
+        desc += "; action endpoints: " + "; ".join(shown) + (f"; +{more} more" if more > 0 else "")
+    return desc
+
+
 def compose(*, inventory, coverage: dict, resolution: dict, repo: str, commit_sha: str,
             ref: str, feature_intent: str, concepts: list, run_id: str,
             semantic: dict | None = None) -> dict:
@@ -68,7 +104,8 @@ def compose(*, inventory, coverage: dict, resolution: dict, repo: str, commit_sh
                "source": "role", "confidence": auth_conf, "evidence": _ev(a["evidence"])}
               for a in inventory.actors]
 
-    capabilities = [{"id": c["cbc_id"], "name": c["slug"], "description": "",
+    capabilities = [{"id": c["cbc_id"], "name": c["slug"],
+                     "description": _capability_description(c["slug"], inventory.routes),
                      "entities": [], "confidence": "medium", "evidence": _ev(c["evidence"])}
                     for c in inventory.capabilities]
 

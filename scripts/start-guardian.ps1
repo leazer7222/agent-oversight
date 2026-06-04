@@ -1,14 +1,14 @@
-# scripts/start-guardian.ps1 — Session guardian daemon
+# scripts/start-guardian.ps1 - Session guardian daemon
 #
 # Starts a background PowerShell job that calls checkpoint.ps1 every 20 minutes.
 # This protects against the case where Claude's response is cut off mid-generation
-# by the 5-hour usage limit — the Stop hook cannot fire in that case, but the
+# by the 5-hour usage limit - the Stop hook cannot fire in that case, but the
 # guardian runs independently of Claude Code.
 #
 # Usage:
-#   pwsh scripts/start-guardian.ps1          # start guardian for this session
-#   pwsh scripts/start-guardian.ps1 -Stop    # stop running guardian
-#   pwsh scripts/start-guardian.ps1 -Status  # show guardian status + checkpoint log
+#   powershell -File scripts/start-guardian.ps1          # start guardian for this session
+#   powershell -File scripts/start-guardian.ps1 -Stop    # stop running guardian
+#   powershell -File scripts/start-guardian.ps1 -Status  # show guardian status + checkpoint log
 #
 # The guardian writes a PID file to .claude/guardian.pid.
 # It auto-stops when the git worktree is no longer the active directory.
@@ -32,7 +32,7 @@ $LogFile     = Join-Path $ProjectRoot ".claude\checkpoint.log"
 # (this dead system went unnoticed for a whole session - see LESSONS_LEARNED).
 $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
 
-# ── Worker mode (the detached background loop; not invoked by humans) ──────────
+# -- Worker mode (the detached background loop; not invoked by humans) ----------
 if ($Worker) {
     $checkpointScript = Join-Path $ProjectRoot "scripts\checkpoint.ps1"
     # Immediate checkpoint on start, then every interval. Survives the launching shell because it is
@@ -46,7 +46,7 @@ if ($Worker) {
     exit 0
 }
 
-# ── Status ───────────────────────────────────────────────────────────────────
+# -- Status -------------------------------------------------------------------
 if ($Status) {
     if (Test-Path $PidFile) {
         $savedPid = Get-Content $PidFile -ErrorAction SilentlyContinue
@@ -71,7 +71,7 @@ if ($Status) {
     exit 0
 }
 
-# ── Stop ─────────────────────────────────────────────────────────────────────
+# -- Stop ---------------------------------------------------------------------
 if ($Stop) {
     if (Test-Path $PidFile) {
         $savedPid = Get-Content $PidFile -ErrorAction SilentlyContinue
@@ -89,7 +89,7 @@ if ($Stop) {
     exit 0
 }
 
-# ── Already running? ─────────────────────────────────────────────────────────
+# -- Already running? ---------------------------------------------------------
 if (Test-Path $PidFile) {
     $savedPid = Get-Content $PidFile -ErrorAction SilentlyContinue
     $proc = Get-Process -Id $savedPid -ErrorAction SilentlyContinue
@@ -97,11 +97,11 @@ if (Test-Path $PidFile) {
         Write-Host "Guardian already running (PID $savedPid). Use -Stop to restart." -ForegroundColor Yellow
         exit 0
     }
-    # Stale PID — remove and continue
+    # Stale PID - remove and continue
     Remove-Item $PidFile -ErrorAction SilentlyContinue
 }
 
-# ── Start (launch a DETACHED background process, not a session-bound Start-Job) ──
+# -- Start (launch a DETACHED background process, not a session-bound Start-Job) --
 # Start-Job dies with its host shell, so launching it from a transient tool call never persisted.
 # Start-Process spawns an independent process that outlives the launching shell; we save its REAL
 # PID so -Stop / -Status (which use Get-Process -Id) actually work.
@@ -117,9 +117,9 @@ Write-Host "Session guardian started." -ForegroundColor Green
 Write-Host "  Checkpoint interval : every $IntervalMinutes minutes" -ForegroundColor DarkGray
 Write-Host "  First checkpoint    : in ${IntervalMinutes}min (also ran once now)" -ForegroundColor DarkGray
 Write-Host "  Checkpoint log      : .claude/checkpoint.log" -ForegroundColor DarkGray
-Write-Host "  Stop guardian       : pwsh scripts/start-guardian.ps1 -Stop" -ForegroundColor DarkGray
-Write-Host "  Status              : pwsh scripts/start-guardian.ps1 -Status" -ForegroundColor DarkGray
+Write-Host "  Stop guardian       : powershell -File scripts/start-guardian.ps1 -Stop" -ForegroundColor DarkGray
+Write-Host "  Status              : powershell -File scripts/start-guardian.ps1 -Status" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "If Claude hits the 5-hour limit mid-response, the last guardian checkpoint" -ForegroundColor DarkGray
-Write-Host "will be on the remote branch — at most ${IntervalMinutes} minutes of work at risk." -ForegroundColor DarkGray
+Write-Host "will be on the remote branch - at most ${IntervalMinutes} minutes of work at risk." -ForegroundColor DarkGray
 Write-Host ""

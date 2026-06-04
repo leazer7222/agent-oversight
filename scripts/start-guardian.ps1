@@ -19,12 +19,32 @@
 param(
     [switch]$Stop,
     [switch]$Status,
+    [switch]$Worker,
     [int]$IntervalMinutes = 20
 )
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $PidFile     = Join-Path $ProjectRoot ".claude\guardian.pid"
 $LogFile     = Join-Path $ProjectRoot ".claude\checkpoint.log"
+
+# Prefer PowerShell Core (pwsh) if installed; fall back to Windows PowerShell (always present on
+# Windows). pwsh is NOT installed on every machine - hard-coding it silently no-ops every checkpoint
+# (this dead system went unnoticed for a whole session - see LESSONS_LEARNED).
+$psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+
+# ── Worker mode (the detached background loop; not invoked by humans) ──────────
+if ($Worker) {
+    $checkpointScript = Join-Path $ProjectRoot "scripts\checkpoint.ps1"
+    # Immediate checkpoint on start, then every interval. Survives the launching shell because it is
+    # its own detached process (see Start-Process below) - NOT a Start-Job tied to the host session.
+    & $psExe -NoProfile -ExecutionPolicy Bypass -File $checkpointScript -Reason "guardian-start" 2>&1 | Out-Null
+    while ($true) {
+        Start-Sleep -Seconds ($IntervalMinutes * 60)
+        if (-not (Test-Path $ProjectRoot)) { break }
+        & $psExe -NoProfile -ExecutionPolicy Bypass -File $checkpointScript -Reason "guardian" 2>&1 | Out-Null
+    }
+    exit 0
+}
 
 # ── Status ───────────────────────────────────────────────────────────────────
 if ($Status) {
@@ -81,36 +101,16 @@ if (Test-Path $PidFile) {
     Remove-Item $PidFile -ErrorAction SilentlyContinue
 }
 
-# ── Start ────────────────────────────────────────────────────────────────────
-$checkpointScript = Join-Path $ProjectRoot "scripts\checkpoint.ps1"
-$intervalMs       = $IntervalMinutes * 60 * 1000
+# ── Start (launch a DETACHED background process, not a session-bound Start-Job) ──
+# Start-Job dies with its host shell, so launching it from a transient tool call never persisted.
+# Start-Process spawns an independent process that outlives the launching shell; we save its REAL
+# PID so -Stop / -Status (which use Get-Process -Id) actually work.
+$proc = Start-Process -FilePath $psExe `
+    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath,
+                    '-Worker', '-IntervalMinutes', $IntervalMinutes) `
+    -WindowStyle Hidden -PassThru
 
-# Prefer PowerShell Core (pwsh) if installed; fall back to Windows PowerShell (always present on Windows).
-# pwsh is NOT installed on every machine - hard-coding it silently breaks every checkpoint (see LESSONS_LEARNED).
-$psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
-
-$scriptBlock = {
-    param($projectRoot, $checkpointScript, $intervalMs, $logFile, $psExe)
-
-    # Run immediately on start (catch anything uncommitted at session start)
-    & $psExe -NoProfile -ExecutionPolicy Bypass -File $checkpointScript -Reason "guardian-start" 2>&1 | Out-Null
-
-    while ($true) {
-        Start-Sleep -Milliseconds $intervalMs
-
-        # Stop if project root no longer exists (worktree was deleted)
-        if (-not (Test-Path $projectRoot)) { break }
-
-        # Run checkpoint
-        & $psExe -NoProfile -ExecutionPolicy Bypass -File $checkpointScript -Reason "guardian" 2>&1 | Out-Null
-    }
-}
-
-$job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $ProjectRoot, $checkpointScript, $intervalMs, $LogFile, $psExe
-
-# Save PID (Job.Id is not a real PID, but we can find the child process)
-# For simplicity, save the PowerShell Job ID and use Get-Job to check
-$job.Id | Set-Content $PidFile
+$proc.Id | Set-Content $PidFile
 
 Write-Host ""
 Write-Host "Session guardian started." -ForegroundColor Green

@@ -537,3 +537,31 @@ Add new lessons at the end of each session.
 - NEVER hard-code `pwsh` in a hook/script on a Windows machine without a pwsh-or-powershell fallback.
   Hooks fail silently; a missing-binary hook gives you ZERO auto-save and you won't find out until you
   check git and see nothing committed. Start the guardian AND verify `checkpoint.log` grows.
+
+---
+
+## Product Graph / BA Lifecycle (P2)
+
+### A human/non-agent artifact cannot live in agent_outputs
+- `agent_outputs.run_id` is NOT NULL and FKs to `runs`; `runs` itself requires `task_type_id` (FK, no
+  default) + classifier columns. So any artifact NOT produced by a telemetry'd agent run (e.g. a human
+  Gate A approval) cannot be inserted into `agent_outputs`. Use a dedicated append-only table instead
+  (e.g. `public.gate_a_snapshots` via `platform.apply_append_only_rls`). Discovered building Gate A P2.
+
+### Recreating a CHECK constraint: always read the LIVE definition first
+- A `DROP CONSTRAINT` + `ADD CONSTRAINT` that re-lists allowed values WILL fail if another thread
+  extended the set and you omitted those values (existing rows violate the new check). Migration 041's
+  first apply failed because the PCA-intake thread (033) had added `intake_assessment`,
+  `clarification_brief`, `concept_resolution` to `agent_outputs_output_type_check`. Query
+  `pg_get_constraintdef` (or distinct column values) before recreating; include every existing value.
+
+### Polymorphic graph: extend node_type, do not add relational tables
+- Promoting Rule/Attribute = new `node_type` values + relaxed `kind`/`maps_to_codebase` constraints +
+  new edge types (`establishes`, `owns`) in the existing `graph_nodes`/`graph_edges`. Dedicated `rules`/
+  `attributes` tables would have forked the model and broken every `graph_*` RPC. Keep categorical
+  distinctions (rule_type/attribute_type) in the open `kind` column, never closed enums.
+
+### Feature subgraph reads must be transitive, not one-hop
+- `graph_feature_detail` (one-hop) could not see Decisions (2 hops) let alone Rules (3 hops). Use a
+  typed fixed-shape traversal (`graph_feature_graph`) that follows provenance edges and treats shared
+  Concepts as leaves (+ owned Attributes) so they do not bleed in other features' nodes.

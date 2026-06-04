@@ -134,6 +134,34 @@ def resolve_tenant(name_or_id: str) -> str:
     return rows[0]["id"]
 
 
+_IRREGULAR = {"people": "person", "children": "child", "data": "datum", "media": "medium"}
+
+
+def _singularize(tok: str) -> str:
+    if tok in _IRREGULAR:
+        return _IRREGULAR[tok]
+    if tok.endswith("ies") and len(tok) > 3:
+        return tok[:-3] + "y"
+    if tok.endswith(("ses", "xes", "zes", "ches", "shes")):
+        return tok[:-2]
+    if tok.endswith("s") and not tok.endswith("ss"):
+        return tok[:-1]
+    return tok
+
+
+def _norm(name: str) -> str:
+    """Mirror the CCA's cbc normalization so a product noun deterministically matches a code name.
+    lowercase -> snake_case -> singularize(head token) -> strip non-alphanumerics."""
+    import re
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+    s = re.sub(r"[^a-z0-9]+", "_", s).strip("_")
+    if not s:
+        return ""
+    toks = [t for t in s.split("_") if t]
+    toks[-1] = _singularize(toks[-1])
+    return "_".join(toks)
+
+
 def load_codebase_context(product_key: str) -> dict | None:
     rows = sb_rpc("get_latest_codebase_context", {"p_target_key": product_key})
     if not rows:
@@ -276,14 +304,21 @@ def call_llm(model: str, feature_intent: str, context_text: str) -> tuple[dict, 
 
 def scope_to_graph(raw: dict, *, tenant: str, product: str, feature_intent: str, commit_sha: str,
                    name_to_cbc: dict, noun_to_cbc: dict, created_by: str,
-                   clarification_artifact_id: str | None = None) -> tuple[str, list[dict], list[dict]]:
+                   clarification_artifact_id: str | None = None,
+                   cc_artifact_id: str | None = None) -> tuple[str, list[dict], list[dict]]:
     """Write Feature + Concepts + Questions + edges. Returns (feature_key, nodes[], edges[])."""
     nodes: list[dict] = []
     edges: list[dict] = []
 
+    # deterministic exact name-match index: normalized code name -> cbc id (singular/plural-insensitive)
+    name_to_cbc_norm: dict[str, str] = {}
+    for k, v in name_to_cbc.items():
+        name_to_cbc_norm.setdefault(_norm(k), v)
+
     notes = [n for n in raw.get("feature_notes", []) if isinstance(n, str)]
     # clarification_brief_artifact_id is the field the Scoping dashboard reads to surface the PCA panel.
     feat_attrs = {"scoped_against_commit": commit_sha,
+                  **({"codebase_context_artifact_id": cc_artifact_id} if cc_artifact_id else {}),
                   **({"notes": notes} if notes else {}),
                   **({"clarification_brief_artifact_id": clarification_artifact_id} if clarification_artifact_id else {})}
     fk = sb_rpc("graph_next_key", {"p_product": product, "p_node_type": "feature"})
@@ -298,21 +333,39 @@ def scope_to_graph(raw: dict, *, tenant: str, product: str, feature_intent: str,
         title = c["title"].strip()
         kind = c.get("kind", "entity").strip() or "entity"
         aliases = [a for a in c.get("aliases", []) if isinstance(a, str)]
-        # Authoritative: concept_resolution by noun (title + aliases). Fallback: LLM cbc_refs by code name.
+        # maps_to_codebase is populated DETERMINISTICALLY (never left to LLM judgment):
+        #   1. concept_resolution by noun (title + aliases) - authoritative when the CCA checked that noun.
+        #   2. exact normalized name-match of the title/aliases against entities/actors - catches existing
+        #      code even when the noun was NOT in concepts_to_check (the Partner/Admin end-to-end bug).
+        #   3. LLM cbc_refs - last-resort fallback only.
         ids: set[str] = set()
         for key in [title.lower(), *(a.strip().lower() for a in aliases)]:
             ids.update(noun_to_cbc.get(key, []))
+            nk = _norm(key)
+            if nk and nk in name_to_cbc_norm:
+                ids.add(name_to_cbc_norm[nk])
         for ref in c.get("cbc_refs", []):
             r = str(ref).strip().lower()
             if r in noun_to_cbc:
                 ids.update(noun_to_cbc[r])
             elif name_to_cbc.get(r):
                 ids.add(name_to_cbc[r])
+            elif _norm(r) in name_to_cbc_norm:
+                ids.add(name_to_cbc_norm[_norm(r)])
         cbc_ids = sorted(ids)
 
         existing = sb_rpc("graph_resolve_concept", {"p_tenant": tenant, "p_product": product, "p_noun": title})
         if existing:
             ck = existing[0]["node_key"]
+            # backfill code links if this reused concept was minted without them (the Partner/Admin bug):
+            # only when it currently has NONE and we now have a deterministic mapping (never overwrite).
+            if cbc_ids and not (existing[0].get("maps_to_codebase") or []):
+                try:
+                    sb_rpc("graph_set_maps_to_codebase", {"p_tenant": tenant, "p_product": product,
+                        "p_node_key": ck, "p_cbc_ids": cbc_ids})
+                    log.info("backfilled maps_to_codebase %s (%s) -> %s", ck, title, cbc_ids)
+                except Exception as e:
+                    log.warning("backfill %s failed (non-fatal): %s", ck, str(e)[:120])
         else:
             ck = sb_rpc("graph_next_key", {"p_product": product, "p_node_type": "concept"})
             sb_rpc("graph_upsert_node", {"p_tenant": tenant, "p_product": product, "p_node_type": "concept",
@@ -413,7 +466,7 @@ def scope_feature(*, feature_intent: str, product_key: str, tenant: str, model: 
         fk, nodes, edges = scope_to_graph(raw, tenant=tenant, product=product_key,
             feature_intent=feature_intent, commit_sha=commit_sha,
             name_to_cbc=name_to_cbc, noun_to_cbc=noun_to_cbc, created_by=AGENT_INSTANCE,
-            clarification_artifact_id=clarification_artifact_id)
+            clarification_artifact_id=clarification_artifact_id, cc_artifact_id=cc_artifact_id)
         tctx.step("graph_written", message=f"{len(nodes)} nodes, {len(edges)} edges, feature {fk}")
 
         readiness = sb_rpc("graph_feature_readiness",

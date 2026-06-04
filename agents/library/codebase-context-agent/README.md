@@ -11,6 +11,33 @@ Those belong to the BA Scoping Agent.
 
 ---
 
+## Architecture: deterministic truth service (P1)
+
+This is NOT an LLM summarizer. **Deterministic parsers discover structure; the LLM only labels it.**
+The v1 approach (one LLM call that DISCOVERS entities) is retired - it sampled ~13% of the schema
+(18 of 140 entities) and produced the Partner/Admin net-new error class. Design baseline:
+`docs/codebase-context-agent-truth-service-design.md`.
+
+- **Mechanism A (entities/enums/relations):** `parser/drizzle_snapshot.py` reads the drizzle-kit
+  snapshot the target repo already maintains (`apps/api/drizzle/migrations/meta/*_snapshot.json`).
+  Authoritative, complete (140 entities / 74 enums), reproducible. No LLM, no AST.
+- **Mechanism B (actors/routes/permissions/integrations):** `parser/source_scan.py` extracts literal
+  values only - seeded roles (`scripts/seed-roles.ts`) + `USER_ROLES` + `authorize()` args (actors),
+  literal `router.<method>('<path>')` + mount prefixes (routes), config file stems (integrations).
+- **Coverage gating:** `coverage.py` reports per-layer green/yellow/red + a snapshot-vs-source
+  completeness guard. A concept resolves to `not_found` ONLY when the relevant layer is green;
+  otherwise `indeterminate` (the BA must not classify net-new from `indeterminate`).
+- **Label-only LLM:** `semantic.py` produces `domain_signals`/glossary over the deterministic
+  inventory and may NOT invent entities (any cbc id it returns that is not in the inventory is dropped).
+- **Cache:** `codebase_context_cache` keyed by `(commit_sha, parser_version)`. Commit truth is paid
+  once; per-feature concept resolution is a cheap reuse (cache hit ~10s vs ~3min cold).
+
+Pipeline: `pipeline.py` (the runtime; `agent.py` delegates to it). Modules: `inventory.py` (cbc
+minting, authoritative per C1), `resolve.py` (Tier-1 deterministic), `compose.py` (BA-facing view),
+`cache.py`, `reconcile_cbc.py` (C1 deprecation tool). Parser version: `cca-parser-v1.1`.
+
+---
+
 ## Owner
 
 `reformai`
@@ -166,16 +193,26 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 
 ## Running it
 
-Runtime is not implemented yet (this is the documentation + registration package). The intended
-invocation:
+The runtime is implemented and operational (deterministic truth service). v1 acquisition mode is a
+local checkout; pass `--repo-path` at a clone. The first cold run extracts + caches; subsequent runs
+at the same commit are cache hits (~10s).
 
 ```bash
+# deterministic only (fast, free):
 python agents/library/codebase-context-agent/agent.py \
+  --repo-path .workspace/Reform-AI \
   --target-key reformai-product \
-  --ref main \
-  --feature-intent "Add a catalogue of materials for suppliers and service providers" \
-  --concepts-to-check Material Catalogue Supplier ServiceProvider Market
+  --feature-intent "Integrate Habi property inventory into ReformAI" \
+  --concepts-to-check Partner Admin Habi Property Inventory
+
+# with the label-only LLM domain_signals pass (cached after first run):
+#   ... --semantic
+# force re-extraction (bypass cache, e.g. after a parser_version bump):
+#   ... --force
 ```
+
+`agent.py` delegates to `pipeline.py` (the runtime). C1 registry cleanup:
+`python agents/library/codebase-context-agent/reconcile_cbc.py --repo-path <clone> [--apply]`.
 
 ## Telemetry
 
@@ -195,18 +232,22 @@ Step events: see [docs/runtime-workflow.md](docs/runtime-workflow.md).
 ## Schemas and storage
 
 - Output schema: `docs/schemas/codebase-context.schema.json`
-- Registry storage: `supabase/migrations/025_cbc_identity_registry.sql` (**authored, NOT yet applied**)
+- Registry: `supabase/migrations/025_cbc_identity_registry.sql` (**applied**)
+- Cache: `supabase/migrations/036_codebase_context_cache.sql` (**applied**)
+- Output types: `agent_outputs.output_type` in {`codebase_context` (027), `concept_resolution` (037)} (**applied**)
+- BA handoff resolver: `supabase/migrations/028_codebase_context_resolver.sql` (**applied**)
 
 ## Status
 
-**Registered (DB), runtime pending.** Instance `reformai.codebase-context-agent` is registered with
-`status = paused` and `metadata.runtime_implemented = false`. `agent.py` does not exist yet and
-migration 025 is not applied. Not operationally active. See
-[Remaining steps](docs/runtime-workflow.md#remaining-steps-before-activation).
+**Active (P1 truth service operational).** Instance `reformai.codebase-context-agent` is
+`status = active`, `runtime_implemented = true`. Deterministic pipeline implemented and verified
+against `ReformAI-Inc/Reform-AI @ d768f37` (140 entities, 7 actors, green coverage). Habi regression
+green: Partner/Admin resolve `exists` with evidence; the Partner/Admin net-new error class is killed.
 
-## Future roadmap (deferred from v1)
+## Future roadmap (P2+)
 
-- Selective field -> `Attribute` candidate mapping (keys/enums/FKs/intent-relevant only)
-- Cross-SHA diffing (drift between two `codebase-context.json` artifacts)
-- Multi-target support beyond `reformai-product`
-- LRU clone cache keyed by immutable `commit_sha`
+- Clone/auth acquisition layer (target registry + read-only token) beyond local-path mode.
+- Tier-2 LLM ambiguous-tail resolver (for ambiguous concepts like "Inventory").
+- Extend the registry (migration) to `route`/`integration`/`enum` cbc types.
+- Incremental per-file/per-module merge (changed-file re-extraction).
+- Runtime/DB reality layer (Postgres catalog, row counts, dead-code/usage).

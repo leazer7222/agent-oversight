@@ -1,33 +1,29 @@
 # Runtime Workflow - Codebase Context Agent
 
-The complete run flow from a target-key + feature intent to a stored `codebase_context` artifact. The
-agent process is stateless per run; durable identity state lives in `platform.cbc_identity_registry`.
-Wrap the whole run in `OversightClient.run(...)` so `run_started` / `run_completed` / `run_failed` are
-emitted with a single `run_id`.
+The run flow for the P1 **deterministic truth service**. Deterministic parsers discover structure; the
+LLM only LABELS. The v1 single-LLM-call flow (LLM discovers entities) is RETIRED. Runtime: `pipeline.py`
+(`agent.py` delegates to it). The agent process is stateless per run; durable state lives in
+`platform.cbc_identity_registry` and `public.codebase_context_cache`. Telemetry is wrapped via
+`OversightClient.run(...)`; it degrades gracefully (`NullRunCtx`) when the instance is paused.
 
-## Flow
+## Flow (pipeline.py)
 
-| # | Step | Action | Telemetry step | Failure mode |
-|---|---|---|---|---|
-| 1 | Validate input | Check `target_key`, `ref`, `feature_intent` present | `input_validated` | `validation_error` -> abort |
-| 2 | Resolve target | `target_key` -> repo URL + read-only credential via the target registry | `target_resolved` | abort if unknown target / missing token |
-| 3 | Resolve ref | `git ls-remote` resolves `ref` -> concrete `commit_sha` (no full clone needed) | `ref_resolved` | abort if ref not found |
-| 4 | Clone read-only | Shallow clone into `.workspace/<target_key>@<sha>/`; **assert `HEAD == commit_sha`** | `repo_cloned` | abort on SHA mismatch (never analyze the wrong tree) |
-| 5 | Map repo | Walk `include_globs`, skip `exclude_globs`; build the file inventory for `coverage` | `repo_mapped` | non-fatal; record omissions |
-| 6 | Extract entities | Schema/models/migrations -> code-side `entities[]` (fields + `semantic_hint`, relationships) with evidence | `entities_extracted` | - |
-| 7 | Extract actors + capabilities | Auth roles -> `actors[]`; service/route modules -> `capabilities[]`, with evidence | `actors_capabilities_extracted` | - |
-| 8 | Domain-signal sweep | Full, unrequested sweep (market-scoping, multi-tenancy, currency/locale, soft-delete) | `domain_signals_swept` | - |
-| 9 | Build glossary | Code terms + `aka[]` -> `maps_to` cbc:* | `glossary_built` | - |
-| 10 | Existence-check | `feature_intent` nouns + `concepts_to_check[]` -> `exists` flags + `concept_resolution[]` | `existence_checked` | - |
-| 11 | Reconcile registry | Mint/resolve cbc:* via `public.cbc_*`; rename/implement/possible_realization as needed; emit `registry_events[]` | `registry_reconciled` | registry write fatal (identity integrity) |
-| 12 | Compute coverage | `scanned_paths`, `omitted`, `files_scanned/total`, `confidence` | `coverage_computed` | - |
-| 13 | Emit artifact + render | Validate against `codebase-context.schema.json`; write `codebase_context` to `agent_outputs`; render `codebase-context.md`; tear down clone; `run.report(...)` | (run_completed) | schema-validation fatal; telemetry non-fatal |
+| # | Step | Action | Telemetry step |
+|---|---|---|---|
+| 1 | Acquire + pin | Local checkout (v1); `git rev-parse HEAD` -> `commit_sha` (clone/auth deferred) | - |
+| 2 | Cache check | `codebase_context_cache` by `(product_key, repo, commit_sha, parser_version)` - HIT reuses inventory+coverage+semantic, skips 3-5 | `cache_hit` |
+| 3 | Build inventory (deterministic) | Mechanism A: drizzle snapshot -> entities/enums/relations. Mechanism B: source scan -> actors/routes/capabilities/integrations. cbc minting (authoritative) | `inventory_built` |
+| 4 | Coverage | Per-layer green/yellow/red + snapshot-vs-source completeness guard | `coverage_built` |
+| 5 | Cache write | Upsert inventory + coverage (+ semantic) into `codebase_context_cache` | `cache_written` |
+| 6 | Resolve concepts (Tier-1) | Deterministic match; `not_found` ONLY on green coverage, else `indeterminate` | - |
+| 7 | Semantic (label-only, optional) | LLM labels domain_signals/glossary over the inventory; drops any cbc id not in it. Cached | `semantic_labeled` |
+| 8 | Compose BA view | Map to the existing `codebase-context.schema.json`; **jsonschema validate** | `composed_validated` |
+| 9 | Publish + register | `codebase_context` + `concept_resolution` to `agent_outputs`; register cbc ids (skipped on cache hit) | `published` |
 
-**cbc minting (step 11):** for a NEW identity, normalize the name
-(`lowercase -> snake_case -> singularize -> strip non-alphanumerics`) and call
-`public.cbc_register_or_get`. The registry is the sole authority for whether an ID already exists; the
-runtime never decides identity by string comparison against the artifact. See
-[identity-registry.md](identity-registry.md).
+**parser_version** (`cca-parser-v1.1`) is part of the cache key: a parser-logic change invalidates the
+cache even at an unchanged commit. **cbc minting:** the deterministic parser is the sole authoritative
+minter (C1 Option A); normalize (`lowercase -> snake_case -> singularize -> strip non-alphanumerics`)
+and `public.cbc_register_or_get`. See [identity-registry.md](identity-registry.md).
 
 ## Controlled-workspace lifecycle
 

@@ -1,0 +1,45 @@
+{
+  "description": "P1 acceptance regression. Kills the Partner/Admin net-new error class. Expectations grounded in the real Reform-AI @ d768f37 drizzle snapshot (140 entities) + USER_ROLES constant.",
+  "handoff": {
+    "feature_id": "FEAT-HABI-INGESTION",
+    "feature_intent": "Integrate Habi property inventory into ReformAI",
+    "concepts_to_check": ["Partner", "Admin", "Habi", "Property", "Inventory"],
+    "target_key": "reformai-product",
+    "repo_path": ".workspace/Reform-AI"
+  },
+  "expected": {
+    "Partner": {
+      "status_in": ["exists", "partially_exists"],
+      "evidence_required": true,
+      "resolves_via": "entity",
+      "expected_cbc_prefix": "cbc:entity:partner",
+      "hard_fail_if": ["not_found", "indeterminate", "net_new_without_evidence"]
+    },
+    "Admin": {
+      "status_in": ["exists"],
+      "evidence_required": true,
+      "resolves_via": "actor",
+      "expected_cbc": "cbc:actor:admin",
+      "hard_fail_if": ["not_found", "indeterminate", "net_new_without_evidence"]
+    },
+    "Habi": {
+      "status_in": ["not_found", "indeterminate"],
+      "not_found_requires_green_layers": ["schema", "integrations"]
+    },
+    "Property": {
+      "status_in": ["exists", "partially_exists"],
+      "evidence_required": true,
+      "resolves_via": "entity"
+    },
+    "Inventory": {
+      "status_in": ["exists", "partially_exists", "ambiguous", "not_found", "indeterminate"],
+      "coverage_basis_required": true
+    }
+  },
+  "global_invariants": {
+    "no_llm_created_entities": true,
+    "every_exists_has_evidence": true,
+    "not_found_requires_green_coverage": true,
+    "deterministic_same_commit_parser_version": true
+  }
+}

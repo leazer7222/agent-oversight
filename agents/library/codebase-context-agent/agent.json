@@ -2,9 +2,10 @@
   "agent_id": "93b45e81-a1e5-47d8-98b1-0575de49a21b",
   "name": "codebase-context-agent",
   "display_name": "Codebase Context Agent",
-  "description": "Analyzes an external target codebase read-only at a pinned commit and produces a structured codebase-context.json artifact describing code reality (entities, actors, capabilities, domain signals, glossary, coverage, evidence) for downstream BA scoping. Describes WHAT IS; never scopes WHAT SHOULD BE.",
+  "description": "Deterministic codebase TRUTH SERVICE (not an LLM summarizer). Deterministic parsers discover structure - entities/enums/relations from the drizzle-kit snapshot, actors/routes/permissions/integrations from literal source values; the LLM only LABELS (domain_signals/glossary) and may not invent entities. Produces a commit-keyed, coverage-gated codebase-context.json describing code reality for downstream BA scoping. Describes WHAT IS; never scopes WHAT SHOULD BE.",
   "owner": "reformai",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "parser_version": "cca-parser-v1.1",
   "agent_type": "worker",
   "instance_type": "stateless",
   "capability_tags": [
@@ -26,10 +27,12 @@
     "platform.cbc_identity_registry (existing frozen cbc:* identities, via public.cbc_* RPCs)"
   ],
   "writes": {
-    "registry": "platform.cbc_identity_registry, platform.cbc_registry_events (via public.cbc_* RPCs only)",
-    "artifact": "agent_outputs (output_type='codebase_context'); codebase-context.md is a human-only render",
-    "reads_only": "the external target repository (read-only clone at a pinned commit_sha); never written"
+    "registry": "platform.cbc_identity_registry, platform.cbc_registry_events (via public.cbc_* RPCs only; deterministic parser is the authoritative minter)",
+    "cache": "public.codebase_context_cache (commit-keyed inventory + coverage + semantic; key product_key,repo,commit_sha,parser_version)",
+    "artifact": "agent_outputs (output_type='codebase_context' BA-facing view + output_type='concept_resolution' feature-scoped)",
+    "reads_only": "the target repository (local checkout in v1; read-only) - never written"
   },
+  "runtime": "agents/library/codebase-context-agent/pipeline.py (agent.py delegates to it); v1 LLM-discovery core retired",
   "owns_identifiers": ["cbc:*", "cbc_identity_registry", "cbc_registry_events"],
   "never_owns": [
     "CON-*",

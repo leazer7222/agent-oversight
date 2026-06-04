@@ -144,6 +144,7 @@
           "additionalProperties": false,
           "properties": {
             "scoped_against_commit": { "type": "string", "description": "The commit_sha from scoped_against." },
+            "codebase_context_artifact_id": { "type": "string", "format": "uuid", "description": "The consumed codebase_context artifact_id (mirrors top-level scoped_against.codebase_context_artifact_id; surfaced in the Scoping dashboard CCA panel)." },
             "notes": { "type": "array", "items": { "type": "string" }, "description": "Low-divergence non-blocking assumptions, captured as notes (Assumption-as-node is deferred in v1)." },
             "clarification_brief_artifact_id": { "type": "string", "description": "Pointer to the PCA clarification_brief artifact that seeded this feature (Agile front-door link; surfaced in the Scoping dashboard)." }
           }

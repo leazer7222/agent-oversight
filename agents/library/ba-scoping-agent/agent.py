@@ -364,30 +364,19 @@ def render_provisional_brief(feature_intent: str, nodes: list[dict], readiness: 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main() -> None:
-    p = argparse.ArgumentParser(description="ba-scoping-agent v1 (Pass A scope)")
-    p.add_argument("--feature-intent", required=True)
-    p.add_argument("--product-key", default="reformai-product")
-    p.add_argument("--tenant", default="ReformAI", help="company name or explicit UUID")
-    p.add_argument("--model", default=os.environ.get("BA_SCOPING_MODEL", "claude-opus-4-5"))
-    p.add_argument("--clarification-artifact-id", default=None,
-                   help="link this feature to a PCA clarification_brief artifact (stamped on the feature node; surfaced in the Scoping dashboard)")
-    p.add_argument("--no-persist", action="store_true", help="skip the agent_outputs artifact write")
-    args = p.parse_args()
-
-    tenant = resolve_tenant(args.tenant)
-    log.info("tenant %s -> %s", args.tenant, tenant)
-
-    ctx_row = load_codebase_context(args.product_key)
+def scope_feature(*, feature_intent: str, product_key: str, tenant: str, model: str,
+                  clarification_artifact_id: str | None = None, parent_run_id: str | None = None,
+                  no_persist: bool = False) -> dict:
+    """Scope a feature against the latest codebase_context (reads no source code). Returns a
+    structured result. Callable by the CLI (main) and by the agile orchestrator/worker auto-chain."""
+    ctx_row = load_codebase_context(product_key)
     if not ctx_row:
-        log.error("no codebase_context artifact for product_key=%s (run the CCA first)", args.product_key)
-        sys.exit(2)
+        raise RuntimeError(f"no codebase_context artifact for product_key={product_key} (run the CCA first)")
     content = ctx_row["content"] if isinstance(ctx_row.get("content"), dict) else json.loads(ctx_row["content"])
     commit_sha = ctx_row.get("commit_sha") or content.get("commit_sha", "unknown")
     cc_artifact_id = ctx_row.get("artifact_id", "")
     log.info("loaded codebase context @ %s (artifact %s)", commit_sha[:12], cc_artifact_id)
 
-    # defensive validation of the consumed IS-state artifact (warn, do not hard-abort the smoke)
     try:
         jsonschema.validate(content, json.loads(IN_SCHEMA_PATH.read_text(encoding="utf-8")))
     except jsonschema.ValidationError as e:
@@ -402,69 +391,95 @@ def main() -> None:
         secret=(os.environ.get("AGENT_OVERSIGHT_SECRET") or os.environ.get("OVERSIGHT_SECRET")
                 or os.environ.get("INGEST_SECRET") or ""))
     run_id = str(uuid.uuid4())
+    tkw = dict(agent_id=AGENT_INSTANCE_ID, run_id=run_id, model=model, provider="anthropic",
+               tokens_in_hint=tokens_in_hint, task_type_code="orchestration", task_complexity_bucket="medium")
+    if parent_run_id:
+        tkw["parent_run_id"] = parent_run_id
 
-    with telemetry_ctx(oversight, agent_id=AGENT_INSTANCE_ID, run_id=run_id, model=args.model,
-                       provider="anthropic", tokens_in_hint=tokens_in_hint, task_type_code="orchestration",
-                       task_complexity_bucket="medium") as tctx:
+    record_id = "(skipped)"
+    with telemetry_ctx(oversight, **tkw) as tctx:
         tctx.step("context_loaded", message=f"codebase context @ {commit_sha[:12]}",
                   payload={"entities": len(content.get("entities", [])),
                            "signals": len(content.get("domain_signals", []))})
-
-        log.info("calling %s for scoping...", args.model)
+        log.info("calling %s for scoping...", model)
         with tctx.timer() as t:
-            raw, ti, to = call_llm(args.model, args.feature_intent, context_text)
-        cost = estimate_cost(args.model, ti, to)
+            raw, ti, to = call_llm(model, feature_intent, context_text)
+        cost = estimate_cost(model, ti, to)
         tctx.report(tokens_in=ti, tokens_out=to, cost_usd=cost)
         tctx.step("scoped", message=f"{len(raw.get('concepts', []))} concepts, "
                   f"{len(raw.get('questions', []))} questions", duration_ms=t.ms,
                   tokens_in=ti, tokens_out=to, cost_usd=cost)
 
-        fk, nodes, edges = scope_to_graph(raw, tenant=tenant, product=args.product_key,
-            feature_intent=args.feature_intent, commit_sha=commit_sha,
+        fk, nodes, edges = scope_to_graph(raw, tenant=tenant, product=product_key,
+            feature_intent=feature_intent, commit_sha=commit_sha,
             name_to_cbc=name_to_cbc, noun_to_cbc=noun_to_cbc, created_by=AGENT_INSTANCE,
-            clarification_artifact_id=args.clarification_artifact_id)
+            clarification_artifact_id=clarification_artifact_id)
         tctx.step("graph_written", message=f"{len(nodes)} nodes, {len(edges)} edges, feature {fk}")
 
         readiness = sb_rpc("graph_feature_readiness",
-            {"p_tenant": tenant, "p_product": args.product_key, "p_feature_key": fk})
+            {"p_tenant": tenant, "p_product": product_key, "p_feature_key": fk})
         scope_ready = bool(readiness.get("scope_ready"))
         tctx.step("readiness_evaluated", message=f"scope_ready={scope_ready}", payload=readiness)
 
-        brief_md = None if scope_ready else render_provisional_brief(args.feature_intent, nodes, readiness)
-
+        brief_md = None if scope_ready else render_provisional_brief(feature_intent, nodes, readiness)
         artifact = {
             "schema_version": "1.0", "artifact_type": "product_graph_scope",
             "artifact_id": str(uuid.uuid4()), "run_id": run_id,
-            "product_key": args.product_key, "tenant_id": tenant,
+            "product_key": product_key, "tenant_id": tenant,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "feature_key": fk,
-            "scoped_against": {"repo": args.product_key, "commit_sha": commit_sha,
+            "scoped_against": {"repo": product_key, "commit_sha": commit_sha,
                                **({"codebase_context_artifact_id": cc_artifact_id} if cc_artifact_id else {})},
-            "generator": {"agent": AGENT_INSTANCE, "version": DEFINITION_VERSION, "model": args.model},
-            "inputs": {"product_key": args.product_key, "feature_intent": args.feature_intent},
+            "generator": {"agent": AGENT_INSTANCE, "version": DEFINITION_VERSION, "model": model},
+            "inputs": {"product_key": product_key, "feature_intent": feature_intent},
             "nodes": nodes, "edges": edges, "readiness": readiness,
             **({"brief_markdown": brief_md} if brief_md else {}),
         }
         jsonschema.validate(artifact, out_schema)
         tctx.step("artifact_validated", message="product_graph_scope schema-valid")
-
-        record_id = "(skipped)"
-        if not args.no_persist:
+        if not no_persist:
             with tctx.timer() as t:
                 record_id = write_agent_output(artifact, run_id, tenant)
             tctx.step("artifact_written", message=f"agent_outputs/{record_id}", duration_ms=t.ms)
 
+    return {"feature_key": fk, "scope_ready": scope_ready, "artifact_id": record_id, "run_id": run_id,
+            "readiness": readiness, "n_concepts": sum(1 for n in nodes if n["node_type"] == "concept"),
+            "n_questions": sum(1 for n in nodes if n["node_type"] == "question"), "n_edges": len(edges),
+            "cost": cost, "tokens_in": ti, "tokens_out": to, "commit_sha": commit_sha}
+
+
+def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    p = argparse.ArgumentParser(description="ba-scoping-agent v1 (Pass A scope)")
+    p.add_argument("--feature-intent", required=True)
+    p.add_argument("--product-key", default="reformai-product")
+    p.add_argument("--tenant", default="ReformAI", help="company name or explicit UUID")
+    p.add_argument("--model", default=os.environ.get("BA_SCOPING_MODEL", "claude-opus-4-5"))
+    p.add_argument("--clarification-artifact-id", default=None,
+                   help="link this feature to a PCA clarification_brief artifact (stamped on the feature node; surfaced in the Scoping dashboard)")
+    p.add_argument("--no-persist", action="store_true", help="skip the agent_outputs artifact write")
+    args = p.parse_args()
+
+    tenant = resolve_tenant(args.tenant)
+    log.info("tenant %s -> %s", args.tenant, tenant)
+    try:
+        r = scope_feature(feature_intent=args.feature_intent, product_key=args.product_key, tenant=tenant,
+                          model=args.model, clarification_artifact_id=args.clarification_artifact_id,
+                          no_persist=args.no_persist)
+    except RuntimeError as e:
+        log.error("%s", e)
+        sys.exit(2)
+
     print(f"\n{'-'*64}")
     print("  BA Scoping Complete (Pass A)")
-    print(f"  Feature : {fk}  ({args.feature_intent})")
-    print(f"  Concepts: {sum(1 for n in nodes if n['node_type']=='concept')}  "
-          f"Questions: {sum(1 for n in nodes if n['node_type']=='question')}  Edges: {len(edges)}")
-    print(f"  Ready   : {scope_ready}  (blocking={readiness.get('gate_open_blocking_questions')}, "
-          f"high_div={readiness.get('gate_open_high_divergence')})")
-    print(f"  Brief   : {'withheld (provisional)' if not scope_ready else 'rendered'}")
-    print(f"  Cost    : ${cost:.6f}  ({ti:,} in / {to:,} out)")
-    print(f"  Artifact: agent_outputs/{record_id}")
-    print(f"  Run     : {run_id}")
+    print(f"  Feature : {r['feature_key']}  ({args.feature_intent})")
+    print(f"  Concepts: {r['n_concepts']}  Questions: {r['n_questions']}  Edges: {r['n_edges']}")
+    print(f"  Ready   : {r['scope_ready']}  (blocking={r['readiness'].get('gate_open_blocking_questions')}, "
+          f"high_div={r['readiness'].get('gate_open_high_divergence')})")
+    print(f"  Cost    : ${r['cost']:.6f}  ({r['tokens_in']:,} in / {r['tokens_out']:,} out)")
+    print(f"  Artifact: agent_outputs/{r['artifact_id']}")
+    print(f"  Run     : {r['run_id']}")
     print(f"{'-'*64}\n")
 
 

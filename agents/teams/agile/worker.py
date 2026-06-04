@@ -48,15 +48,15 @@ _NEXT_STATE = {"proceed_direct": "context_scanning", "clarify": "clarification_b
                "block": "clarification_blocked"}
 
 
-def _load_pca():
-    spec = ilu.spec_from_file_location(
-        "pca_agent", REPO_ROOT / "agents/library/product-clarification-agent/agent.py")
+def _load(alias: str, rel: str):
+    spec = ilu.spec_from_file_location(alias, REPO_ROOT / rel)
     mod = ilu.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
-pca = _load_pca()
+pca = _load("pca_agent", "agents/library/product-clarification-agent/agent.py")
+ba = _load("ba_agent", "agents/library/ba-scoping-agent/agent.py")
 
 
 def _sb():
@@ -100,7 +100,14 @@ def _emit(client: OversightClient, **kw) -> None:
         print(f"[warn] worker telemetry: {str(e)[:120]}", file=sys.stderr)
 
 
+# Sonnet is reliable + cheap for the auto-chain scoping step; override with AGILE_BA_MODEL.
+BA_MODEL = os.environ.get("AGILE_BA_MODEL", "claude-sonnet-4-6")
+
+
 def process(job: dict, client: OversightClient) -> None:
+    """One orchestrator run per job. PCA (clarifying) -> on proceed_direct auto-chain to BA
+    (scoping) reusing the latest codebase_context -> park at scope_review (Gate A). PCA child
+    and BA child both link to this orchestrator run via parent_run_id."""
     jid = job["id"]
     orch_run_id = str(uuid.uuid4())
     _emit(client, agent_id=ORCH_AGENT_ID, event="run_started", run_id=orch_run_id, team_id="agile",
@@ -108,6 +115,8 @@ def process(job: dict, client: OversightClient) -> None:
                     "product_key": job["product_key"], "workspace_id": job["workspace_id"], "pass": job["pass"]})
     print(f"[run]  job {jid[:8]} pass={job['pass']} product={job['product_key']} "
           f"sources={len(job.get('intake') or [])}  orch_run={orch_run_id[:8]}")
+
+    # ---- Stage 1: clarifying (PCA) ----
     try:
         grounding = pca.load_grounding(job["workspace_id"])
         entries = [f"{s['source_type']}:{s['text']}" for s in (job.get("intake") or [])]
@@ -119,26 +128,55 @@ def process(job: dict, client: OversightClient) -> None:
             parent_run_id=orch_run_id)
     except Exception as exc:
         _emit(client, agent_id=ORCH_AGENT_ID, event="run_failed", run_id=orch_run_id,
-              error=f"[worker_error] {exc}",
-              metadata={"team_id": "agile", "stage": "clarifying", "job_id": jid})
+              error=f"[worker_error] pca: {exc}", metadata={"team_id": "agile", "stage": "clarifying", "job_id": jid})
         raise
 
-    patch_job(jid, {
-        "status": _STATUS.get(result["decision"], "error"),
-        "decision": result["decision"], "assessment_id": result.get("assessment_id"),
-        "brief_id": result.get("brief_id"), "pca_run_id": result.get("run_id"),
-        "finished_at": _now()})
+    decision = result["decision"]
+    patch_job(jid, {"decision": decision, "assessment_id": result.get("assessment_id"),
+                    "brief_id": result.get("brief_id"), "pca_run_id": result.get("run_id"), "stage": "clarifying"})
+
+    # clarify / block -> stop at the clarifying stage (no BA)
+    if decision != "proceed_direct":
+        patch_job(jid, {"status": _STATUS.get(decision, "error"), "finished_at": _now()})
+        _emit(client, agent_id=ORCH_AGENT_ID, event="run_completed", run_id=orch_run_id,
+              metadata={"team_id": "agile", "stage": "clarifying", "job_id": jid, "decision": decision,
+                        "next_state": _NEXT_STATE.get(decision),
+                        "intake_assessment_artifact_id": result.get("assessment_id"),
+                        "clarification_brief_artifact_id": result.get("brief_id"),
+                        "pca_run_id": result.get("run_id")})
+        print(f"[done] job {jid[:8]} decision={decision} (no BA)")
+        return
+
+    # ---- Stage 2: scoping (BA), auto-chained. Reuses the latest codebase_context. ----
     handoff = result.get("handoff") or {}
+    feature_intent = handoff.get("feature_intent") or (result.get("brief") or {}).get("restated_goal") or ""
+    patch_job(jid, {"status": "scoping", "stage": "scoping"})
+    print(f"[scope] job {jid[:8]} -> BA scoping (reusing codebase_context)...")
+    try:
+        ba_res = ba.scope_feature(
+            feature_intent=feature_intent, product_key=job["product_key"], tenant=job["company_id"],
+            model=BA_MODEL, clarification_artifact_id=result.get("brief_id"), parent_run_id=orch_run_id)
+    except Exception as exc:
+        msg = f"BA scoping failed ({type(exc).__name__}): {str(exc)[:300]}"
+        patch_job(jid, {"status": "error", "stage": "scoping", "error": msg, "finished_at": _now()})
+        _emit(client, agent_id=ORCH_AGENT_ID, event="run_failed", run_id=orch_run_id,
+              error=f"[worker_error] {msg}", metadata={"team_id": "agile", "stage": "scoping", "job_id": jid})
+        print(f"[error] job {jid[:8]} {msg}", file=sys.stderr)
+        return  # handled here; don't let main() overwrite the error
+
+    scope_artifact = ba_res.get("artifact_id")
+    patch_job(jid, {"status": "scoped", "stage": "scope_review", "feature_key": ba_res["feature_key"],
+                    "scope_artifact_id": scope_artifact if scope_artifact and scope_artifact != "(skipped)" else None,
+                    "scope_ready": ba_res["scope_ready"], "finished_at": _now()})
     _emit(client, agent_id=ORCH_AGENT_ID, event="run_completed", run_id=orch_run_id,
-          metadata={"team_id": "agile", "stage": "clarifying", "job_id": jid,
-                    "decision": result["decision"], "next_state": _NEXT_STATE.get(result["decision"]),
-                    "intake_assessment_artifact_id": result.get("assessment_id"),
+          metadata={"team_id": "agile", "stage": "scope_review", "job_id": jid, "decision": decision,
+                    "next_state": "scope_review", "feature_key": ba_res["feature_key"],
+                    "scope_ready": ba_res["scope_ready"],
                     "clarification_brief_artifact_id": result.get("brief_id"),
-                    "feature_intent": handoff.get("feature_intent"),
-                    "concepts_to_check": handoff.get("concepts_to_check"),
-                    "pca_run_id": result.get("run_id")})
-    print(f"[done] job {jid[:8]} decision={result['decision']} "
-          f"assessment={result.get('assessment_id')} brief={result.get('brief_id')}")
+                    "product_graph_scope_artifact_id": scope_artifact,
+                    "pca_run_id": result.get("run_id"), "ba_run_id": ba_res.get("run_id")})
+    print(f"[done] job {jid[:8]} scoped -> {ba_res['feature_key']} "
+          f"(scope_ready={ba_res['scope_ready']}, {ba_res['n_questions']} questions)")
 
 
 def main() -> None:

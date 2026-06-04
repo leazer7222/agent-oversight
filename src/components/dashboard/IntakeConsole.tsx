@@ -19,15 +19,16 @@ const SOURCE_TYPES = [
 type Job = {
   id: string; status: string; decision: string | null; pass: string; product_key: string
   brief_id: string | null; assessment_id: string | null; parent_job_id: string | null
+  feature_key: string | null; scope_ready: boolean | null; stage: string | null
   intake: { source_type: string; text: string }[] | null; created_at: string
 }
-type Detail = { job: Job; assessment: any; brief: any }
+type Detail = { job: Job; assessment: any; brief: any; scope: any }
 
-const TERMINAL = new Set(['done', 'clarify', 'blocked', 'error'])
+const TERMINAL = new Set(['done', 'clarify', 'blocked', 'error', 'scoped'])
 
 function statusVariant(s: string): 'default' | 'secondary' | 'outline' {
-  if (s === 'done') return 'default'
-  if (s === 'running' || s === 'queued') return 'secondary'
+  if (s === 'done' || s === 'scoped') return 'default'
+  if (s === 'running' || s === 'queued' || s === 'scoping') return 'secondary'
   return 'outline'
 }
 
@@ -111,6 +112,7 @@ export function IntakeConsole() {
   const job = detail?.job
   const a = detail?.assessment
   const brief = detail?.brief
+  const scope = detail?.scope
   const questions: string[] = a?.draft_brief?.open_questions ?? []
 
   return (
@@ -230,7 +232,7 @@ export function IntakeConsole() {
         )}
 
         {/* Final brief + handoff */}
-        {job && job.status === 'done' && brief && (
+        {job && brief && (
           <Card>
             <CardHeader><CardTitle className="text-sm">Clarification Brief</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -239,22 +241,54 @@ export function IntakeConsole() {
               <div><span className="text-zinc-500">Target user:</span> <span className="text-zinc-300">{brief.target_user}</span></div>
               {brief.handoff && (
                 <div className="rounded-md border border-emerald-900/50 bg-emerald-950/20 p-3">
-                  <div className="text-xs uppercase tracking-wide text-emerald-400">Handoff to CCA / BA</div>
+                  <div className="text-xs uppercase tracking-wide text-emerald-400">Handoff to scoping</div>
                   <div className="mt-1 text-zinc-200">{brief.handoff.feature_intent}</div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {(brief.handoff.concepts_to_check ?? []).map((c: string) => (
                       <Badge key={c} variant="secondary">{c}</Badge>
                     ))}
                   </div>
-                  {job.brief_id && (
-                    <div className="mt-2 font-mono text-xs text-zinc-500">
-                      clarification_brief_artifact_id: {job.brief_id}
-                    </div>
-                  )}
                 </div>
               )}
-              <Link href="/dashboard/scoping" className="inline-block text-xs text-zinc-400 underline hover:text-zinc-200">
-                Run CCA then BA, then view it under Scoping -&gt;
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Auto-chained scoping result (BA) */}
+        {job && job.status === 'scoping' && (
+          <Card><CardContent className="py-4 text-sm text-zinc-400">
+            Scoping against the codebase (BA)... this takes ~30s.
+          </CardContent></Card>
+        )}
+        {job && job.feature_key && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm">Scoped &middot; {job.feature_key}</CardTitle>
+              <Badge variant={job.scope_ready ? 'default' : 'outline'}>
+                {job.scope_ready ? 'scope-ready' : 'needs review'}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {(() => {
+                const qs = Array.isArray(scope?.nodes)
+                  ? scope.nodes.filter((n: any) => n.node_type === 'question' && n.status === 'open') : []
+                return qs.length > 0 ? (
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-zinc-500">Blocking questions ({qs.length})</div>
+                    <ul className="mt-1 space-y-1">
+                      {qs.map((q: any) => (
+                        <li key={q.node_key} className="text-zinc-300">
+                          &bull; {q.title}{' '}
+                          <span className="text-zinc-600">({q.node_key}, {q.divergence})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : <p className="text-emerald-400">No blocking questions — scope-ready.</p>
+              })()}
+              <Link href={`/dashboard/scoping/${job.feature_key}`}
+                className="inline-block text-xs text-zinc-200 underline hover:text-white">
+                Open in Scoping to answer &amp; ratify (Gate A) -&gt;
               </Link>
             </CardContent>
           </Card>

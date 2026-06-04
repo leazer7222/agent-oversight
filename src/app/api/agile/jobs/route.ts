@@ -7,7 +7,7 @@ export async function GET() {
   const sb = createServiceRoleClient()
   const { data, error } = await sb
     .from('agile_intake_jobs')
-    .select('id, status, decision, pass, product_key, brief_id, assessment_id, parent_job_id, intake, created_at')
+    .select('id, status, decision, pass, product_key, brief_id, assessment_id, parent_job_id, feature_key, scope_ready, stage, intake, created_at')
     .order('created_at', { ascending: false })
     .limit(25)
   if (error) return Response.json({ error: error.message }, { status: 500 })

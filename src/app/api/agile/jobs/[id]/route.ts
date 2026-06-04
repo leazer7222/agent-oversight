@@ -14,8 +14,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { data: job, error } = await sb.from('agile_intake_jobs').select('*').eq('id', id).single()
   if (error || !job) return Response.json({ error: 'job not found' }, { status: 404 })
 
-  const out: { job: unknown; assessment: unknown; brief: unknown } = { job, assessment: null, brief: null }
-  const j = job as { assessment_id?: string; brief_id?: string }
+  const out: { job: unknown; assessment: unknown; brief: unknown; scope: unknown } =
+    { job, assessment: null, brief: null, scope: null }
+  const j = job as { assessment_id?: string; brief_id?: string; scope_artifact_id?: string }
 
   if (j.assessment_id) {
     const { data } = await sb.from('agent_outputs').select('content').eq('id', j.assessment_id).single()
@@ -24,6 +25,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (j.brief_id) {
     const { data } = await sb.from('agent_outputs').select('content').eq('id', j.brief_id).single()
     out.brief = (data as { content: unknown } | null)?.content ?? null
+  }
+  if (j.scope_artifact_id) {
+    const { data } = await sb.from('agent_outputs').select('content').eq('id', j.scope_artifact_id).single()
+    out.scope = (data as { content: unknown } | null)?.content ?? null
   }
   return Response.json(out)
 }

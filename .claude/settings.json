@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh scripts/checkpoint.ps1 -Reason auto"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/checkpoint.ps1 -Reason auto"
           }
         ]
       }

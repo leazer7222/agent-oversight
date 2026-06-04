@@ -85,11 +85,15 @@ if (Test-Path $PidFile) {
 $checkpointScript = Join-Path $ProjectRoot "scripts\checkpoint.ps1"
 $intervalMs       = $IntervalMinutes * 60 * 1000
 
+# Prefer PowerShell Core (pwsh) if installed; fall back to Windows PowerShell (always present on Windows).
+# pwsh is NOT installed on every machine - hard-coding it silently breaks every checkpoint (see LESSONS_LEARNED).
+$psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+
 $scriptBlock = {
-    param($projectRoot, $checkpointScript, $intervalMs, $logFile)
+    param($projectRoot, $checkpointScript, $intervalMs, $logFile, $psExe)
 
     # Run immediately on start (catch anything uncommitted at session start)
-    & pwsh -File $checkpointScript -Reason "guardian-start" 2>&1 | Out-Null
+    & $psExe -NoProfile -ExecutionPolicy Bypass -File $checkpointScript -Reason "guardian-start" 2>&1 | Out-Null
 
     while ($true) {
         Start-Sleep -Milliseconds $intervalMs
@@ -98,11 +102,11 @@ $scriptBlock = {
         if (-not (Test-Path $projectRoot)) { break }
 
         # Run checkpoint
-        & pwsh -File $checkpointScript -Reason "guardian" 2>&1 | Out-Null
+        & $psExe -NoProfile -ExecutionPolicy Bypass -File $checkpointScript -Reason "guardian" 2>&1 | Out-Null
     }
 }
 
-$job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $ProjectRoot, $checkpointScript, $intervalMs, $LogFile
+$job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $ProjectRoot, $checkpointScript, $intervalMs, $LogFile, $psExe
 
 # Save PID (Job.Id is not a real PID, but we can find the child process)
 # For simplicity, save the PowerShell Job ID and use Get-Job to check

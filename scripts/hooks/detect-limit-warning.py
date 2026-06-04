@@ -86,8 +86,14 @@ def main() -> None:
     script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     checkpoint = os.path.join(script_dir, "checkpoint.ps1")
 
+    # Prefer pwsh (PowerShell Core) if installed; fall back to Windows PowerShell (always present
+    # on Windows). pwsh is NOT installed on every machine — hard-coding it silently no-ops the
+    # checkpoint (see LESSONS_LEARNED: the whole checkpoint system was dead on this machine).
+    import shutil
+    ps_exe = shutil.which("pwsh") or shutil.which("powershell") or "powershell"
+
     subprocess.run(
-        ["pwsh", "-File", checkpoint, "-Reason", "limit-warning"],
+        [ps_exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", checkpoint, "-Reason", "limit-warning"],
         capture_output=True,
         timeout=30,
     )

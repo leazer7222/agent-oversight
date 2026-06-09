@@ -136,12 +136,21 @@ management-facing artifact so it looks deliberate.
 The gap to full automation is a data-discipline problem, not a code problem. Two levers: convert
 judgment into rules/data, and let the LLM draft soft narrative so the human only approves.
 
-### Sprint Health formula (deterministic)
+### Sprint Health formula (goal-aware)
+Goal achievement is the PRIMARY signal and overrides the raw-completion formula. A sprint that
+hits its committed goal is NOT red just because lower-priority stories were consciously deferred to
+land that goal. Completion percent is secondary context, not the headline.
 ```
-GREEN  = completion >= 80%  AND scope-creep < 20%  AND 0 unresolved blockers
-YELLOW = completion 50-79%  OR  scope-creep 20-40% OR  1-2 blockers
-RED    = completion < 50%   OR  scope-creep > 40%  OR  >= 3 blockers / goal missed
+IF sprint goal achieved        -> GREEN (note any deliberate carryover as a trade-off)
+ELSE IF no goal set / goal partial:
+  GREEN  = completion >= 80%  AND scope-creep < 20%  AND 0 unresolved blockers
+  YELLOW = completion 50-79%  OR  scope-creep 20-40% OR  1-2 blockers
+  RED    = completion < 50%   OR  scope-creep > 40%  OR  >= 3 blockers / goal missed
 ```
+Lesson (Sprint 1): a pure completion-% formula scored Sprint 1 RED (34% done, 3 blockers) when it
+was actually GREEN - the infrastructure-transition goal was fully achieved, and low throughput on
+other stories was the deliberate cost of landing it. This is why goal achievement must dominate.
+This also requires the sprint goal to be recorded in Jira (Sprint 1's was not, in the sprint field).
 
 ### Goal Assessment (via convention)
 Tag the issues/epic that deliver the sprint goal (label `sprint-goal` - decision pending).

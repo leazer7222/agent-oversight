@@ -8,8 +8,8 @@
   :root{
     --bg:#ffffff; --fg:#0a0a0a; --muted:#737373; --border:#e5e5e5; --surface:#f5f5f5;
     --teal:#00ADB5; --tealDark:#009AA2; --badge:#3B8AA2; --logoTeal:#5BA4B0;
-    --green:#009588; --orange:#f05100; --blue:#104e64; --yellow:#fcbb00; --amber:#f99c00;
-    --red:#e40014;
+    --green:#27AE60; --orange:#F5A623; --blue:#2D9CDB; --yellow:#F2C94C; --amber:#F5A623;
+    --red:#EB5757;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
@@ -19,10 +19,8 @@
   .page:last-child{page-break-after:auto;}
 
   /* Header */
-  .brand{display:flex; align-items:center; gap:10px;}
-  .brand .mark{width:34px; height:38px;}
-  .brand .word{font-weight:700; font-size:20px; letter-spacing:-0.5px;}
-  .brand .word b{color:var(--teal);}
+  .brand{display:flex; align-items:center;}
+  .brand .logo{height:56px; width:300px; object-fit:cover; object-position:center;}
   .topbar{display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:1px solid var(--border);}
   .topbar .meta{text-align:right; font-size:11px; color:var(--muted);}
 
@@ -85,10 +83,7 @@
 <!-- ============ PAGE 1 ============ -->
 <div class="page">
   <div class="topbar">
-    <div class="brand">
-      <svg class="mark" viewBox="0 0 34 38"><polygon points="17,1 33,10 33,28 17,37 1,28 1,10" fill="none" stroke="var(--logoTeal)" stroke-width="2"/><path d="M11 27 L17 11 L23 27 M13.5 21 H20.5" stroke="var(--logoTeal)" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>
-      <span class="word">Reform-<b>A.i</b></span>
-    </div>
+    <div class="brand"><img class="logo" src="logo_en.png" alt="Reform-A.i - Renovation Made Easy"></div>
     <div class="meta">Sprint Review<br>Generated 2026-06-09</div>
   </div>
 

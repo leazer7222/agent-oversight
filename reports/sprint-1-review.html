@@ -184,46 +184,45 @@
   </div>
 
   <div class="kpis" style="margin-top:18px;">
-    <div class="kpi"><div class="label">Committed</div><div class="val teal">31</div><div class="foot">work items</div></div>
-    <div class="kpi"><div class="label">Stories / Bugs</div><div class="val">20 / 11</div><div class="foot">by type</div></div>
-    <div class="kpi"><div class="label">Sized</div><div class="val amber">16 / 31</div><div class="foot">52% have a size</div></div>
-    <div class="kpi"><div class="label">Owners</div><div class="val">20 / 9</div><div class="foot">Kay / Charles</div></div>
+    <div class="kpi"><div class="label">Committed</div><div class="val teal">31</div><div class="foot">20 stories / 11 bugs</div></div>
+    <div class="kpi"><div class="label">Sized</div><div class="val green">28 / 31</div><div class="foot">3 unsized are Done</div></div>
+    <div class="kpi"><div class="label">Carryover</div><div class="val">19</div><div class="foot">only 9 net-new</div></div>
+    <div class="kpi"><div class="label">Readiness</div><div class="val green">Ready</div><div class="foot">gate passed</div></div>
   </div>
 
   <h2 class="sec"><span class="bar"></span>Committed Scope</h2>
   <div class="chartrow" style="grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
     <div>
-      <div class="barlbl"><span>By size</span><span></span></div>
-      <div class="barlbl"><span>XS</span><span>4</span></div><div class="track"><div class="fill" style="width:27%; background:var(--teal);"></div></div>
-      <div class="barlbl"><span>S</span><span>4</span></div><div class="track"><div class="fill" style="width:27%; background:var(--teal);"></div></div>
-      <div class="barlbl"><span>M</span><span>4</span></div><div class="track"><div class="fill" style="width:27%; background:var(--teal);"></div></div>
-      <div class="barlbl"><span>L</span><span>1</span></div><div class="track"><div class="fill" style="width:7%; background:var(--teal);"></div></div>
-      <div class="barlbl"><span>Spike</span><span>3</span></div><div class="track"><div class="fill" style="width:20%; background:var(--blue);"></div></div>
-      <div class="barlbl"><span>Unsized</span><span>15</span></div><div class="track"><div class="fill" style="width:100%; background:var(--amber);"></div></div>
+      <div class="barlbl"><span>By size</span><span>28 sized</span></div>
+      <div class="barlbl"><span>XS</span><span>8</span></div><div class="track"><div class="fill" style="width:89%; background:var(--teal);"></div></div>
+      <div class="barlbl"><span>S</span><span>9</span></div><div class="track"><div class="fill" style="width:100%; background:var(--teal);"></div></div>
+      <div class="barlbl"><span>M</span><span>7</span></div><div class="track"><div class="fill" style="width:78%; background:var(--teal);"></div></div>
+      <div class="barlbl"><span>L</span><span>1</span></div><div class="track"><div class="fill" style="width:11%; background:var(--teal);"></div></div>
+      <div class="barlbl"><span>Spike</span><span>3</span></div><div class="track"><div class="fill" style="width:33%; background:var(--blue);"></div></div>
     </div>
     <div>
       <div class="barlbl"><span>By initiative</span><span></span></div>
-      <div class="barlbl"><span>Product</span><span>21</span></div><div class="track"><div class="fill" style="width:100%; background:var(--orange);"></div></div>
-      <div class="barlbl"><span>Tech Debt</span><span>2</span></div><div class="track"><div class="fill" style="width:10%; background:var(--blue);"></div></div>
-      <div class="barlbl"><span>Infrastructure</span><span>1</span></div><div class="track"><div class="fill" style="width:5%; background:var(--green);"></div></div>
-      <div class="barlbl"><span>Not linked to an epic</span><span>7</span></div><div class="track"><div class="fill" style="width:33%; background:var(--amber);"></div></div>
-      <div class="legend" style="margin-top:10px;"><strong>Team:</strong> Kay Plata 20 items &middot; Charles Leazer 9 &middot; 2 unassigned.</div>
+      <div class="barlbl"><span>Product</span><span>22</span></div><div class="track"><div class="fill" style="width:100%; background:var(--orange);"></div></div>
+      <div class="barlbl"><span>Infrastructure</span><span>4</span></div><div class="track"><div class="fill" style="width:18%; background:var(--green);"></div></div>
+      <div class="barlbl"><span>Business Design</span><span>3</span></div><div class="track"><div class="fill" style="width:14%; background:var(--blue);"></div></div>
+      <div class="barlbl"><span>Tech Debt</span><span>2</span></div><div class="track"><div class="fill" style="width:9%; background:var(--amber);"></div></div>
+      <div class="legend" style="margin-top:10px;"><strong>Team:</strong> Kay drives build &middot; Charles on design + QA.</div>
     </div>
   </div>
 
-  <h2 class="sec"><span class="bar"></span>Readiness Check</h2>
+  <h2 class="sec"><span class="bar"></span>Readiness &amp; Watch</h2>
   <div class="two">
-    <div class="card" style="border-left:5px solid var(--amber);">
-      <strong style="font-size:13px;">Before locking the sprint</strong>
-      <ul class="clean warn">
-        <li><strong>15 items unsized (48%)</strong> - size them so capacity is real</li>
-        <li><strong>7 items not linked to an epic</strong> - assign an initiative</li>
-        <li><strong>2 items unassigned</strong> - give them an owner</li>
+    <div class="card" style="border-left:5px solid var(--green);">
+      <strong style="font-size:13px;">Plan-ready</strong>
+      <ul class="clean">
+        <li>All 31 items linked to an epic</li>
+        <li>All active items t-shirt sized</li>
+        <li>All active items have an owner</li>
       </ul>
     </div>
-    <div class="card" style="border-left:5px solid var(--blue);">
+    <div class="card" style="border-left:5px solid var(--amber);">
       <strong style="font-size:13px;">Planning watch</strong>
-      <p style="font-size:12.5px; margin-top:8px;">31 items committed vs 13 delivered in Sprint 1. With sizing only half complete and a 4-day, two-person cadence, the scope looks ambitious. Apply the Sprint 1 lesson: budget the goal work (Wompi + Dashboards) first, finish sizing, then trim to a realistic commit before locking.</p>
+      <p style="font-size:12.5px; margin-top:8px;"><strong>19 of 31 items are carryover</strong> from Sprint 1 &mdash; only 9 are net-new. Sprint 2 is largely about finishing the work that was deliberately deprioritized to land Sprint 1's goal. Watch for piling new scope on top of a 19-item backlog.</p>
     </div>
   </div>
 

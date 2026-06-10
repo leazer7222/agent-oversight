@@ -2,7 +2,7 @@
 
 **Definition UUID:** `04c82526-fa49-4241-9bbf-674a0a64108a`
 **Instance:** `reformai.jira-sprint-reporting-agent` (`5544edd7-fe39-4340-9063-f9f71aef85b9`)
-**Owner:** `reformai` | **Type:** `worker` | **Status:** registered (capability proven; telemetry runtime pending)
+**Owner:** `reformai` | **Type:** `worker` | **Status:** ACTIVE (registered; runtime emits telemetry)
 
 The first capability of the ReformAI Jira Agent. Turns Jira + Confluence data into two
 sprint artifacts, with a human-gated write-back for t-shirt sizing.
@@ -50,16 +50,25 @@ Key design choices:
   board API, which the integration does not expose); deletes; schema/permission changes;
   accepting or closing work.
 
-## Run (current state)
+## Run
 
-There is no packaged autonomous runtime (`agent.py`) yet. The capability is currently driven
-interactively through the Atlassian MCP. First reports are live in Confluence space RAPD:
+```
+python agents/library/jira-sprint-reporting-agent/agent.py --smoke   # telemetry + config only
+python agents/library/jira-sprint-reporting-agent/agent.py           # live: pull latest closed sprint
+```
+`agent.py` emits `run_started`/`run_completed` via the `oversight` SDK (no LLM calls -> reports
+`cost_usd=0`, `cost_reported=true`). Live mode needs `ATLASSIAN_EMAIL` + `ATLASSIAN_API_TOKEN` in
+`.env.local`; `--smoke` runs without them.
+
+First reports are live in Confluence space RAPD:
 - Sprint 1 - Review Analysis (page `166723587`)
 - Sprint 2 - Planning (page `166985730`)
 - Management PDF: `reports/sprint-1-review.pdf`
 
 ## Registration status
 
-Registered in Supabase for catalog/identity (`agent_definitions` + `agents`). Status is
-`paused` until a telemetry-emitting runtime (emits `run_started`/`run_completed` to `/api/ingest`
-per Agent Standards) is built. The capability itself is proven and producing real artifacts.
+ACTIVE. Registered in Supabase (`agent_definitions` + `agents`); `metadata.runtime_implemented=true`.
+Telemetry smoke-tested (run `51a54fba-1b8e-4747-9d61-f563c12538ce`, `status=completed`). The runtime
+covers connect + sprint metrics + telemetry; the rich Confluence/PDF authoring is still produced via
+the Atlassian MCP. Add an Atlassian API token to run the live pull headless. Flip status with
+`node scripts/set_jira_agent_status.js <active|paused>`.

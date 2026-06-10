@@ -259,21 +259,30 @@ Site: `reform-ai-team.atlassian.net` | cloudId: `6c97a9a2-291e-4c35-89da-b7c3d24
 
 ---
 
-## 12. Registration - DONE (catalog) / runtime telemetry pending
+## 12. Registration - DONE and ACTIVE
 
-Registered 2026-06-10 via `scripts/register_jira_sprint_agent.js`.
+Registered + activated 2026-06-10.
 - [x] Registered in Supabase: definition `04c82526-fa49-4241-9bbf-674a0a64108a`
   (`jira-sprint-reporting-agent`) + instance `5544edd7-fe39-4340-9063-f9f71aef85b9`
   (`reformai.jira-sprint-reporting-agent`), company ReformAI, worker, trigger `manual`.
-- [x] `agent.json` + `README.md` + `LESSONS.md` in `agents/library/jira-sprint-reporting-agent/`.
+- [x] `agent.json` + `README.md` + `LESSONS.md` + `agent.py` in `agents/library/jira-sprint-reporting-agent/`.
 - [x] MCP/Jira dependencies declared in `agent.json` (Atlassian; Jira + Confluence scopes).
-- [ ] Emit `run_started` / `run_completed` to `/api/ingest` with unique `run_id` - NOT done.
-- [ ] Report `tokens_in` / `tokens_out` / `cost_usd` - NOT done.
+- [x] Emits `run_started` / `run_completed` to `/api/ingest` with unique `run_id` (via `oversight`
+  SDK). Smoke-tested: run `51a54fba-1b8e-4747-9d61-f563c12538ce` recorded `status=completed`.
+- [x] Reports tokens/cost: this runtime makes NO LLM calls, so it reports `cost_usd=0` with
+  `cost_reported=true` (honest zero-cost deterministic API work).
 
-Status is `paused` on purpose: the capability is proven and live, but there is no packaged
-telemetry-emitting runtime yet (it is driven interactively via the Atlassian MCP). Flip the
-instance to `active` only once a runtime that emits `run_started`/`run_completed` exists - ingest
-returns 403 for non-active agents, so do not flip early. `metadata.runtime_implemented=false`.
+Status is `active`, `metadata.runtime_implemented=true`. Runtime entrypoint:
+`agents/library/jira-sprint-reporting-agent/agent.py` (`--smoke` for telemetry-only; default mode
+pulls the latest closed sprint and computes count-based metrics). The live Jira pull needs an
+Atlassian API token (`ATLASSIAN_EMAIL` + `ATLASSIAN_API_TOKEN`); `--smoke` runs without it.
+Scripts: `register_jira_sprint_agent.js`, `set_jira_agent_status.js <active|paused>`.
+
+Remaining to make the runtime fully autonomous (not blocking active status):
+- Add an Atlassian API token to env so the default (live) mode can pull Jira headless.
+- Port the full report-generation (Confluence page authoring + PDF render) into the runtime; today
+  the rich authoring is still done via the Atlassian MCP, while `agent.py` covers connect + metrics
+  + telemetry. Trigger on sprint close is future work.
 
 Shape chosen: a standalone `worker` (definition + ReformAI instance). A future `reformai.jira-agent`
 orchestrator could parent this and other Jira capabilities (backlog hygiene, config, dashboards).

@@ -69,6 +69,9 @@
   td{padding:7px 8px; border-bottom:1px solid var(--border);}
   .lozenge{font-size:10px; font-weight:700; padding:2px 9px; border-radius:9999px; color:#fff;}
   .lz-todo{background:#94a3b8;} .lz-prog{background:var(--amber);} .lz-qa{background:var(--blue);} .lz-block{background:var(--red);} .lz-done{background:var(--green);}
+  table.scope{font-size:10px;} table.scope th{padding:4px 6px;} table.scope td{padding:3px 6px; vertical-align:middle;}
+  .grp{font-size:13px; font-weight:700; margin:15px 0 3px; color:var(--blue);}
+  .cotag{display:inline-block; font-size:8.5px; font-weight:800; color:#fff; background:#8270DB; padding:1px 6px; border-radius:5px;}
 
   ul.clean{list-style:none;}
   ul.clean li{padding:6px 0 6px 18px; position:relative; border-bottom:1px solid var(--border); font-size:12.5px;}
@@ -210,21 +213,66 @@
     </div>
   </div>
 
-  <h2 class="sec"><span class="bar"></span>Readiness &amp; Watch</h2>
-  <div class="two">
-    <div class="card" style="border-left:5px solid var(--green);">
-      <strong style="font-size:13px;">Plan-ready</strong>
-      <ul class="clean">
-        <li>All 31 items linked to an epic</li>
-        <li>All active items t-shirt sized</li>
-        <li>All active items have an owner</li>
-      </ul>
-    </div>
-    <div class="card" style="border-left:5px solid var(--amber);">
-      <strong style="font-size:13px;">Planning watch</strong>
-      <p style="font-size:12.5px; margin-top:8px;"><strong>19 of 31 items are carryover</strong> from Sprint 1 &mdash; only 9 are net-new. Sprint 2 is largely about finishing the work that was deliberately deprioritized to land Sprint 1's goal. Watch for piling new scope on top of a 19-item backlog.</p>
-    </div>
+  <h2 class="sec"><span class="bar"></span>Planning Watch</h2>
+  <div class="card" style="border-left:5px solid var(--amber);">
+    <p style="font-size:13px;"><strong>19 of 31 items are carryover</strong> from Sprint 1 &mdash; only 9 are net-new. Sprint 2 is largely about finishing the work that was deliberately deprioritized to land Sprint 1's goal. Watch for piling new scope on top of a 19-item backlog.</p>
   </div>
+
+  <div class="footer"><span>Reform-A.i &middot; Sprint 1 Review</span><span>Confidential</span></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <div class="eyebrow">Sprint 2</div>
+  <h1 style="font-size:32px; margin-top:6px;">What's in Scope</h1>
+  <p style="color:var(--muted); margin-top:6px; font-size:12px;">All 31 committed items &mdash; every story and bug. <span class="cotag">CO</span> = carryover from Sprint 1.</p>
+
+  <div class="grp">Business Design (3)</div>
+  <table class="scope"><thead><tr><th>Key</th><th>Size</th><th>Status</th><th>Owner</th><th></th><th>Summary</th></tr></thead><tbody>
+  <tr><td>RAI-546</td><td>L</td><td><span class="lozenge lz-todo">To Do</span></td><td>Charles</td><td></td><td>Design for Supplier Catalogs</td></tr>
+  <tr><td>RAI-625</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Charles</td><td></td><td>Design Creating a Project from the Visualization</td></tr>
+  <tr><td>RAI-628</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Charles</td><td></td><td>Research other tools to track how users interact with platform</td></tr>
+  </tbody></table>
+
+  <div class="grp">Product (22)</div>
+  <table class="scope"><thead><tr><th>Key</th><th>Type</th><th>Size</th><th>Status</th><th>Owner</th><th></th><th>Summary</th></tr></thead><tbody>
+  <tr><td>RAI-608</td><td>Story</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>Update Wompi Account to New ReformAI Bank Account</td></tr>
+  <tr><td>RAI-622</td><td>Story</td><td>S</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>Update Broker Agreement for White Glove Service</td></tr>
+  <tr><td>RAI-550</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>Service Providers: Update Subscription</td></tr>
+  <tr><td>RAI-124</td><td>Story</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Dashboard</td></tr>
+  <tr><td>RAI-148</td><td>Story</td><td>S</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Dashboard</td></tr>
+  <tr><td>RAI-23</td><td>Story</td><td>S</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Dashboard</td></tr>
+  <tr><td>RAI-65</td><td>Story</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Teams</td></tr>
+  <tr><td>RAI-592</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Remove Moodboards from Homeowner Subscription</td></tr>
+  <tr><td>RAI-602</td><td>Bug</td><td>S</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Distressed Assets: restore 3-tier photo option</td></tr>
+  <tr><td>RAI-607</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Inspiration Hub: Style Filter not working</td></tr>
+  <tr><td>RAI-548</td><td>Story</td><td>S</td><td><span class="lozenge lz-prog">In Prog</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>FAQ</td></tr>
+  <tr><td>RAI-601</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-prog">In Prog</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Seller Module: Before/After photos not showing</td></tr>
+  <tr><td>RAI-610</td><td>Story</td><td>S</td><td><span class="lozenge lz-prog">In Prog</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Review and suggest for the Landing Pages</td></tr>
+  <tr><td>RAI-437</td><td>Story</td><td>S</td><td><span class="lozenge lz-qa">QA</span></td><td>Charles</td><td></td><td>Create Home Seller User Type</td></tr>
+  <tr><td>RAI-547</td><td>Story</td><td>S</td><td><span class="lozenge lz-qa">QA</span></td><td>Charles</td><td><span class="cotag">CO</span></td><td>Help Centre</td></tr>
+  <tr><td>RAI-593</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-qa">QA</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Quick Jobs: Wallpaper option + optional measurements</td></tr>
+  <tr><td>RAI-605</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-qa">QA</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>Prod: SP profile showing specialties in English</td></tr>
+  <tr><td>RAI-613</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-qa">QA</span></td><td>Charles</td><td><span class="cotag">CO</span></td><td>Update Materials in Project to Spanish</td></tr>
+  <tr><td>RAI-619</td><td>Bug</td><td>XS</td><td><span class="lozenge lz-qa">QA</span></td><td>Charles</td><td><span class="cotag">CO</span></td><td>Bid estimated value rounding issue</td></tr>
+  <tr><td>RAI-201</td><td>Bug</td><td>-</td><td><span class="lozenge lz-done">Done</span></td><td>Charles</td><td><span class="cotag">CO</span></td><td>SP Registration: Custom hours toggle</td></tr>
+  <tr><td>RAI-228</td><td>Bug</td><td>-</td><td><span class="lozenge lz-done">Done</span></td><td>Charles</td><td><span class="cotag">CO</span></td><td>Admin: Rejecting Service Providers</td></tr>
+  <tr><td>RAI-67</td><td>Story</td><td>-</td><td><span class="lozenge lz-done">Done</span></td><td>&mdash;</td><td><span class="cotag">CO</span></td><td>Project Tools</td></tr>
+  </tbody></table>
+
+  <div class="grp">Tech Debt (2)</div>
+  <table class="scope"><thead><tr><th>Key</th><th>Type</th><th>Size</th><th>Status</th><th>Owner</th><th></th><th>Summary</th></tr></thead><tbody>
+  <tr><td>RAI-579</td><td>Story</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>[DATA] Automated DB migration pipelines and rollback strategies</td></tr>
+  <tr><td>RAI-582</td><td>Story</td><td>S</td><td><span class="lozenge lz-prog">In Prog</span></td><td>Kay</td><td><span class="cotag">CO</span></td><td>[LOGIC] Migrate hardcoded filter prices/ranges to DB</td></tr>
+  </tbody></table>
+
+  <div class="grp">Infrastructure (4)</div>
+  <table class="scope"><thead><tr><th>Key</th><th>Type</th><th>Size</th><th>Status</th><th>Owner</th><th></th><th>Summary</th></tr></thead><tbody>
+  <tr><td>RAI-467</td><td>Story</td><td>M</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>GCP: Install a function to determine cost per API call</td></tr>
+  <tr><td>RAI-623</td><td>Story</td><td>Spike</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>Analysis Task: Web Scraper for Seller Module</td></tr>
+  <tr><td>RAI-626</td><td>Story</td><td>Spike</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>Automate the pipeline to Jira to connect each Story/Bug with versioning</td></tr>
+  <tr><td>RAI-627</td><td>Story</td><td>Spike</td><td><span class="lozenge lz-todo">To Do</span></td><td>Kay</td><td></td><td>Implement Code Review in GitHub</td></tr>
+  </tbody></table>
 
   <div class="footer"><span>Reform-A.i &middot; Sprint 1 Review</span><span>Confidential</span></div>
 </div>

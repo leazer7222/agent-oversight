@@ -1,0 +1,49 @@
+{
+  "agent_id": "04c82526-fa49-4241-9bbf-674a0a64108a",
+  "name": "jira-sprint-reporting-agent",
+  "display_name": "Jira Sprint Reporting Agent",
+  "description": "Pulls a completed sprint, its retrospective, and the upcoming sprint from Jira and Confluence, and assembles two artifacts: a comprehensive internal Sprint Review Analysis (Confluence page) and a distilled, brand-styled Management Report (PDF). Read-only on Jira except a human-gated t-shirt-size write-back; writes Confluence pages only. First capability of the ReformAI Jira Agent.",
+  "owner": "reformai",
+  "version": "1.0.0",
+  "agent_type": "worker",
+  "instance_type": "stateless",
+  "capability_tags": [
+    "sprint_reporting",
+    "agile_metrics",
+    "jira_integration",
+    "confluence_authoring",
+    "sprint_planning",
+    "management_reporting"
+  ],
+  "mcp_dependencies": [
+    {
+      "name": "atlassian",
+      "surface": "Jira + Confluence Cloud",
+      "scopes": ["read:jira-work", "write:jira-work", "read:page:confluence", "write:page:confluence"]
+    }
+  ],
+  "design_spec": "docs/agent-jira-sprint-reporting.md",
+  "reads": {
+    "jira": "sprints, issues, epics, t-shirt size (customfield_10225), sprint field (customfield_10020); count-based (no story points)",
+    "confluence": "Sprint N - Retro page (structured page, never a whiteboard)"
+  },
+  "writes": {
+    "jira": "READ-ONLY except customfield_10225 (T-Shirt Size) write-back - human chooses the value, agent transcribes; never estimates. Cannot move issues between/out of sprints (Agile board API not available).",
+    "confluence": "creates/updates pages in space RAPD (Sprint N - Review Analysis, Sprint N - Planning)",
+    "pdf": "reports/sprint-1-review.html -> .pdf, rendered via Edge headless"
+  },
+  "autonomy": {
+    "auto": "read-only metrics, Confluence page generation",
+    "human_gated": "t-shirt size write-back to Jira",
+    "prohibited": "sprint membership changes, deletes, schema/permission changes, accepting/closing work"
+  },
+  "env_vars": {
+    "required": [
+      "OVERSIGHT_URL",
+      "AGENT_OVERSIGHT_SECRET",
+      "JIRA_SPRINT_REPORTING_AGENT_ID",
+      "ATLASSIAN_CLOUD_ID"
+    ],
+    "atlassian_auth": "Atlassian API token (email + token) or OAuth 2.0 3LO; runtime currently driven via the Atlassian MCP"
+  }
+}

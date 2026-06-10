@@ -259,17 +259,24 @@ Site: `reform-ai-team.atlassian.net` | cloudId: `6c97a9a2-291e-4c35-89da-b7c3d24
 
 ---
 
-## 12. Registration - pending (Agent Oversight committee)
+## 12. Registration - DONE (catalog) / runtime telemetry pending
 
-To be completed AFTER the first report proves the pipeline. Per `AGENTS.md` standards:
-- [ ] Register in Supabase `agents` table with stable UUID `agent_id`.
-- [ ] `agent.json` identity manifest + `README.md`.
-- [ ] Emit `run_started` / `run_completed` to `/api/ingest` with unique `run_id` per run.
-- [ ] Report `tokens_in` / `tokens_out` / `cost_usd` on completion.
-- [ ] Declare MCP/Jira dependencies in `agent.json`.
+Registered 2026-06-10 via `scripts/register_jira_sprint_agent.js`.
+- [x] Registered in Supabase: definition `04c82526-fa49-4241-9bbf-674a0a64108a`
+  (`jira-sprint-reporting-agent`) + instance `5544edd7-fe39-4340-9063-f9f71aef85b9`
+  (`reformai.jira-sprint-reporting-agent`), company ReformAI, worker, trigger `manual`.
+- [x] `agent.json` + `README.md` + `LESSONS.md` in `agents/library/jira-sprint-reporting-agent/`.
+- [x] MCP/Jira dependencies declared in `agent.json` (Atlassian; Jira + Confluence scopes).
+- [ ] Emit `run_started` / `run_completed` to `/api/ingest` with unique `run_id` - NOT done.
+- [ ] Report `tokens_in` / `tokens_out` / `cost_usd` - NOT done.
 
-Likely shape: a `worker` capability, possibly under a Jira orchestrator instance
-`reformai.jira-agent`. Decide definition-vs-instance split at registration time.
+Status is `paused` on purpose: the capability is proven and live, but there is no packaged
+telemetry-emitting runtime yet (it is driven interactively via the Atlassian MCP). Flip the
+instance to `active` only once a runtime that emits `run_started`/`run_completed` exists - ingest
+returns 403 for non-active agents, so do not flip early. `metadata.runtime_implemented=false`.
+
+Shape chosen: a standalone `worker` (definition + ReformAI instance). A future `reformai.jira-agent`
+orchestrator could parent this and other Jira capabilities (backlog hygiene, config, dashboards).
 
 ---
 

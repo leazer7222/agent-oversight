@@ -77,6 +77,15 @@ Template to copy from: `/agents/library/_template/`
     - Schemas: input `agents/library/codebase-context-agent/docs/input-contract.md` -> output `docs/schemas/codebase-context.schema.json`
     - Storage: `platform.cbc_identity_registry` / `cbc_registry_events` (migration 025) + `agent_outputs.output_type='codebase_context'` (migration 027) - **APPLIED** to `hdhovyrlnfojtkqbcegh`
 
+### Jira Team
+- **jira-sprint-reporting-agent** ([library](agents/library/jira-sprint-reporting-agent/))
+    - Purpose: Pulls a completed sprint, its retrospective, and the upcoming sprint from Jira + Confluence and assembles two artifacts: a comprehensive internal **Sprint Review Analysis** (Confluence) and a distilled, brand-styled **Management Report** (PDF). Also produces a **Sprint Planning** readiness page with a human-gated t-shirt-size write-back to Jira. First capability of the ReformAI Jira Agent.
+    - agent_id (definition): `04c82526-fa49-4241-9bbf-674a0a64108a` | Instance: `reformai.jira-sprint-reporting-agent` (`5544edd7-fe39-4340-9063-f9f71aef85b9`)
+    - Status: **Paused** - capability proven and live (Sprint 1 Review page `166723587`, Sprint 2 Planning page `166985730`, management PDF), but no packaged telemetry-emitting runtime yet; driven interactively via the Atlassian MCP. `metadata.runtime_implemented=false`. | Owner: `reformai` | Type: `worker`
+    - **Design spec:** [docs/agent-jira-sprint-reporting.md](docs/agent-jira-sprint-reporting.md)
+    - Jira: project `RAI` (board 3), count-based (no story points); goal-aware health. Confluence: space `RAPD`. Read-only on Jira except the human-gated t-shirt-size (`customfield_10225`) write-back; cannot move issues between/out of sprints (Agile board API not exposed). Writes Confluence pages only. PDF via Edge headless.
+    - Register: `node scripts/register_jira_sprint_agent.js`
+
 
 ## Required at runtime
 

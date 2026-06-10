@@ -565,3 +565,35 @@ Add new lessons at the end of each session.
 - `graph_feature_detail` (one-hop) could not see Decisions (2 hops) let alone Rules (3 hops). Use a
   typed fixed-shape traversal (`graph_feature_graph`) that follows provenance edges and treats shared
   Concepts as leaves (+ owned Attributes) so they do not bleed in other features' nodes.
+
+---
+
+## Hooks with relative paths deadlock the whole session if the shell CWD moves
+
+### Root cause
+- `.claude/settings.json` PreToolUse hooks were configured with RELATIVE commands
+  (`python scripts/hooks/detect-limit-warning.py`, `check-git-push.py`). Hooks run from the
+  Bash tool's persistent working directory.
+- A single `cd .workspace/Reform-AI && ...` in one Bash call left the shell parked inside
+  `.workspace/Reform-AI`. The relative hook path then resolved to
+  `.workspace/Reform-AI/scripts/hooks/detect-limit-warning.py`, which does not exist.
+- Python "can't open file" exits with **code 2**. Claude Code treats a PreToolUse hook exit
+  code 2 as **"block this tool."** The `.*` matcher meant EVERY tool (Bash, PowerShell, Glob,
+  Read, Write, Agent) was blocked — including the `cd` that would undo it. Total deadlock; only
+  a session restart cleared it (restart resets the Bash CWD to project root).
+
+### Fixes (applied)
+- All three hook commands now use `$CLAUDE_PROJECT_DIR` absolute paths, e.g.
+  `python "$CLAUDE_PROJECT_DIR/scripts/hooks/check-git-push.py"` and
+  `powershell ... -File "$CLAUDE_PROJECT_DIR/scripts/checkpoint.ps1"`. A stray `cd` can no
+  longer break hook resolution. (Takes effect on next session start.)
+
+### Standing rules
+- NEVER configure a hook command with a relative script path — always `$CLAUDE_PROJECT_DIR/...`.
+- Do NOT `cd` into `.workspace/<clone>` in a Bash call; the CWD persists across calls and the
+  clone has no `scripts/hooks/`. Use absolute paths or the Glob/Grep/Read tools (with explicit
+  path args) instead. To explore an external clone, prefer Explore subagents — they spawn fresh
+  at the project root and are unaffected by the parent shell's CWD.
+- If every tool suddenly errors with `PreToolUse ... hook error: can't open file
+  '...\.workspace\...\scripts\hooks\...'`, the shell CWD has moved. A session restart is the
+  reliable escape; on restart, fix the hook to use $CLAUDE_PROJECT_DIR.

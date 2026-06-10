@@ -1,14 +1,14 @@
 # Jira Agent - Sprint Reporting Capability
 
-Status: DESIGN (pre-build) | Owner: `reformai` | Type: capability within Agent Oversight
-Last updated: 2026-06-09
+Status: BUILT (first reports live, unregistered) | Owner: `reformai` | Type: capability within Agent Oversight
+Last updated: 2026-06-10
 
 This document specifies the Sprint Reporting capability of the ReformAI Jira Agent. It is a
 capability inside the existing Agent Oversight framework, NOT new agent infrastructure. The
 underlying orchestration, oversight, permissions, logging, and execution controls already exist.
 
-This capability is unregistered as of this writing. Plan: build templates -> generate the first
-real report -> register the agent properly via Agent Oversight (see "Registration - pending").
+First reports are built and live (see Section 14). The agent is still unregistered. Plan: prove
+the reports over 1-2 sprints -> register the agent properly via Agent Oversight (Section 12).
 
 ---
 
@@ -218,7 +218,10 @@ Site: `reform-ai-team.atlassian.net` | cloudId: `6c97a9a2-291e-4c35-89da-b7c3d24
 
 ### Epic -> initiative category mapping (maintained list)
 - Tech Debt: `RAI-558` ([Tech Debt] System Stabilization, Observability, Architecture Remediation).
-- Infrastructure: `RAI-161` (Technical Infrastructure), `RAI-159` (Integrations - 3rd-party tools).
+- Infrastructure: `RAI-161` (Technical Infrastructure), `RAI-159` (Integrations - 3rd-party tools),
+  plus other infra epics linked under 161/159.
+- Business Design: `RAI-629` (Business Design) - design stories; broken out as its OWN group in
+  planning, separate from Product (per Charles - these are design work he owns).
 - Product: everything else (RAI-160 UI/UX, RAI-147 Distressed Assets, RAI-146 Admin Webpage,
   RAI-83 HomeOwner/HomeBuyer, RAI-1 Vendor Web App).
 - New epics default to Product until classified. Agent reads issue parent epic to categorize.
@@ -226,8 +229,10 @@ Site: `reform-ai-team.atlassian.net` | cloudId: `6c97a9a2-291e-4c35-89da-b7c3d24
 ### Confluence
 - Space RAPD ("Reform AI Product Documentation"), id `38928388`. Home for these docs.
 - Retro template page id `166297602`.
-- Existing Sprint Review template page id `165904385` (to be superseded by Doc 1 template).
-- Naming convention: `Sprint N - Review`, `Sprint N - Retro`, `Sprint N - Mgmt Report`.
+- Existing Sprint Review template page id `165904385` (superseded by Doc 1).
+- LIVE pages built this session: Sprint 1 Review Analysis `166723587` · Sprint 2 Planning
+  `166985730` · Sprint 1 Retro (filled from template) `166395905`.
+- Naming convention: `Sprint N - Review Analysis`, `Sprint N - Retro`, `Sprint N - Planning`.
 - Folders are created manually by the team; the agent writes pages into the designated location.
 
 ---
@@ -273,3 +278,61 @@ Likely shape: a `worker` capability, possibly under a Jira orchestrator instance
 1. Sprint-goal linkage: `sprint-goal` label vs designated goal epic. Leaning label (simpler at N=2).
 2. Whether the agent should actively enforce the 5 data conventions as in-sprint hygiene nudges.
 3. Confluence home: standardize all three artifacts in RAPD (current direction).
+
+---
+
+## 14. Implementation notes (Sprint 1/2 build, 2026-06-10)
+
+### What was built
+- Sprint 1 Review Analysis (Confluence `166723587`) - full internal doc, brand-styled.
+- Sprint 2 Planning (Confluence `166985730`) - redesigned planning page (below).
+- Management report PDF: `reports/sprint-1-review.html` -> `reports/sprint-1-review.pdf`, rendered
+  via Edge headless (`msedge --headless --print-to-pdf`). 4 pages: (1) Sprint 1 Review,
+  (2) Shipped + Self-Correcting + Risk, (3) Sprint 2 Planning summary, (4) Sprint 2 Full Scope.
+
+### Write capabilities - PROVEN and BOUNDED
+- IMPLEMENTED write-back: t-shirt sizing from Confluence. A fillable "Set Size" column on the
+  planning page -> human types sizes -> agent parses the published page -> writes each via
+  `editJiraIssue` setting `customfield_10225` to `{value: "<size>"}`. Guardrail held: the agent
+  only transcribes the size the HUMAN chose; it never estimates. This is the first Jira write.
+- WRITE-BOUNDARY (hard limit of this integration): the agent can set issue FIELDS but CANNOT move
+  issues between/out of sprints. `editJiraIssue` on `customfield_10020` rejects arrays
+  ("The Sprint id must be a number") - it only accepts a single sprint to move INTO, which would
+  wipe an issue's whole sprint history. Removing from a sprint (esp. a CLOSED one) needs the Agile
+  board API (`/rest/agile/1.0/backlog/issue`), which this MCP does not expose. Consequence: items
+  wrongly tagged to a sprint are handled by REPORT-LEVEL EXCLUSION, not Jira edits.
+- Worked example: RAI-201/228/67 were UAT items completed pre-Sprint-1 but tagged to Sprint 1+2.
+  They are excluded from all report metrics/scope with a note; Jira tags left as-is (closed-sprint
+  membership is effectively locked).
+
+### Confluence rendering ceiling (verified)
+- Cell background colors via `data-highlight-colour` are STRIPPED by the HTML->ADF converter
+  (confirmed by reading back ADF). Brand color on tables is only reliable via status lozenges
+  (green/yellow/blue/neutral/purple) + panels. True brand-colored tables live in the PDF.
+- Whiteboards are not API-readable (404). Retro MUST be a page (Section 8), not a whiteboard.
+- Drafts are invisible to the API - a page must be PUBLISHED before the agent can read edits
+  (matters for the Set-Size write-back flow).
+
+### Redesigned Sprint 2 Planning page structure
+Goal + success criteria -> Snapshot KPIs (Committed / Sized / Carryover / Owners) -> Readiness Gate
+(epics linked / sized / owners -> READY verdict) -> Committed Scope (by initiative + by size) ->
+Full Committed Scope (Business Design broken out first, then Product / Tech Debt / Infrastructure,
+all expanded, carryover-tagged) -> Action Worklist (editable write-back; "all clear" when empty) ->
+Risks & Dependencies. NO points/capacity model yet (count-based by decision; revisit after seeing
+throughput). Carryover detection: item is in BOTH sprint 540 and 573 (`sprint in (540) AND
+sprint in (573)`).
+
+### Branding (reconciled against source)
+- The `reformai-design-system` skill was reconciled against `ReformAI-Inc/Reform-AI @ d768f37`.
+  Real logo ships as PNGs (no SVG): `logo_en.png` bundled in the skill `assets/` (copied to
+  `reports/logo_en.png`). Two teals: `#00ADB5` primary, `#3B8AA2` system. Semantic palette:
+  success `#27AE60`, info `#2D9CDB`, accent `#F5A623`, warning `#F2C94C`, danger `#EB5757`.
+  Chart hexes from the old QA scrape are stale - use the semantic tokens. The earlier
+  `docs/ref-logo-branding-thread.md` is now superseded by this skill reconciliation.
+
+### Data-handling gotchas
+- Query Sprint membership by sprint ID (`sprint = 540`), NOT name (`sprint = "Sprint 1"`) - the
+  name matches other boards' identically-named sprints and over-returns.
+- Exclude sub-tasks from work-item counts (`issuetype != Sub-task`).
+- Large JQL results exceed the tool token cap - they save to a file; parse with PowerShell
+  (`ConvertFrom-Json`), not inline. `jq` is not installed on this machine.

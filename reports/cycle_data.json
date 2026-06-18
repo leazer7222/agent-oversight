@@ -1,0 +1,864 @@
+{
+  "review": {
+    "sprint": "Sprint 2",
+    "id": 573,
+    "goal": "Wompi Account Update and Dashboard Views",
+    "committed": 40,
+    "completed": 29,
+    "carryover": 11,
+    "completion_pct": 72,
+    "by_type": {
+      "Bug": {
+        "total": 15,
+        "done": 13
+      },
+      "Story": {
+        "total": 24,
+        "done": 15
+      },
+      "Task": {
+        "total": 1,
+        "done": 1
+      }
+    },
+    "by_initiative": {
+      "Product": {
+        "total": 25,
+        "done": 20
+      },
+      "Tech Debt": {
+        "total": 2,
+        "done": 0
+      },
+      "Business Design": {
+        "total": 5,
+        "done": 4
+      },
+      "Infrastructure": {
+        "total": 8,
+        "done": 5
+      }
+    },
+    "sizes": {
+      "XS": 11,
+      "S": 10,
+      "M": 6,
+      "L": 1,
+      "Unsized": 9,
+      "Spike": 3
+    },
+    "issues": [
+      {
+        "key": "RAI-613",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Update Materials in Project to Spanish"
+      },
+      {
+        "key": "RAI-619",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Charles",
+        "summary": "Once the bid is received by the service provider the estimated value is rounding"
+      },
+      {
+        "key": "RAI-547",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-160",
+        "epic": "UI/UX ",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Charles",
+        "summary": "Help Centre"
+      },
+      {
+        "key": "RAI-437",
+        "type": "Story",
+        "status": "QA / Testing",
+        "done": false,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Charles",
+        "summary": "Create Home Seller User Type"
+      },
+      {
+        "key": "RAI-593",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Update:  Quick Jobs to have \"Wallpaper\" option as well as measurements as (optional)"
+      },
+      {
+        "key": "RAI-605",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Prod: Service Provider Profile is showing specialties in english"
+      },
+      {
+        "key": "RAI-65",
+        "type": "Story",
+        "status": "QA / Testing",
+        "done": false,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "Teams"
+      },
+      {
+        "key": "RAI-582",
+        "type": "Story",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-558",
+        "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
+        "cat": "Tech Debt",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "[LOGIC] Migrate hardcoded filter prices and ranges to database for multi-currency/country support"
+      },
+      {
+        "key": "RAI-601",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Seller Module: Before/After photos not showing up on the property detailed page"
+      },
+      {
+        "key": "RAI-610",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-160",
+        "epic": "UI/UX ",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Review and make any suggestions for the Landing Pages"
+      },
+      {
+        "key": "RAI-548",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-160",
+        "epic": "UI/UX ",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "FAQ"
+      },
+      {
+        "key": "RAI-546",
+        "type": "Story",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": "L",
+        "owner": "Charles",
+        "summary": "Design for Supplier Catalogs"
+      },
+      {
+        "key": "RAI-630",
+        "type": "Bug",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-159",
+        "epic": "Integrations",
+        "cat": "Infrastructure",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Sign in with Google: If user hasn't registered before then need to take them to register page"
+      },
+      {
+        "key": "RAI-560",
+        "type": "Story",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-558",
+        "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
+        "cat": "Tech Debt",
+        "size": null,
+        "owner": "Kay",
+        "summary": "[Infra] Implement production error monitoring and alerting for Google Cloud Run"
+      },
+      {
+        "key": "RAI-608",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "Update Wompi Account to New ReformAI Bank Account"
+      },
+      {
+        "key": "RAI-124",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "M",
+        "owner": "Charles",
+        "summary": "Dashboard"
+      },
+      {
+        "key": "RAI-23",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Charles",
+        "summary": "Dashboard"
+      },
+      {
+        "key": "RAI-148",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-146",
+        "epic": "Admin Webpage",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Charles",
+        "summary": "Dashboard"
+      },
+      {
+        "key": "RAI-550",
+        "type": "Bug",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Service Providers: Update Subscription"
+      },
+      {
+        "key": "RAI-623",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-159",
+        "epic": "Integrations",
+        "cat": "Infrastructure",
+        "size": "Spike",
+        "owner": "Kay",
+        "summary": "Analysis Task: Web Scraper for Seller Module"
+      },
+      {
+        "key": "RAI-607",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Inspiration Hub: Style Filter is not working"
+      },
+      {
+        "key": "RAI-592",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Remove Moodboards from Homeowner Subscription"
+      },
+      {
+        "key": "RAI-602",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Distressed Assets: Bring back the option to see the photos with the 3 tiers: Standard, ReformAI, User Generated"
+      },
+      {
+        "key": "RAI-626",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "Spike",
+        "owner": "Kay",
+        "summary": "Automate the pipeline to JIRA to connect each User Story/Bug with proper versioning"
+      },
+      {
+        "key": "RAI-579",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "[DATA] Establish automated database migration pipelines and rollback strategies"
+      },
+      {
+        "key": "RAI-627",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "Spike",
+        "owner": "Kay",
+        "summary": "Implement Code Review in Github"
+      },
+      {
+        "key": "RAI-638",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": null,
+        "owner": "Charles",
+        "summary": "Design an Operations Health Dashboard"
+      },
+      {
+        "key": "RAI-631",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Contact form is showing property in sq ft instead of m2"
+      },
+      {
+        "key": "RAI-632",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": null,
+        "owner": "Kay",
+        "summary": "Onboarding pictures not available - Cloud flare issue"
+      },
+      {
+        "key": "RAI-639",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": null,
+        "owner": "Kay",
+        "summary": "Implemented User Logs"
+      },
+      {
+        "key": "RAI-634",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Default Homeowner Country to Colombia"
+      },
+      {
+        "key": "RAI-635",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": null,
+        "owner": "Charles",
+        "summary": "Design Habi Import Flow"
+      },
+      {
+        "key": "RAI-628",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "Research other tools to track how the users interact with our platform"
+      },
+      {
+        "key": "RAI-625",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": "M",
+        "owner": "Charles",
+        "summary": "Design Creating a Project from the Visualization"
+      },
+      {
+        "key": "RAI-636",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": null,
+        "owner": "Kay",
+        "summary": "Prod: Seller Dashboard - Failed to upload picture of a property"
+      },
+      {
+        "key": "RAI-640",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-146",
+        "epic": "Admin Webpage",
+        "cat": "Product",
+        "size": null,
+        "owner": "Kay",
+        "summary": "Implemented Email notifications editable in Admin"
+      },
+      {
+        "key": "RAI-647",
+        "type": "Bug",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-160",
+        "epic": "UI/UX ",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Remove the partner tag from the listings"
+      },
+      {
+        "key": "RAI-642",
+        "type": "Task",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-160",
+        "epic": "UI/UX ",
+        "cat": "Product",
+        "size": null,
+        "owner": "Kay",
+        "summary": "UX Recommendation \u2013 Reorder Left Navigation Menu for Homeowner Role (Project Management Above Profile Management)"
+      },
+      {
+        "key": "RAI-645",
+        "type": "Story",
+        "status": "Done",
+        "done": true,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": null,
+        "owner": "Kay",
+        "summary": "Implement PostHog Analytics"
+      },
+      {
+        "key": "RAI-622",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Update Broker Agreement for White Glove Service in Legal Documents and During Registration"
+      }
+    ]
+  },
+  "planning": {
+    "sprint": "Sprint 3",
+    "id": 575,
+    "goal": "",
+    "committed": 21,
+    "carryover": 11,
+    "unsized": 4,
+    "unassigned": 2,
+    "no_epic": 0,
+    "sizes": {
+      "S": 7,
+      "M": 6,
+      "L": 1,
+      "Unsized": 4,
+      "XS": 2,
+      "Spike": 1
+    },
+    "by_initiative": {
+      "Product": {
+        "total": 8,
+        "done": 0
+      },
+      "Tech Debt": {
+        "total": 4,
+        "done": 0
+      },
+      "Business Design": {
+        "total": 3,
+        "done": 0
+      },
+      "Infrastructure": {
+        "total": 6,
+        "done": 0
+      }
+    },
+    "issues": [
+      {
+        "key": "RAI-437",
+        "type": "Story",
+        "status": "QA / Testing",
+        "done": false,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Charles",
+        "summary": "Create Home Seller User Type",
+        "carryover": true
+      },
+      {
+        "key": "RAI-65",
+        "type": "Story",
+        "status": "QA / Testing",
+        "done": false,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "Teams",
+        "carryover": true
+      },
+      {
+        "key": "RAI-582",
+        "type": "Story",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-558",
+        "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
+        "cat": "Tech Debt",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "[LOGIC] Migrate hardcoded filter prices and ranges to database for multi-currency/country support",
+        "carryover": true
+      },
+      {
+        "key": "RAI-546",
+        "type": "Story",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": "L",
+        "owner": "Charles",
+        "summary": "Design for Supplier Catalogs",
+        "carryover": true
+      },
+      {
+        "key": "RAI-630",
+        "type": "Bug",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-159",
+        "epic": "Integrations",
+        "cat": "Infrastructure",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Sign in with Google: If user hasn't registered before then need to take them to register page",
+        "carryover": true
+      },
+      {
+        "key": "RAI-560",
+        "type": "Story",
+        "status": "In Progress",
+        "done": false,
+        "epic_key": "RAI-558",
+        "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
+        "cat": "Tech Debt",
+        "size": null,
+        "owner": "Kay",
+        "summary": "[Infra] Implement production error monitoring and alerting for Google Cloud Run",
+        "carryover": true
+      },
+      {
+        "key": "RAI-587",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-558",
+        "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
+        "cat": "Tech Debt",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "[TESTING] Implement automated test coverage for Wompi payment integration",
+        "carryover": false
+      },
+      {
+        "key": "RAI-608",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-147",
+        "epic": "Distressed Assets",
+        "cat": "Product",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "Update Wompi Account to New ReformAI Bank Account",
+        "carryover": true
+      },
+      {
+        "key": "RAI-651",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Optimize photos loading: Inspiration Hub and Renovation Game",
+        "carryover": false
+      },
+      {
+        "key": "RAI-467",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "GCP: Install a function to determine cost per API call",
+        "carryover": false
+      },
+      {
+        "key": "RAI-550",
+        "type": "Bug",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Service Providers: Update Subscription",
+        "carryover": true
+      },
+      {
+        "key": "RAI-579",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "[DATA] Establish automated database migration pipelines and rollback strategies",
+        "carryover": true
+      },
+      {
+        "key": "RAI-627",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "Spike",
+        "owner": "Kay",
+        "summary": "Implement Code Review in Github",
+        "carryover": true
+      },
+      {
+        "key": "RAI-644",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-161",
+        "epic": "Technical Infrastructure",
+        "cat": "Infrastructure",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Implement Github/Jira Connection",
+        "carryover": false
+      },
+      {
+        "key": "RAI-646",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": null,
+        "owner": "Unassigned",
+        "summary": "Design Notification Emails",
+        "carryover": false
+      },
+      {
+        "key": "RAI-648",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-558",
+        "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
+        "cat": "Tech Debt",
+        "size": "M",
+        "owner": "Kay",
+        "summary": "Optimize and Implement Operations Health Dashboard",
+        "carryover": false
+      },
+      {
+        "key": "RAI-649",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": null,
+        "owner": "Charles",
+        "summary": "Web Scraper to Hubspot Integration Setup",
+        "carryover": false
+      },
+      {
+        "key": "RAI-650",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-146",
+        "epic": "Admin Webpage",
+        "cat": "Product",
+        "size": "XS",
+        "owner": "Kay",
+        "summary": "Admin Dashboard Updates",
+        "carryover": false
+      },
+      {
+        "key": "RAI-652",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-160",
+        "epic": "UI/UX ",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Bring back version of being able to scroll the platform without being registered",
+        "carryover": false
+      },
+      {
+        "key": "RAI-653",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-1",
+        "epic": "Vendor Web App",
+        "cat": "Product",
+        "size": null,
+        "owner": "Unassigned",
+        "summary": "Test Team member functionality",
+        "carryover": false
+      },
+      {
+        "key": "RAI-622",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "S",
+        "owner": "Kay",
+        "summary": "Update Broker Agreement for White Glove Service in Legal Documents and During Registration",
+        "carryover": true
+      }
+    ]
+  },
+  "retro": {
+    "good": [
+      "logs on the admin side",
+      "dashboards",
+      "Implementing posthog",
+      "Email notifications",
+      "landing pages completely working"
+    ],
+    "bad": [
+      "Sprint 2 was scheduled to end on monday 18th",
+      "Bugs in production",
+      "R2",
+      "Google registration"
+    ],
+    "ideas": [
+      "To allocate dedicated time / open bugs for production",
+      "sprints being only 1 week is tight especially in the summer time with holidays, move to 2 week sprint but still have weekly production releases as well as any hot fixes necessary"
+    ],
+    "page_id": "170721281"
+  }
+}

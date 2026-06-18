@@ -132,15 +132,21 @@ def summarize(issues: list[dict]) -> dict:
         by_init[i["cat"]]["total"] += 1
         if i["done"]:
             by_init[i["cat"]]["done"] += 1
-    sizes = {}
+    SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "Spike", "Unsized"]
+    sizes, completed_by_size = {}, {}
     for i in issues:
-        sizes[i["size"] or "Unsized"] = sizes.get(i["size"] or "Unsized", 0) + 1
+        s = i["size"] or "Unsized"
+        sizes[s] = sizes.get(s, 0) + 1
+        if i["done"]:
+            completed_by_size[s] = completed_by_size.get(s, 0) + 1
+    order = lambda d: {k: d[k] for k in SIZE_ORDER if k in d}
     return {
         "committed": len(issues),
         "completed": len(done),
         "carryover": len(issues) - len(done),
         "completion_pct": round(100.0 * len(done) / len(issues)) if issues else 0,
-        "by_type": by_type, "by_initiative": by_init, "sizes": sizes,
+        "by_type": by_type, "by_initiative": by_init,
+        "sizes": order(sizes), "completed_by_size": order(completed_by_size),
     }
 
 def main():
@@ -177,6 +183,7 @@ def main():
     print(f"  committed {r['committed']} | completed {r['completed']} | carryover {r['carryover']} | {r['completion_pct']}%")
     print(f"  by initiative: {json.dumps(r['by_initiative'])}")
     print(f"  by type: {json.dumps(r['by_type'])}")
+    print(f"  VELOCITY - completed by size: {json.dumps(r['completed_by_size'])}")
     if future:
         p = data["planning"]
         print(f"\n=== {p['sprint']} PLANNING ===")

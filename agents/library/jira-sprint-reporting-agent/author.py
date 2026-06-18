@@ -49,8 +49,9 @@ ORDER = {"Done": 0, "QA / Testing": 1, "In Progress": 2, "To Do": 3, "Blocked": 
 
 # ---- Confluence REST upsert --------------------------------------------------
 def find_page(title):
-    cql = f'space={SPACE} and title="{title}" and type=page'
-    r = httpx.get(f"{SITE}/wiki/rest/api/content/search", params={"cql": cql, "expand": "version"},
+    # Direct content lookup by exact title (NOT the CQL search index, which lags for new pages).
+    r = httpx.get(f"{SITE}/wiki/rest/api/content",
+                  params={"spaceKey": SPACE, "title": title, "type": "page", "expand": "version"},
                   headers=HJSON, timeout=40); r.raise_for_status()
     res = r.json().get("results", [])
     return res[0] if res else None
@@ -97,6 +98,14 @@ def build_review(d):
     out.append("<p><strong>By work type</strong>:</p>")
     out.append(table(["Type", "Completed", "Total"],
         [td(k, v["done"], v["total"]) for k, v in sorted(bt.items(), key=lambda x: -x[1]["total"])]))
+    cbs = r.get("completed_by_size", {})
+    sized_total = sum(v for k, v in cbs.items() if k != "Unsized")
+    out.append("<h2>Velocity - Completed by Size</h2>")
+    out.append("<p>The first size-based throughput baseline. This is what the team actually delivered, by t-shirt size:</p>")
+    out.append(table(list(cbs.keys()), [td(*[cbs[k] for k in cbs])]))
+    out.append(panel("note", f"<p>{cbs.get('Unsized',0)} of {r['completed']} completed items were <strong>unsized</strong> "
+                             f"(carryover predating sizing), so the clean sized-velocity sample is <strong>{sized_total} items</strong>. "
+                             f"No L/XL/XXL were completed. This baseline sharpens each fully-sized sprint.</p>"))
     out.append("<h2>Goal Assessment</h2>")
     out.append(f"<p><em>[HUMAN: was the Wompi + Dashboards goal achieved? Mark Achieved / Partial and add business impact.]</em></p>")
     out.append("<h2>Work Completed</h2>")
@@ -154,6 +163,17 @@ def build_planning(d):
     out.append(table(["Initiative", "Items"], [td(k, v["total"]) for k, v in sorted(p["by_initiative"].items(), key=lambda x: -x[1]["total"])]))
     out.append("<p><strong>By size:</strong></p>")
     out.append(table(list(p["sizes"].keys()), [td(*[p["sizes"][k] for k in p["sizes"]])]))
+    # capacity vs last sprint's actual throughput
+    cbs = d["review"].get("completed_by_size", {})
+    def big(d2): return d2.get("M", 0) + d2.get("L", 0) + d2.get("XL", 0) + d2.get("XXL", 0)
+    out.append("<h2>Capacity vs Last Sprint</h2>")
+    out.append(table(["Size", "Sprint 3 committed", "Sprint 2 delivered"],
+        [td(s, p["sizes"].get(s, 0), cbs.get(s, 0)) for s in ["XS", "S", "M", "L", "XL", "Spike"]]))
+    out.append(panel("warning",
+        f"<p><strong>Capacity watch:</strong> Sprint 3 commits {big(p['sizes'])} items at M or larger; "
+        f"Sprint 2 only delivered {big(cbs)} that big (and zero L). The committed mix is heavier than proven "
+        f"throughput - confirm capacity or trim the larger items before locking. Velocity baseline is still one "
+        f"sprint old and partly unsized, so treat as directional.</p>"))
     if sized_active:
         out.append("<h2>Needs Estimate</h2>")
         out.append(table(["Key", "Status", "Epic", "Owner", "Summary"],

@@ -41,11 +41,18 @@
     },
     "sizes": {
       "XS": 11,
-      "S": 10,
+      "S": 11,
       "M": 6,
       "L": 1,
-      "Unsized": 9,
-      "Spike": 3
+      "Spike": 3,
+      "Unsized": 8
+    },
+    "completed_by_size": {
+      "XS": 10,
+      "S": 6,
+      "M": 3,
+      "Spike": 2,
+      "Unsized": 8
     },
     "issues": [
       {
@@ -212,7 +219,7 @@
         "epic_key": "RAI-558",
         "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
         "cat": "Tech Debt",
-        "size": null,
+        "size": "S",
         "owner": "Kay",
         "summary": "[Infra] Implement production error monitoring and alerting for Google Cloud Run"
       },
@@ -534,17 +541,16 @@
     "sprint": "Sprint 3",
     "id": 575,
     "goal": "",
-    "committed": 21,
+    "committed": 22,
     "carryover": 11,
-    "unsized": 4,
-    "unassigned": 2,
+    "unsized": 0,
+    "unassigned": 0,
     "no_epic": 0,
     "sizes": {
-      "S": 7,
-      "M": 6,
-      "L": 1,
-      "Unsized": 4,
       "XS": 2,
+      "S": 9,
+      "M": 8,
+      "L": 2,
       "Spike": 1
     },
     "by_initiative": {
@@ -557,7 +563,7 @@
         "done": 0
       },
       "Business Design": {
-        "total": 3,
+        "total": 4,
         "done": 0
       },
       "Infrastructure": {
@@ -639,7 +645,7 @@
         "epic_key": "RAI-558",
         "epic": "[Tech Debt] - System Stabilization, Observability, and Architecture Remediation",
         "cat": "Tech Debt",
-        "size": null,
+        "size": "S",
         "owner": "Kay",
         "summary": "[Infra] Implement production error monitoring and alerting for Google Cloud Run",
         "carryover": true
@@ -756,8 +762,8 @@
         "epic_key": "RAI-629",
         "epic": "Business Design",
         "cat": "Business Design",
-        "size": null,
-        "owner": "Unassigned",
+        "size": "M",
+        "owner": "David",
         "summary": "Design Notification Emails",
         "carryover": false
       },
@@ -782,7 +788,7 @@
         "epic_key": "RAI-629",
         "epic": "Business Design",
         "cat": "Business Design",
-        "size": null,
+        "size": "M",
         "owner": "Charles",
         "summary": "Web Scraper to Hubspot Integration Setup",
         "carryover": false
@@ -821,8 +827,8 @@
         "epic_key": "RAI-1",
         "epic": "Vendor Web App",
         "cat": "Product",
-        "size": null,
-        "owner": "Unassigned",
+        "size": "S",
+        "owner": "Charles",
         "summary": "Test Team member functionality",
         "carryover": false
       },
@@ -838,6 +844,19 @@
         "owner": "Kay",
         "summary": "Update Broker Agreement for White Glove Service in Legal Documents and During Registration",
         "carryover": true
+      },
+      {
+        "key": "RAI-654",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-629",
+        "epic": "Business Design",
+        "cat": "Business Design",
+        "size": "L",
+        "owner": "Charles",
+        "summary": "Moodboard Design",
+        "carryover": false
       }
     ]
   },

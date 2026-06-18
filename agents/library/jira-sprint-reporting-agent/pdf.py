@@ -34,9 +34,15 @@ def main():
     dash = round(502.6 * pct / 100, 1)
 
     H = []
+    OVERRIDE = ("body{font-size:12.5px;}"
+                ".hero{margin-top:14px;} .hero h1{font-size:34px; line-height:1.04;} .hero .sub{font-size:14px; margin-top:6px;}"
+                ".healthbadge{margin-top:12px; font-size:13px; padding:7px 14px;}"
+                ".kpis{margin-top:16px;} .kpi .val{font-size:23px;}"
+                "h2.sec{margin:16px 0 9px; font-size:18px;} .panel-goal{padding:12px 16px;}"
+                ".hlcard{padding:11px 13px;} .track{margin-bottom:9px;}")
     H.append(f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Reform-A.i - Sprint 2 Review</title>'
              f'<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">'
-             f'<style>{CSS}</style></head><body>')
+             f'<style>{CSS}</style><style>{OVERRIDE}</style></head><body>')
 
     # ---- PAGE 1: Review ----
     H.append('<div class="page">')
@@ -79,13 +85,16 @@ def main():
              '<div class="hlcard"><div class="k">DASHBOARDS</div><div class="t">3 user dashboards live</div><span class="tag">Goal</span></div>'
              '<div class="hlcard"><div class="k">POSTHOG</div><div class="t">Analytics found + shipped in-sprint</div><span class="tag">Ahead of plan</span></div>'
              '<div class="hlcard"><div class="k">OPS HEALTH</div><div class="t">New operational health dashboard</div><span class="tag">Infrastructure</span></div>'
-             '<div class="hlcard"><div class="k">PLATFORM</div><div class="t">Email notifications + landing pages live</div><span class="tag">Product</span></div>'
+             '<div class="hlcard"><div class="k">EMAIL</div><div class="t">Notification templates for every user type</div><span class="tag">Visuals this sprint</span></div>'
+             '<div class="hlcard"><div class="k">ADMIN LOGS</div><div class="t">User activity logs in the admin module</div><span class="tag">Product</span></div>'
+             '<div class="hlcard"><div class="k">PLATFORM</div><div class="t">Landing pages live + email notifications</div><span class="tag">Product</span></div>'
              '</div>')
     H.append('<h2 class="sec"><span class="bar"></span>The Story Behind the Numbers</h2><ul class="clean">'
              '<li><strong>Cloudflare fallout -&gt; a new dashboard.</strong> Old account references left from the Sprint 1 infra migration broke production images and took major unplanned effort to fix. That pain inspired the operational health dashboard - now being handed to Kay to productionize.</li>'
              '<li><strong>Google-registration bug</strong> was a significant time sink (fix expected end of day) - a real driver of the carryover.</li>'
              '<li><strong>Seller module (from UAT)</strong> is blocked on CEO input: broker-agreement update + white-glove service pricing. It keeps rolling over until that decision lands.</li>'
              '</ul>')
+    H.append('<div class="footer"><span>Reform-A.i &middot; Sprint 2 Review</span><span>Confidential</span></div></div><div class="page">')
     # velocity bars
     vmax = max(cbs.values()) if cbs else 1
     vbars = "".join(bar(k, v, round(100*v/vmax), "var(--amber)" if k == "Unsized" else "var(--teal)") for k, v in cbs.items())

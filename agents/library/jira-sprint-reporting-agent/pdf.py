@@ -21,7 +21,12 @@ OVERRIDE = ("body{font-size:12.5px;}"
             ".healthbadge{margin-top:12px; font-size:13px; padding:7px 14px;}"
             ".kpis{margin-top:16px;} .kpi .val{font-size:23px;}"
             "h2.sec{margin:16px 0 9px; font-size:18px;} .panel-goal{padding:12px 16px;}"
-            ".hlcard{padding:11px 13px;} .track{margin-bottom:9px;}")
+            ".hlcard{padding:11px 13px;} .track{margin-bottom:9px;}"
+            "table.scope{font-size:8.6px;} table.scope th{padding:2px 5px;} table.scope td{padding:1.5px 5px; white-space:nowrap;}"
+            " .grp{margin:8px 0 2px; font-size:11px;}")
+
+def trunc(s, n=70):
+    return s if len(s) <= n else s[:n - 1].rstrip() + "…"
 
 LZ = {"To Do": "lz-todo", "In Progress": "lz-prog", "QA / Testing": "lz-qa", "Done": "lz-done", "Blocked": "lz-block"}
 ORDER = {"Done": 0, "QA / Testing": 1, "In Progress": 2, "To Do": 3, "Blocked": 4}
@@ -226,7 +231,7 @@ def build(lang, d):
             co = '<span class="cotag">CO</span>' if i.get("carryover") else ""
             rows += (f'<tr><td>{esc(i["key"])}</td><td>{esc(i["type"])}</td><td>{esc(i["size"] or "-")}</td>'
                      f'<td><span class="lozenge {LZ.get(i["status"],"lz-todo")}">{S["st"].get(i["status"], i["status"])}</span></td>'
-                     f'<td>{esc(i["owner"])}</td><td>{co}</td><td>{esc(i["summary"])}</td></tr>')
+                     f'<td>{esc(i["owner"])}</td><td>{co}</td><td>{esc(trunc(i["summary"]))}</td></tr>')
         cols = "".join(f"<th>{c2}</th>" for c2 in S["cols"])
         H.append(f'<table class="scope"><thead><tr>{cols}</tr></thead><tbody>{rows}</tbody></table>')
     H.append(foot + '</div>')

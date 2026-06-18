@@ -544,7 +544,7 @@
     "committed": 23,
     "carryover": 11,
     "unsized": 0,
-    "unassigned": 1,
+    "unassigned": 0,
     "no_epic": 0,
     "sizes": {
       "XS": 2,
@@ -867,7 +867,7 @@
         "epic": "HomeOwner / HomeBuyer Module",
         "cat": "Product",
         "size": "M",
-        "owner": "Unassigned",
+        "owner": "Kay",
         "summary": "Review and Implement Creating a Project from Visualization",
         "carryover": false
       }

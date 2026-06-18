@@ -83,10 +83,11 @@ def build_review(d):
     out.append(panel("note", f"<p><strong>DRAFT - agent-generated (token runtime, no MCP).</strong> Source: Jira {r['sprint']} (id {r['id']}), generated via cycle.py. Sub-tasks excluded.</p>"))
     out.append("<h1>Executive Summary</h1>")
     out.append(panel("tip",
-        f"<p><strong>Sprint Health: </strong>{status('GREEN','Green')} <em>[HUMAN: confirm vs goal]</em></p>"
-        f"<p><strong>Goal:</strong> {esc(r['goal'] or 'not set in Jira')}</p>"
-        f"<p><strong>{r['completed']} of {r['committed']} work items completed ({r['completion_pct']}%)</strong> &middot; {r['carryover']} carried over</p>"
-        f"<p>Strongest sprint to date by completion. Wins from the retro: dashboards, PostHog analytics, email notifications, landing pages live.</p>"))
+        f"<p><strong>Sprint Health: </strong>{status('GREEN','Green')}</p>"
+        f"<p><strong>Goal:</strong> {esc(r['goal'] or 'not set in Jira')} &mdash; {status('PARTIAL','Yellow')}</p>"
+        f"<p><strong>{r['completed']} of {r['committed']} work items completed ({r['completion_pct']}%)</strong> &middot; {r['carryover']} carried over &mdash; the strongest sprint to date by completion.</p>"
+        f"<p>The 3 user dashboards shipped; the Wompi account switch is still pending on Wompi's side (external dependency - the CEO met Wompi yesterday and the switch is the goal again in Sprint 3). Health stays GREEN: the one miss was outside the team's control.</p>"
+        f"<p><strong>Standout win:</strong> analytics was scoped only as a research task - the team found PostHog and fully implemented it in-sprint, ahead of plan.</p>"))
     out.append("<h2>Sprint Outcome</h2>")
     out.append(table(["Metric", "Result"], [
         td("Committed", r["committed"]), td("Completed", f"<strong>{r['completed']}</strong>"),
@@ -107,7 +108,18 @@ def build_review(d):
                              f"(carryover predating sizing), so the clean sized-velocity sample is <strong>{sized_total} items</strong>. "
                              f"No L/XL/XXL were completed. This baseline sharpens each fully-sized sprint.</p>"))
     out.append("<h2>Goal Assessment</h2>")
-    out.append(f"<p><em>[HUMAN: was the Wompi + Dashboards goal achieved? Mark Achieved / Partial and add business impact.]</em></p>")
+    out.append(panel("warning", f"<p><strong>Outcome: </strong>{status('PARTIAL','Yellow')}</p>"))
+    out.append("<p>Goal was two-part: switch Wompi billing to the ReformAI account, and ship the 3 user dashboards. "
+               "<strong>Dashboards delivered.</strong> The <strong>Wompi switch did not complete</strong> - the account is still "
+               "in pending status on Wompi's side. The CEO met with Wompi yesterday; the switch carries into Sprint 3 as a goal "
+               "again. Because the blocker is external, it does not pull sprint health down.</p>")
+    out.append("<h2>Highlights &amp; Context</h2>")
+    out.append("<ul>"
+               "<li><strong>Analytics shipped ahead of plan.</strong> PostHog was only scoped as a research task; the team found a tool and fully implemented it in-sprint.</li>"
+               "<li><strong>New: operational health dashboard.</strong> A Cloudflare fallout from the Sprint 1 infra migration (old account references) broke production images and took significant unplanned effort to fix. That pain inspired a new operational health dashboard (built in-house), being handed to Kay this sprint to productionize.</li>"
+               "<li><strong>Carryover driver - Google registration bug.</strong> A major unplanned time sink; fix expected by end of day.</li>"
+               "<li><strong>Carryover-of-carryover - seller module (from UAT).</strong> Blocked on CEO input (broker-agreement update + white-glove service pricing). It will keep rolling over until that decision lands.</li>"
+               "</ul>")
     out.append("<h2>Work Completed</h2>")
     out.append(expand(f"Show all {len(done)} completed items",
         table(["Key", "Type", "Initiative", "Summary"],
@@ -123,7 +135,8 @@ def build_review(d):
     out.append(panel("warning", "<p><strong>Could be better</strong></p><ul>" + "".join(f"<li>{esc(x)}</li>" for x in retro["bad"]) + "</ul>"))
     out.append(panel("info", "<p><strong>Ideas</strong></p><ul>" + "".join(f"<li>{esc(x)}</li>" for x in retro["ideas"]) + "</ul>"))
     out.append("<h2>Recommendations</h2>")
-    recs = ["<li><strong>Tech Debt slipped (0 of 2 done).</strong> Protect explicit tech-debt capacity in Sprint 3 or it keeps deferring.</li>",
+    recs = ["<li><strong>Unblock the seller module (CEO action).</strong> It needs the broker-agreement update and white-glove service pricing; until those decisions land it keeps rolling over from UAT.</li>",
+            "<li><strong>Tech Debt slipped (0 of 2 done).</strong> Protect explicit tech-debt capacity in Sprint 3 or it keeps deferring.</li>",
             "<li><strong>Evaluate the 2-week sprint idea from retro.</strong> 1-week cadence ran long this sprint (ended after the planned Mon 18th); 2-week sprints with weekly releases + hotfixes is worth trying.</li>",
             "<li><strong>Allocate dedicated prod-bug time.</strong> Retro flagged production bugs (R2, Google registration) as friction.</li>",
             f"<li><strong>{r['carryover']} items carried into Sprint 3.</strong> Right-size Sprint 3 around that backlog before adding new scope.</li>"]

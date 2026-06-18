@@ -540,22 +540,22 @@
   "planning": {
     "sprint": "Sprint 3",
     "id": 575,
-    "goal": "",
-    "committed": 22,
+    "goal": "Technical hardening sprint: complete the Wompi switch to the ReformAI account, productionize the operational health dashboard, add Google Cloud health monitoring, and stand up code review + Jira/GitHub integration. User feature: create a project from a visualization.",
+    "committed": 23,
     "carryover": 11,
     "unsized": 0,
-    "unassigned": 0,
+    "unassigned": 1,
     "no_epic": 0,
     "sizes": {
       "XS": 2,
       "S": 9,
-      "M": 8,
+      "M": 9,
       "L": 2,
       "Spike": 1
     },
     "by_initiative": {
       "Product": {
-        "total": 8,
+        "total": 9,
         "done": 0
       },
       "Tech Debt": {
@@ -856,6 +856,19 @@
         "size": "L",
         "owner": "Charles",
         "summary": "Moodboard Design",
+        "carryover": false
+      },
+      {
+        "key": "RAI-656",
+        "type": "Story",
+        "status": "To Do",
+        "done": false,
+        "epic_key": "RAI-83",
+        "epic": "HomeOwner / HomeBuyer Module",
+        "cat": "Product",
+        "size": "M",
+        "owner": "Unassigned",
+        "summary": "Review and Implement Creating a Project from Visualization",
         "carryover": false
       }
     ]

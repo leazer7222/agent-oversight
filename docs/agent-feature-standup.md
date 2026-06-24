@@ -99,6 +99,27 @@ wrong. Consequences (all mandatory):
 PR numbers collide across repos (multiple `#1`s, etc.). The register and digest MUST key PRs as
 `repo + number` (e.g. `WebScraper#7`), never a bare number. A bare number is a guaranteed misread.
 
+### 3.4 GitHub is multi-account, and not every project is a git repo
+`gh` has TWO accounts in the keyring: `reformai-admin` (active; covers the `ReformAI-Inc` org +
+`reformai-admin` repos) and `leazer7222` (personal). Repos span three owners:
+
+| Repo | Owner | Account |
+|---|---|---|
+| `agent-oversight` | `leazer7222` | personal |
+| `reformai` (Reform-AI) | `ReformAI-Inc` org | reformai-admin |
+| `WebScraper` (web-scraper) | `ReformAI-Inc` org | reformai-admin |
+| `Visualization_Engine` | `reformai-admin` | reformai-admin |
+
+`gh` queries the ACTIVE account by default. To read a repo owned by the other account, target it
+explicitly (`gh -R owner/repo`) and `gh auth switch` where access does not overlap. The agent must
+resolve owner+account per repo, not assume one global account.
+
+Also verified: `Outdoor Glazed`, `Landing Pages`, and `ReformAI_ExcelLoader` (at their session cwd)
+are **NOT git repos**. For these, feed 2 is empty - they exist only as chats (feed 4) + memory
+(feed 3). This is the strongest confirmation that the chat feed is foundational. Caveat: ExcelLoader
+has merged PRs, so its git root is at a different path than the chat cwd - the agent must resolve the
+actual repo root, never assume `cwd == git root`.
+
 ---
 
 ## 4. Data model: `feature_register`
@@ -238,6 +259,15 @@ State always lives in Supabase; Notion is a render target, not a source of truth
 | P3 | Email delivery + `0 6 * * *` cloud routine | lands in inbox at 6am unattended |
 | P4 | `/dashboard/features` page (confirm importance / groupings) | you curate from the UI |
 | P5 | Notion mirror; hard naming-convention hook | - |
+| P6 | **Day Planner layer** (optional, decoupled): pull Google Calendar -> today's meetings -> free blocks -> suggest which feature `next_step` fits which slot, ranked by importance | core must stand alone without it |
+
+### P6 - Day Planner (scope-creep parking lot, kept decoupled)
+Adds a `== TODAY ==` digest section: meetings + free blocks, with each block mapped to a top
+feature's `next_step`. Pairs the existing importance ranking with calendar gaps. New ingredient: a
+rough effort estimate (t-shirt) per `next_step` so a step fits a block. Access: share the Gmail
+calendar with the Google service account (`reformai-catalog-agent@reformai-agent.iam.gserviceaccount.com`,
+same pattern as Drive) and read via Calendar API, OR a Google Calendar MCP. The status digest (P1-P3)
+must NOT depend on this; the planner is purely additive.
 
 ---
 
@@ -261,10 +291,15 @@ routine survives the machine being off. Wired once the agent runs clean manually
 ## 13. Open questions (to resolve before build)
 
 1. **Name** - Standup vs Daybreak / Compass / Ledger.
-2. **Personal-feature feed** - personal work that is NOT in a git repo (life projects) has no feed 2;
-   is that purely hand-maintained, or out of scope for v1?
+2. **Non-git projects** - Outdoor Glazed / Landing Pages / ExcelLoader-at-cwd have no feed 2 (chats
+   only). Confirmed acceptable (chat feed covers them), but: are any of these dormant enough to
+   exclude from v1 entirely?
 3. **Importance scale** - P0-P3, 1-5, or H/M/L?
 4. **Email target + sender** - reuse the Jira agent's send path?
 5. **Bootstrap scope** - seed the register from all ~50 chats at once, or only the ~7 currently-live
    ones and let the rest get picked up by the GC pass?
+6. **Day Planner (P6)** - is the Calendar layer in scope for the roadmap at all, and is Calendar
+   access via the shared service account or a dedicated Calendar MCP?
+7. **Effort estimates** - P6 needs a t-shirt size per `next_step` to fit calendar blocks. Agent
+   proposes these too (consistent with importance), or skip until P6?
 ```

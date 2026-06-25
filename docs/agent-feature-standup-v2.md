@@ -9,7 +9,7 @@ cloud, register-backed, multi-project "status report" before resolving its riski
 is leaner, more honest about what is reliable, and sequenced so the cheapest version proves the value
 before any expensive infrastructure is built.
 
-Working name: still open - **Standup** / **Re-Entry** / Daybreak / Compass / Ledger.
+Name: **Compass** (settled). Phase-1 form: a **Claude Code slash command** `/compass` (settled).
 
 ---
 
@@ -165,8 +165,16 @@ behavior change; revisit only if the proven core demands them.
 
 ## 9. The on-demand briefing (Phase 1 - the probe, change A + H)
 
-Invocation: a local command, run when you sit down. **Single-project by default** (reads cwd to pick
-the project); `--all` for the cross-project sweep.
+Form: a **Claude Code slash command `/compass`** - a single markdown file at `.claude/commands/compass.md`
+(or `~/.claude/commands/compass.md` to make it global across projects, which fits Compass's
+cross-project nature). The file body IS the agent: it is the run sequence below written as a prompt,
+executed in the current session with its tools (`gh`/git via Bash, the session-list MCP, Read for
+session-logs). No Python, no DB, no registration in Phase 1. `$ARGUMENTS` carries flags; a `!`-prefixed
+line can pre-embed `git`/`gh` output; `@.compass/overlay.json` embeds the overlay. The same logic moves
+into a registered Python agent only when it graduates to the scheduled version (P4).
+
+Invocation: run it when you sit down. **Single-project by default** (reads cwd to pick the project);
+`/compass --all` for the cross-project sweep.
 
 Run sequence:
 1. Resolve project from cwd (or `--all`).
@@ -252,7 +260,7 @@ proven - if the probe shows you prefer pulling on-demand, P4 may never be needed
 
 ## 14. Agent standards / registration (when it graduates past the probe)
 
-- Register as `reformai.standup-agent` (definition + instance UUIDs) once it is a scheduled agent.
+- Register as `reformai.compass` (definition + instance UUIDs) once it is a scheduled agent.
 - `README.md` + `agent.json` + `LESSONS.md` (lead rule: "never trust the session cache").
 - Emits `run_started` / `run_completed` with unique `run_id`, tokens, cost.
 - Declares MCP deps (Jira/Atlassian; Calendar at P6) in `agent.json`.
@@ -262,8 +270,8 @@ proven - if the probe shows you prefer pulling on-demand, P4 may never be needed
 
 ## 15. Open questions
 
-1. **Name** - Standup vs Re-Entry vs Daybreak / Compass / Ledger.
-2. **Probe form** - a Claude Code slash command (`/standup`), a Python CLI, or a skill?
+1. ~~Name~~ - SETTLED: **Compass**.
+2. ~~Probe form~~ - SETTLED: **`/compass` slash command** (`.claude/commands/compass.md`).
 3. **Importance scale** - P0-P3, 1-5, or H/M/L? (Human-set, so pick what you will actually maintain.)
 4. **Neglect thresholds** - what "stalled N days" means per project (reformai vs a dormant personal repo differ).
 5. **Cloud-vs-local (Section 13)** - only forced at P4; flag now if you already have a preference.

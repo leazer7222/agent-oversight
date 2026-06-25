@@ -119,7 +119,14 @@ Totals: ~78 merged PRs across 5 repos.
 Straight-to-main shipped (NOT PRs - from sessions/ + docs/): Cost Risk Engine (mig 012-022),
 Estimation Dashboard, BA Scoping Agent, Codebase Context Agent, Jira Sprint Reporting Agent.
 
-## reformai-admin/reformai_visualizationengine  (5 merged)
+## reformai-admin/reformai_visualizationengine  (5 merged PRs + straight-to-main)
+
+> PARTIAL via PRs: after May 11 this repo went straight-to-main. The Jun 11 "backlog 1-12" session
+> (provider abstraction, AGT verified-generation guardrails, regression gate, balanced_v8 HTTP,
+> v7_nb2 on Gemini 3.1 - 9 commits, +2274/-237) was committed to main and pushed 2026-06-24. It is
+> NOT in the PR list below; its record is the repo's main history + `session-logs/2026-06-11_reformai.md`.
+
+### Merged PRs (5)
 
 | Merged | PR | Title |
 |---|---|---|

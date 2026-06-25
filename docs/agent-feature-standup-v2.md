@@ -24,7 +24,7 @@ Name: **Compass** (settled). Phase-1 form: a **Claude Code slash command** `/com
 | E | Agent clusters chats from scratch each run | **Deterministic-first + sticky**; LLM only on residual unfiled chats | Clustering 50 noisy transcripts is the fuzziest task; make it shrink each use, not re-roll nightly. |
 | F | "Next step" inferred and presented as fact | **Provenance-tagged**; ask when unknown, never hallucinate | A confidently-wrong next step at 6am is worse than a blank. |
 | G | You type `[KEY]` titles; Notion feed; hard hook | **Agent maintains the naming convention** (renames); Notion + hard hook dropped from core | Do not build feeds on aspirational discipline you do not have yet. |
-| H | Default = all 7 projects | **Project-scoped by default** (cwd-aware); `--all` opt-in | When you sit down in one repo you want that repo, not a 7-project firehose. |
+| H | Default = all 7 projects | **All projects by default** (the whole point); narrow to one with `/compass here` (cwd) or `/compass <project>` | The product exists to fix cross-project memory loss. Single-project is a deliberate focus mode, not the default. Manage firehose via the IMPORTANT x NEGLECTED band + grouping, not by hiding projects. |
 | I | Decommission lens in the daily path | **Separate, conservative, weekly sweep**; suggest-only, bias-keep | A wrong "kill" costs work; a wrong "keep" costs nothing - asymmetric, so lopsided bar + different cadence. |
 
 ---
@@ -163,7 +163,7 @@ behavior change; revisit only if the proven core demands them.
 
 ---
 
-## 9. The on-demand briefing (Phase 1 - the probe, change A + H)
+## 9. The on-demand briefing (Phase 1 - the probe, change A)
 
 Form: a **Claude Code slash command `/compass`** - a single markdown file at `.claude/commands/compass.md`
 (or `~/.claude/commands/compass.md` to make it global across projects, which fits Compass's
@@ -173,11 +173,11 @@ session-logs). No Python, no DB, no registration in Phase 1. `$ARGUMENTS` carrie
 line can pre-embed `git`/`gh` output; `@.compass/overlay.json` embeds the overlay. The same logic moves
 into a registered Python agent only when it graduates to the scheduled version (P4).
 
-Invocation: run it when you sit down. **Single-project by default** (reads cwd to pick the project);
-`/compass --all` for the cross-project sweep.
+Invocation: run it when you sit down. **All projects by default** (the cross-project picture is the
+point); narrow to a focus mode with `/compass here` (cwd's project only) or `/compass <project>`.
 
 Run sequence:
-1. Resolve project from cwd (or `--all`).
+1. Resolve scope: all projects (default), or one project from `here`/`<project>`.
 2. Pull chat index for that project (cheap); deep-read only chats active since last briefing.
 3. Verify live: `gh` ship-state, Jira for `jira_key` rows, session-logs for next_step + blockers.
 4. Cluster (Section 6); apply sticky overlay; flag residual unfiled.
@@ -211,8 +211,11 @@ RE-ENTRY - reformai - Tue Jun 24
   unfiled chat      : "Local setup" - part of a feature, or noise?
 ```
 
-Default scope is one project; `--all` adds project headers. Each entry is built to get you BACK INTO
-the work: last decision, blocker, provenance-tagged next step, and the exact place to resume.
+Default scope is ALL projects, grouped under project headers (the mockup above shows one group);
+`/compass here` collapses to the current project only. Each entry is built to get you BACK INTO the
+work: last decision, blocker, provenance-tagged next step, and the exact place to resume. The
+IMPORTANT x NEGLECTED band sits ABOVE the per-project groups so the one urgent thing is never buried
+under organization - it spans all projects.
 
 ---
 
@@ -231,9 +234,9 @@ Rationale: a wrong "kill" costs real work/context; a wrong "keep" costs an un-ar
 
 | Phase | Scope | Gate to next |
 |---|---|---|
-| **P1 (probe)** | On-demand local command; single-project; overlay-as-file; feeds 2+4; deterministic clustering; re-entry briefing | You actually use it when you sit down, for ~2 weeks |
+| **P1 (probe)** | On-demand `/compass`; ALL projects by default (`here` to focus); overlay-as-file; feeds 2+4; deterministic clustering; re-entry briefing | You actually use it when you sit down, for ~2 weeks |
 | P2 | Add feed 1 (Jira) + feed 3 (session-logs) + provenance prompts + agent-owned renames | reformai features show real Jira state; next-step prompts working |
-| P3 | Overlay -> Supabase; `--all` cross-project view; weekly decommission sweep | overlay durable; cross-project trusted |
+| P3 | Overlay -> Supabase; weekly decommission sweep; `/compass here` focus mode polish | overlay durable |
 | P4 | **Resolve cloud-vs-local** (see Section 13) + scheduled 06:00 delivery (md + email) | lands unattended only if Section 13 is solved |
 | P5 | `/dashboard/features` (confirm importance / groupings in UI) | you curate from the UI |
 | P6 | Day Planner (Calendar -> free blocks -> slot suggestions), fully decoupled and additive | core stands alone without it |

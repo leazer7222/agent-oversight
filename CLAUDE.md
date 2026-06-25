@@ -40,8 +40,15 @@ to be told to run it explicitly.
    - What was completed
    - What is pending / next steps
    - Any new lessons learned (add to `LESSONS_LEARNED.md`)
-2. Run `powershell -ExecutionPolicy Bypass -File scripts/push.ps1` to do a full push with doc sync.
-3. Run `powershell -ExecutionPolicy Bypass -File scripts/start-guardian.ps1 -Stop` to stop the background guardian.
+2. **Compass:** for each feature touched this session, record its **next step** (in the session
+   file / `tasks/current-state.md`). If a durable human decision changed — a confirmed grouping,
+   `importance`, a `next_step` override, or a decommissioned project — capture it in
+   `~/.claude/compass/overlay.json`. This is the highest-value input `/compass` reads at re-entry;
+   keep it current. Do NOT run `/compass` here — it is a session-START (re-entry) tool, not a close step.
+   (Compass is frozen at the probe; see `docs/agent-feature-standup-v2.md`. Do NOT add it to the
+   registered-agents list in AGENTS.md until it is actually registered at P4.)
+3. Run `powershell -ExecutionPolicy Bypass -File scripts/push.ps1` to do a full push with doc sync.
+4. Run `powershell -ExecutionPolicy Bypass -File scripts/start-guardian.ps1 -Stop` to stop the background guardian.
 
 ## Checkpoint system overview
 

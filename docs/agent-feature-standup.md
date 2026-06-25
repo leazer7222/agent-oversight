@@ -1,7 +1,13 @@
 # Feature Standup Agent
 
-Status: DRAFT (design only - not built, not registered) | Owner: `reformai` | Type: capability within Agent Oversight
+Status: SUPERSEDED by `docs/agent-feature-standup-v2.md` (retained for history) | Owner: `reformai`
 Last updated: 2026-06-24
+
+> NOTE: This v1 was redesigned after an adversarial review. See v2 for the design of record. The
+> short version of what changed: on-demand local probe before any schedule; "re-entry briefing" not
+> "status report"; overlay (human-added facts only) not a derived register; importance is human/sticky
+> with neglect computed separately; deterministic-sticky clustering; provenance-tagged next steps;
+> agent-owned naming; project-scoped default; decommission demoted to a weekly sweep.
 
 This document specifies the **Feature Standup Agent**: a daily agent that, at ~06:00 every day,
 compiles where each feature you are working on stands, what the next step is, and how important it

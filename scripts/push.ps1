@@ -66,7 +66,8 @@ $remoteBranch = if ($Branch) { "$Remote/$Branch" } else { "$Remote/$currentBranc
 # `git ... 2>&1` under ErrorActionPreference=Stop turns git's stderr into a TERMINATING error in
 # PowerShell 5.1, so verify the ref exists quietly (2>$null, no error record) before merge-base.
 git rev-parse --verify --quiet "$($remoteBranch)^{commit}" 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) {
+$remoteExists = ($LASTEXITCODE -eq 0)
+if ($remoteExists) {
     $baseRef = git merge-base HEAD $remoteBranch
 } else {
     $baseRef = "HEAD~1"   # no remote ref yet (first push)
@@ -177,8 +178,8 @@ if (-not $NoDocCheck) {
 # -- 4. Final status ----------------------------------------------------------
 Write-Step "Pre-push summary"
 
-$ahead = git rev-list --count "$remoteBranch..HEAD" 2>$null
-if ($LASTEXITCODE -eq 0) {
+if ($remoteExists) {
+    $ahead = git rev-list --count "$remoteBranch..HEAD"
     Write-Ok "$ahead commit(s) ahead of $remoteBranch"
 } else {
     Write-Ok "Commits ready to push (remote not yet fetched)"

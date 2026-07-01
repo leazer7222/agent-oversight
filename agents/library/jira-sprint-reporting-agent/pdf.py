@@ -153,7 +153,7 @@ STR = {
   "scope_intro": 'Los {pcommitted} ítems comprometidos. <span class="cotag">CO</span> = trasladado del Sprint 3.',
   "cols": ["Clave","Tipo","Tamaño","Estado","Responsable","","Resumen"],
   "st": {"To Do":"Por Hacer","In Progress":"En Curso","QA / Testing":"QA","Done":"Hecho","Blocked":"Bloqueado"},
-  "cat": {"Business Design":"Diseño de Negocio","Product":"Producto","Tech Debt":"Deuda Técnica","Infrastructure":"Infraestructura"},
+  "cat": {"Business Design":"Diseño de Negocio","Product":"Producto","Tech Debt":"Deuda Técnica","Infrastructure":"Infraestructura","Uncategorized":"Sin categoría"},
   "footer": "Reform-A.i &middot; Revisión Sprint 3", "conf": "Confidencial",
  },
 }

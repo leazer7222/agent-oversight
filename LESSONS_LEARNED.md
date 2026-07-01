@@ -443,6 +443,15 @@ Add new lessons at the end of each session.
 - A git pre-push hook (`.githooks/pre-push`) blocks manual CLI pushes with the same redirect. Activated by `git config core.hooksPath .githooks`.
 - `PUSH_SCRIPT_RUNNING=1` env var signals to the git hook that it's being called from inside `push.ps1` — allows the internal `git push` through without recursion.
 - Bypass: `pwsh scripts/push.ps1 --no-doc-check` (emergencies) or `git push --no-verify` (skips git hook only).
+- **First-push bug (fixed 2026-07-01):** `push.ps1` sets `$ErrorActionPreference='Stop'`; under PS 5.1
+  a native `git ... 2>&1`/`2>$null` against a NON-existent upstream (first push of a worktree branch)
+  turns git's stderr into a TERMINATING error and aborts the script. Fix: probe with
+  `git rev-parse --verify --quiet "<ref>^{commit}"` and gate merge-base / rev-list on `$remoteExists`
+  instead of catching stderr. Applies to any native-git call that can hit a missing ref.
+- **403 on push = wrong gh account.** `reformai-admin` cannot push to `leazer7222/agent-oversight`.
+  Run `gh auth switch --user leazer7222` before pushing this repo (see also the git-push-auth lesson).
+- Run `push.ps1 -NoReview` for close-out doc pushes when the Anthropic balance may be empty (the
+  code-review-agent step crashes on no credit).
 - PreToolUse hook fires on EVERY Bash call — the script exits 0 immediately if the command isn't a git push, so overhead is negligible.
 
 ### Build order for estimation dashboard (vertical slices)

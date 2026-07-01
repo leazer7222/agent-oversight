@@ -43,8 +43,8 @@
       "XS": 4,
       "S": 11,
       "M": 10,
-      "L": 2,
-      "Spike": 1,
+      "L": 1,
+      "Spike": 2,
       "Unsized": 2
     },
     "completed_by_size": {
@@ -143,7 +143,7 @@
         "epic_key": "RAI-629",
         "epic": "Business Design",
         "cat": "Business Design",
-        "size": "L",
+        "size": "Spike",
         "owner": "Charles",
         "summary": "Design for Supplier Catalogs",
         "added_after_start": false
@@ -465,7 +465,7 @@
   "planning": {
     "sprint": "Sprint 4",
     "id": 608,
-    "goal": "Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul + Productionize Email Notifications",
+    "goal": "Project Creation from Visualization in Production + Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul + Productionize Email Notifications",
     "committed": 24,
     "carryover": 12,
     "unsized": 3,
@@ -475,8 +475,8 @@
       "XS": 1,
       "S": 8,
       "M": 8,
-      "L": 3,
-      "Spike": 1,
+      "L": 2,
+      "Spike": 2,
       "Unsized": 3
     },
     "by_initiative": {
@@ -584,7 +584,7 @@
         "epic_key": "RAI-629",
         "epic": "Business Design",
         "cat": "Business Design",
-        "size": "L",
+        "size": "Spike",
         "owner": "Charles",
         "summary": "Design for Supplier Catalogs",
         "carryover": true

@@ -69,7 +69,9 @@ First reports are live in Confluence space RAPD:
 
 Run this first each cycle. It does the three session-opening steps in one shot:
 1. Copies `SPRINT RETRO - TEMPLATE` into `<review sprint> Retro` under **RAPD > Reform AI Product
-   Documentation > Sprint Reviews** (idempotent - skips if it already exists).
+   Documentation > Sprint Reviews** (idempotent - skips if it already exists), and **pre-fills from
+   Jira**: Sprint name, Dates, Review + Planning page links, and one Sprint Goal table row per goal
+   component (split on `+`). Facilitator / Participants stay blank for the humans.
 2. Copies over the Jira sprint info (runs the gather -> `reports/cycle_data.json` + prints the summary).
 3. Prints the 1-hour-before pre-meeting checklist (`PRE_MEETING_CHECKLIST.md`).
 

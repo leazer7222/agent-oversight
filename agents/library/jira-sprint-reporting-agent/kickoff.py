@@ -18,7 +18,8 @@ Run:
   python agents/library/jira-sprint-reporting-agent/kickoff.py --dry-run   # no writes
 """
 from __future__ import annotations
-import sys
+import sys, re
+import html as _html
 from pathlib import Path
 import httpx
 
@@ -33,6 +34,8 @@ HJSON = {**H, "Content-Type": "application/json"}
 SPRINT_REVIEWS_PARENT = "164921346"   # RAPD > Reform AI Product Documentation > Sprint Reviews
 RETRO_TEMPLATE_ID = "166297602"       # SPRINT RETRO - TEMPLATE
 
+def esc(t): return _html.escape(str(t), quote=False)
+
 def find_page(title):
     r = httpx.get(f"{SITE}/wiki/rest/api/content",
                   params={"spaceKey": SPACE, "title": title, "type": "page", "expand": "version"},
@@ -40,25 +43,80 @@ def find_page(title):
     res = r.json().get("results", [])
     return res[0] if res else None
 
-def review_sprint_name(override=None):
+def pick_sprints(override=None):
+    """Return (review_sprint_dict, next_sprint_dict). Review = the sprint being reviewed
+    (override by name, else latest closed). Next = first future sprint (for the planning link)."""
+    vals, start = [], 0
+    while True:
+        pg = cycle.jget(f"/rest/agile/1.0/board/{cycle.BOARD}/sprint", {"startAt": start, "maxResults": 50})
+        vals += pg.get("values", [])
+        if pg.get("isLast") or start + 50 >= 1000:
+            break
+        start += 50
     if override:
-        return override
-    closed, _future = cycle.find_sprints()  # review target = latest closed (matches the gather)
-    if not closed:
-        raise SystemExit("no closed sprint found - close the sprint in Jira first, or pass --sprint")
-    return closed["name"]
+        review = next((s for s in vals if s["name"] == override), None)
+        if not review:
+            raise SystemExit(f"sprint {override!r} not found on board {cycle.BOARD}")
+    else:
+        closed = [s for s in vals if s["state"] == "closed"]
+        if not closed:
+            raise SystemExit("no closed sprint found - close the sprint in Jira first, or pass --sprint")
+        review = closed[-1]
+    future = [s for s in vals if s["state"] == "future"]
+    return review, (future[0] if future else None)
 
-def copy_retro(sprint_name, dry=False):
-    title = f"{sprint_name} Retro"
+def _pagelink(title):
+    return f'<ac:link><ri:page ri:content-title="{esc(title)}" /></ac:link>'
+
+def prefill(body, review, nxt):
+    """Fill the info panel (Sprint, Dates, Review/Planning links) and the Sprint Goal
+    table (one row per goal component). Facilitator/Participants stay blank (human)."""
+    name = review["name"]
+    start = (review.get("startDate") or "")[:10]
+    end = (review.get("endDate") or "")[:10]
+    body = body.replace("<strong>Sprint:</strong> Sprint N</p>",
+                        f"<strong>Sprint:</strong> {esc(name)}</p>")
+    if start and end:
+        body = body.replace("<strong>Dates:</strong> YYYY-MM-DD &ndash; YYYY-MM-DD</p>",
+                            f"<strong>Dates:</strong> {start} &ndash; {end}</p>")
+    body = body.replace("<strong>Review page:</strong> (link to Sprint N &mdash; Review)</p>",
+                        f"<strong>Review page:</strong> {_pagelink(f'{name} - Review Analysis')}</p>")
+    plan = _pagelink(f"{nxt['name']} - Planning") if nxt else "(next sprint not created yet)"
+    body = body.replace("<strong>Planning page:</strong> (link to Sprint N+1 &mdash; Planning)</p>",
+                        f"<strong>Planning page:</strong> {plan}</p>")
+    # Sprint Goal table: one component per row (split the Jira goal on '+').
+    goal = (review.get("goal") or "").strip()
+    comps = [c.strip() for c in re.split(r"\s*\+\s*", goal) if c.strip()] if goal else []
+    if comps:
+        h = body.find("Sprint Goal</h2>")
+        tstart = body.find("<table", h) if h != -1 else -1
+        tend = body.find("</table>", tstart) if tstart != -1 else -1
+        if tstart != -1 and tend != -1:
+            table = body[tstart:tend]
+            data_rows = re.findall(r"<tr\b.*?</tr>", table, re.S)[1:]  # skip header
+            for i, comp in enumerate(comps):
+                if i >= len(data_rows):
+                    print(f"   [note] goal has {len(comps)} parts but the table has {len(data_rows)} rows; extra parts dropped")
+                    break
+                filled = re.sub(r'<p local-id="([^"]*)" ?/>',
+                                lambda m: f'<p local-id="{m.group(1)}">{esc(comp)}</p>',
+                                data_rows[i], count=1)
+                body = body.replace(data_rows[i], filled, 1)
+    return body, name, (start, end), comps
+
+def copy_retro(review, nxt, dry=False):
+    title = f"{review['name']} Retro"
     existing = find_page(title)
     if existing:
         print(f"   [skip] '{title}' already exists -> {SITE}/wiki/spaces/{SPACE}/pages/{existing['id']}")
         return
-    if dry:
-        print(f"   [dry-run] would create '{title}' under Sprint Reviews ({SPRINT_REVIEWS_PARENT}) from template {RETRO_TEMPLATE_ID}")
-        return
     tmpl = cycle.jget(f"/wiki/rest/api/content/{RETRO_TEMPLATE_ID}", {"expand": "body.storage"})
-    body = tmpl["body"]["storage"]["value"]
+    body, name, dates, comps = prefill(tmpl["body"]["storage"]["value"], review, nxt)
+    print(f"   prefill -> Sprint: {name} | Dates: {dates[0] or '?'}..{dates[1] or '?'} | "
+          f"Goal rows: {len(comps)} | Planning link: {nxt['name'] if nxt else '(none)'}")
+    if dry:
+        print(f"   [dry-run] would create '{title}' under Sprint Reviews ({SPRINT_REVIEWS_PARENT})")
+        return
     payload = {"type": "page", "title": title, "space": {"key": SPACE},
                "ancestors": [{"id": SPRINT_REVIEWS_PARENT}],
                "body": {"storage": {"value": body, "representation": "storage"}}}
@@ -75,11 +133,11 @@ def main():
     override = None
     if "--sprint" in sys.argv:
         override = sys.argv[sys.argv.index("--sprint") + 1]
-    name = review_sprint_name(override)
-    print(f"== Cycle kickoff: reviewing {name}{' (DRY RUN)' if dry else ''} ==\n")
+    review, nxt = pick_sprints(override)
+    print(f"== Cycle kickoff: reviewing {review['name']}{' (DRY RUN)' if dry else ''} ==\n")
 
-    print("1) Retro page from template:")
-    copy_retro(name, dry=dry)
+    print("1) Retro page from template (pre-filled from Jira):")
+    copy_retro(review, nxt, dry=dry)
 
     print("\n2) Copy over Jira sprint info (gather):")
     if dry:

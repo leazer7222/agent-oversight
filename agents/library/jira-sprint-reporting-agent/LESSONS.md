@@ -2,6 +2,11 @@
 
 Per-agent rules learned building this capability. Read before working on it.
 
+> RUNTIME NOTE: cycles run on the **token-based REST** path (`cycle.py`/`author.py`/`pdf.py`),
+> NOT the Atlassian MCP. The MCP tool names below (`editJiraIssue`, `getJiraIssue`) are historical
+> from the pre-token mechanism; the token equivalent is `PUT /rest/api/3/issue/<key>`. See root
+> `LESSONS_LEARNED.md`.
+
 ## Jira data
 - Query sprint membership by **sprint ID** (`sprint = 540`), NOT name (`sprint = "Sprint 1"`) -
   the name matches identically-named sprints on other boards and over-returns.

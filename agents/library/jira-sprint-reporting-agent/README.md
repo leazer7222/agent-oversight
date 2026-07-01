@@ -68,7 +68,12 @@ First reports are live in Confluence space RAPD:
 ## Registration status
 
 ACTIVE. Registered in Supabase (`agent_definitions` + `agents`); `metadata.runtime_implemented=true`.
-Telemetry smoke-tested (run `51a54fba-1b8e-4747-9d61-f563c12538ce`, `status=completed`). The runtime
-covers connect + sprint metrics + telemetry; the rich Confluence/PDF authoring is still produced via
-the Atlassian MCP. Add an Atlassian API token to run the live pull headless. Flip status with
+Telemetry smoke-tested (run `51a54fba-1b8e-4747-9d61-f563c12538ce`, `status=completed`).
+
+**The live runtime is TOKEN-based REST, NOT the Atlassian MCP.** Every real cycle (Sprint 1/2,
+Sprint 2/3) ran through `cycle.py` -> `author.py` -> `pdf.py` using the Atlassian API token
+(HTTP Basic auth): Jira REST reads, Confluence REST read+write, and Agile-API sprint-goal writes.
+The MCP OAuth broke on 2026-06-18 and is not used. See root `LESSONS_LEARNED.md` ("Jira Sprint
+Reporting Agent — the runtime is TOKEN-based REST"). Requires `ATLASSIAN_EMAIL` +
+`ATLASSIAN_API_TOKEN` in `.env.local`. Flip status with
 `node scripts/set_jira_agent_status.js <active|paused>`.

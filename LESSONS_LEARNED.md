@@ -597,3 +597,41 @@ Add new lessons at the end of each session.
 - If every tool suddenly errors with `PreToolUse ... hook error: can't open file
   '...\.workspace\...\scripts\hooks\...'`, the shell CWD has moved. A session restart is the
   reliable escape; on restart, fix the hook to use $CLAUDE_PROJECT_DIR.
+
+---
+
+## Jira Sprint Reporting Agent — the runtime is TOKEN-based REST, NOT the Atlassian MCP
+
+### Standing rule: do NOT reach for the Atlassian MCP for this agent
+- Every real sprint cycle has been run through the **token-based REST runtime**
+  (`cycle.py` -> `author.py` -> `pdf.py`), authenticating with the Atlassian API token via
+  HTTP Basic auth. This has been the mechanism for BOTH cycles run to date: Sprint 1/2 and
+  Sprint 2/3. The MCP was NOT used for either.
+- The Atlassian MCP OAuth broke mid-cycle on 2026-06-18 ("Invalid context", survived cookie
+  clears / pre-auth / retries) and has stayed broken. The token path fully bypasses it and does
+  strictly MORE: Jira REST reads, Confluence REST read+write, AND Agile-API writes (setting a
+  sprint goal via `POST /rest/agile/1.0/sprint/<id>`), none of which needed the MCP.
+- The token (Basic auth `email:api_token`) covers Jira REST + Confluence REST + Agile API. Build
+  and run everything on the token. Do not attempt to reconnect or invoke the MCP for this agent.
+
+### Stale docs that wrongly imply the MCP (ignore them / fix on sight)
+- The agent `README.md` line "the rich Confluence/PDF authoring is still produced via the
+  Atlassian MCP" is STALE — authoring is REST via `author.py`/`pdf.py`.
+- The agent `LESSONS.md` references MCP tool names (`editJiraIssue`, `getJiraIssue`); those were
+  the pre-token mechanism. The token equivalent is `PUT /rest/api/3/issue/<key>` for the
+  t-shirt-size write-back. Treat the MCP tool names as historical.
+- `agent.py --smoke` still exists for telemetry/config validation, but the actual cycle is
+  `cycle.py`, not `agent.py`.
+
+### How to run a cycle (token path)
+- Token lives in the **main repo** `.env.local` (`ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`,
+  optional `ATLASSIAN_CLOUD_ID`). `cycle.py` computes `REPO = __file__.parents[3]`, so when run
+  from a **worktree** it reads the WORKTREE `.env.local` — which does NOT carry the token. Either
+  run the main-repo copy of the script, or copy the `ATLASSIAN_*` lines into the worktree
+  `.env.local` (gitignored, local-only) before running.
+- `cycle.py` hardcodes `RETRO_PAGE_ID` (Sprint N retro) and a `SPRINT_2_RETRO` comment — it must
+  be repointed to the current sprint's Retro page each cycle. `find_sprints()` auto-selects
+  latest-closed + next-future, so review/planning sprint IDs adapt on their own; only the retro
+  page ID is manual.
+- Site `https://reform-ai-team.atlassian.net`, board 3, space RAPD, t-shirt size
+  `customfield_10225`, sprint field `customfield_10020`.

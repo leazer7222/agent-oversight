@@ -81,9 +81,10 @@ python agents/library/jira-sprint-reporting-agent/kickoff.py --sprint "Sprint 4"
 python agents/library/jira-sprint-reporting-agent/kickoff.py --dry-run    # validate, no writes
 ```
 
-Order: **close the sprint in Jira first**, then run kickoff (so the gather reviews it and the retro
-is named for it). After the retro meeting fills the page and it is re-published, run
-`cycle.py` -> `author.py` -> `pdf.py` to produce the review/planning pages + management PDF.
+Order: run kickoff **while the sprint is still OPEN** (do NOT close it first). Review = the active
+sprint, so the retro is created and pre-filled before the review meeting. After the meeting fills
+the retro page and it is re-published, run `cycle.py` -> `author.py` -> `pdf.py` to produce the
+review/planning pages + management PDF. Close the sprint in Jira after the review, not before.
 
 ## Registration status
 

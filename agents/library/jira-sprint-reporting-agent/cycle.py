@@ -97,7 +97,12 @@ def scope_changes(sprint_id: int) -> dict:
     }
 
 def find_sprints():
-    """Return (closed_latest, future_next) sprint dicts for the board."""
+    """Return (review_sprint, next_sprint) dicts for the board.
+
+    Review = the sprint being reviewed = the ACTIVE (open) sprint if one exists,
+    else the latest closed. This supports reviewing a sprint BEFORE it is closed
+    (the team runs the review while the sprint is still open, then closes it).
+    Next = first future sprint (the planning target)."""
     vals, start = [], 0
     while True:
         page = jget(f"/rest/agile/1.0/board/{BOARD}/sprint", {"startAt": start, "maxResults": 50})
@@ -105,9 +110,11 @@ def find_sprints():
         if page.get("isLast") or start + 50 >= 1000:
             break
         start += 50
+    active = [s for s in vals if s["state"] == "active"]
     closed = [s for s in vals if s["state"] == "closed"]
     future = [s for s in vals if s["state"] == "future"]
-    return (closed[-1] if closed else None), (future[0] if future else None)
+    review = active[-1] if active else (closed[-1] if closed else None)
+    return review, (future[0] if future else None)
 
 def find_retro_page_id(sprint_name: str) -> str | None:
     """Locate the retro Confluence page for a sprint by title in SPACE_KEY.
@@ -180,7 +187,7 @@ def summarize(issues: list[dict]) -> dict:
 
 def main():
     closed, future = find_sprints()
-    print(f"closed sprint: {closed['name']} (id {closed['id']})")
+    print(f"review sprint: {closed['name']} (id {closed['id']}, state {closed['state']})")
     print(f"future sprint: {future['name']} (id {future['id']})" if future else "no future sprint")
 
     s2 = sprint_issues(closed["id"])

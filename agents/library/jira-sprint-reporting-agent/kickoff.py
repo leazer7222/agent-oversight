@@ -45,7 +45,8 @@ def find_page(title):
 
 def pick_sprints(override=None):
     """Return (review_sprint_dict, next_sprint_dict). Review = the sprint being reviewed
-    (override by name, else latest closed). Next = first future sprint (for the planning link)."""
+    (override by name, else the ACTIVE/open sprint, else latest closed) - run this while
+    the sprint is still OPEN, before closing it. Next = first future sprint (planning link)."""
     vals, start = [], 0
     while True:
         pg = cycle.jget(f"/rest/agile/1.0/board/{cycle.BOARD}/sprint", {"startAt": start, "maxResults": 50})
@@ -58,11 +59,13 @@ def pick_sprints(override=None):
         if not review:
             raise SystemExit(f"sprint {override!r} not found on board {cycle.BOARD}")
     else:
+        active = [s for s in vals if s["state"] == "active"]
         closed = [s for s in vals if s["state"] == "closed"]
-        if not closed:
-            raise SystemExit("no closed sprint found - close the sprint in Jira first, or pass --sprint")
-        review = closed[-1]
-    future = [s for s in vals if s["state"] == "future"]
+        review = active[-1] if active else (closed[-1] if closed else None)
+        if not review:
+            raise SystemExit("no active or closed sprint found - pass --sprint")
+    # next = first future sprint that is not the review sprint (for the Planning link)
+    future = [s for s in vals if s["state"] == "future" and s["id"] != review["id"]]
     return review, (future[0] if future else None)
 
 def _pagelink(title):

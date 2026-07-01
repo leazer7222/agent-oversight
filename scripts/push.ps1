@@ -62,10 +62,14 @@ Write-Step "Migration check"
 
 # Find migration files modified since last push (HEAD vs remote)
 $remoteBranch = if ($Branch) { "$Remote/$Branch" } else { "$Remote/$currentBranch" }
-$baseRef = git merge-base HEAD $remoteBranch 2>&1
-if ($LASTEXITCODE -ne 0) {
-    # No remote ref yet (first push) -- compare against all committed migrations
-    $baseRef = "HEAD~1"
+# Determine the diff base without aborting on a missing upstream (first push of a branch).
+# `git ... 2>&1` under ErrorActionPreference=Stop turns git's stderr into a TERMINATING error in
+# PowerShell 5.1, so verify the ref exists quietly (2>$null, no error record) before merge-base.
+git rev-parse --verify --quiet "$($remoteBranch)^{commit}" 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    $baseRef = git merge-base HEAD $remoteBranch
+} else {
+    $baseRef = "HEAD~1"   # no remote ref yet (first push)
 }
 
 $changedMigrations = git diff --name-only $baseRef HEAD -- "supabase/migrations/*.sql" 2>&1 |
@@ -173,7 +177,7 @@ if (-not $NoDocCheck) {
 # -- 4. Final status ----------------------------------------------------------
 Write-Step "Pre-push summary"
 
-$ahead = git rev-list --count $remoteBranch..HEAD 2>&1
+$ahead = git rev-list --count "$remoteBranch..HEAD" 2>$null
 if ($LASTEXITCODE -eq 0) {
     Write-Ok "$ahead commit(s) ahead of $remoteBranch"
 } else {

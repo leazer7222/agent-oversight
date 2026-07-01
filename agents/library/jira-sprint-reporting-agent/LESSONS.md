@@ -29,7 +29,17 @@ Per-agent rules learned building this capability. Read before working on it.
   (critical for the Set-Size write-back: the human must publish before the agent applies).
 
 ## Reporting design
-- **Goal-aware health overrides raw completion.** Goal met = GREEN even at low %.
+- **Velocity is a BASELINE, not a trend, until ~5-6 fully-sized sprints.** With 2-3 data points
+  (and partial sizing) do NOT assert trends ("M doubled", "throughput rose") - frame it as
+  baseline data and say a defensible trend needs ~5-6 sized sprints. Capacity comparisons vs one
+  recent sprint are a planning sanity check, not a hard ceiling. Overclaiming a trend you cannot
+  defend is the fastest way to get the whole report picked apart.
+- **Goal-aware health overrides raw completion.** Goal met = GREEN even at low %. Prefer "GREEN /
+  substantially met" over "GOAL MET" when any goal pillar is only partial - more defensible, same
+  positive read.
+- **A carryover blocked on an external decision-maker (e.g. CEO) that has rolled since UAT is an
+  escalation, not a status line.** Recommend the concrete action (e.g. pull the dependent feature
+  from the application until the legal/pricing decision lands), name the decision gate ticket.
 - Business Design (`RAI-629`) is its own initiative group, separate from Product.
 - Carryover = item in both the closed and the next sprint (`sprint in (A) AND sprint in (B)`).
 

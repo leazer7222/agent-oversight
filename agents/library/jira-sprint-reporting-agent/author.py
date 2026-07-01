@@ -136,8 +136,9 @@ def build_review(d):
     out.append(table(list(cbs.keys()), [td(*[cbs[k] for k in cbs])]))
     out.append(panel("note",
         f"<p>Sized velocity sample: <strong>{sized_total} items</strong> ({cbs.get('Unsized',0)} completed items were unsized). "
-        f"Against the {PRIOR['name']} baseline ({PRIOR['by_size'].get('M',0)} M), mid-size (M) throughput <strong>rose to {cbs.get('M',0)}</strong>. "
-        f"Still <strong>no L or larger completed</strong> - the second sprint running - which is the key input to Sprint 4 capacity.</p>"))
+        f"This is only the second sprint with sizing, so treat it as <strong>baseline data, not a trend</strong> - a defensible "
+        f"velocity trend needs roughly 5-6 fully-sized sprints. One point to carry forward: <strong>no L or larger completed</strong> "
+        f"in either sprint.</p>"))
     out.append("<h2>Goal Assessment</h2>")
     out.append(panel("tip", f"<p><strong>Overall: </strong>{status(*GOAL_HEALTH)} - goal substantially met.</p>"))
     out.append(f"<p><em>Jira goal:</em> {esc(r['goal'] or 'not set')}</p>")
@@ -234,8 +235,8 @@ def build_planning(d):
         f"<p><strong>Capacity watch:</strong> {p['sprint']} commits {big(p['sizes'])} items at M or larger; "
         f"{review_sprint} delivered {big(cbs)} that big (and zero L). Top-end load eased: Supplier Catalog (RAI-546) "
         f"was converted from a large story to a research spike, so the remaining L's are the infrastructure report "
-        f"(RAI-677) and Moodboard Design (RAI-654). Still confirm M capacity - the committed M count sits above last "
-        f"sprint's delivered M.</p>"))
+        f"(RAI-677) and Moodboard Design (RAI-654). On M the plan commits more than last sprint delivered - but with only "
+        f"two sized sprints there is no defensible velocity yet, so treat this as a planning sanity check, not a hard ceiling.</p>"))
     if unsized_stories:
         out.append("<h2>Needs Estimate (non-bug)</h2>")
         out.append(table(["Key", "Status", "Epic", "Owner", "Summary"],

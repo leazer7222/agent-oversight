@@ -68,10 +68,11 @@ STR = {
             "<strong>Prod regressions from hotfixes.</strong> Flagged in the retro; it motivates a per-build test suite and standard user-checks across all tabs and pages.",
             "<strong>Supplier Catalog moved to a research spike.</strong> The retro flagged it hard to design without enough client catalogs to generalize from; for Sprint 4 it converts from a large story to a spike - de-risking the effort while we gather sample catalogs to design against.",
             "<strong>Venezuela new-market design</strong> pulled focus from sprint initiatives."],
-  "s_velocity": "Velocity - Completed by Size", "v_baseline": "M throughput doubled",
+  "s_velocity": "Velocity - Completed by Size", "v_baseline": "Establishing a baseline",
   "v_text": ("The team delivered <strong>{sized} sized items</strong> ({xs} XS, {s} S, {m} M, {spk} Spike) plus {un} "
-             "unsized. Mid-size (M) throughput <strong>doubled versus Sprint 2</strong> (3 &rarr; {m}). <strong>No L or larger</strong> "
-             "was completed - the second sprint running - which is the key input to Sprint 4 capacity."),
+             "unsized. This is only the second sprint with sizing, so these are <strong>baseline data points, not a trend</strong> "
+             "- a defensible velocity trend needs roughly 5-6 fully-sized sprints. One point worth carrying forward: no L or "
+             "larger has been completed in either sprint."),
   "s_selfcorr": "How We're Self-Correcting", "fromretro": "From the retro", "actions": "Actions next sprint",
   "action_items": ["Supplier Catalog moved to a research spike; gather sample client catalogs to design against",
                    "Stand up a per-build test suite to catch prod regressions",
@@ -86,8 +87,9 @@ STR = {
   "cap_text": ("<strong>Capacity watch.</strong> Sprint 4 commits {m} M and {l} L items; Sprint 3 delivered "
                "{dm} M and {dl} L (zero L). Top-end load eased this cycle: Supplier Catalog (RAI-546) was converted from a "
                "large story to a research spike, dropping the L count to {l}. The remaining L's are the infrastructure report "
-               "(RAI-677, a goal anchor) and Moodboard Design (RAI-654). Still confirm M capacity - {m} M sits above the {dm} "
-               "delivered last sprint."),
+               "(RAI-677, a goal anchor) and Moodboard Design (RAI-654). On M, the plan commits {m} vs {dm} delivered last sprint "
+               "- but with only two sized sprints there is no defensible velocity yet, so treat this as a planning sanity check, "
+               "not a hard ceiling."),
   "eyebrow3": "Sprint 4", "h1_scope": "What's in Scope",
   "scope_intro": 'All {pcommitted} committed items. <span class="cotag">CO</span> = carryover from Sprint 3.',
   "cols": ["Key","Type","Size","Status","Owner","","Summary"],
@@ -128,10 +130,11 @@ STR = {
             "<strong>Regresiones en producción por hotfixes.</strong> Señalado en la retro; motiva una suite de pruebas por cada build y verificaciones de usuario estándar en todas las pestañas y páginas.",
             "<strong>El Catálogo de Proveedores pasó a un spike de investigación.</strong> La retro señaló que es difícil de diseñar sin suficientes catálogos de clientes para generalizar; para el Sprint 4 pasa de historia grande a spike - reduciendo el riesgo mientras reunimos catálogos de muestra para diseñar.",
             "<strong>El diseño del nuevo mercado de Venezuela</strong> desvió el foco de las iniciativas del sprint."],
-  "s_velocity": "Velocidad - Completado por Tamaño", "v_baseline": "El rendimiento de M se duplicó",
+  "s_velocity": "Velocidad - Completado por Tamaño", "v_baseline": "Estableciendo una línea base",
   "v_text": ("El equipo entregó <strong>{sized} ítems con tamaño</strong> ({xs} XS, {s} S, {m} M, {spk} Spike) más {un} "
-             "sin tamaño. El rendimiento de tamaño medio (M) <strong>se duplicó versus el Sprint 2</strong> (3 &rarr; {m}). "
-             "<strong>No se completó ningún L o mayor</strong> - el segundo sprint consecutivo - lo cual es el insumo clave para la capacidad del Sprint 4."),
+             "sin tamaño. Este es apenas el segundo sprint con tamaños, así que son <strong>datos de línea base, no una tendencia</strong> "
+             "- una tendencia de velocidad defendible requiere unos 5-6 sprints totalmente dimensionados. Un punto a considerar: no se "
+             "ha completado ningún L o mayor en ninguno de los dos sprints."),
   "s_selfcorr": "Cómo Nos Auto-Corregimos", "fromretro": "De la retro", "actions": "Acciones próximo sprint",
   "action_items": ["El Catálogo de Proveedores pasó a un spike de investigación; reunir catálogos de clientes de muestra para diseñar",
                    "Montar una suite de pruebas por cada build para detectar regresiones en producción",
@@ -147,8 +150,9 @@ STR = {
   "cap_text": ("<strong>Alerta de capacidad.</strong> El Sprint 4 compromete {m} M y {l} L; el Sprint 3 entregó "
                "{dm} M y {dl} L (cero L). La carga de tamaño alto bajó este ciclo: el Catálogo de Proveedores (RAI-546) pasó de "
                "historia grande a spike de investigación, reduciendo el conteo de L a {l}. Los L restantes son el reporte de "
-               "infraestructura (RAI-677, un ancla del objetivo) y el Diseño de Moodboard (RAI-654). Aún confirme la capacidad "
-               "de M - {m} M está por encima de los {dm} entregados el sprint pasado."),
+               "infraestructura (RAI-677, un ancla del objetivo) y el Diseño de Moodboard (RAI-654). En M, el plan compromete {m} "
+               "vs {dm} entregados el sprint pasado - pero con solo dos sprints dimensionados aún no hay una velocidad defendible, "
+               "así que trátelo como una verificación de planeación, no un límite estricto."),
   "eyebrow3": "Sprint 4", "h1_scope": "Qué Está en el Alcance",
   "scope_intro": 'Los {pcommitted} ítems comprometidos. <span class="cotag">CO</span> = trasladado del Sprint 3.',
   "cols": ["Clave","Tipo","Tamaño","Estado","Responsable","","Resumen"],

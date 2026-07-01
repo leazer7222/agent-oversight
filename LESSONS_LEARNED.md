@@ -635,3 +635,48 @@ Add new lessons at the end of each session.
   page ID is manual.
 - Site `https://reform-ai-team.atlassian.net`, board 3, space RAPD, t-shirt size
   `customfield_10225`, sprint field `customfield_10020`.
+
+### RUNBOOK - running a sprint review/planning cycle (do this, in this order)
+Do NOT wait to be told the workflow. It is:
+1. The sprint is still **OPEN** (do not close it first). If in a git worktree, bridge secrets into
+   the worktree `.env.local`: `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `AGENT_OVERSIGHT_SECRET`
+   (copy from the main-repo `.env.local`; the worktree copy lacks them).
+2. Run the kickoff: `python agents/library/jira-sprint-reporting-agent/kickoff.py`
+   - Copies + **pre-fills** `SPRINT RETRO - TEMPLATE` (166297602) -> `<sprint> Retro` under
+     **Sprint Reviews** (164921346): Sprint, Dates, Review/Planning `ac:link` by title, and the
+     Sprint Goal table (one row per goal component split on `+`). Facilitator/Participants blank.
+   - Runs the gather -> `reports/cycle_data.json`. Prints `PRE_MEETING_CHECKLIST.md`.
+3. Do the pre-meeting checklist. Run the review + retro meeting. The team fills the retro page
+   (structured Good/Bad/Ideas/Actions, NOT a whiteboard) and **re-publishes** it (drafts are
+   invisible to the API).
+4. Produce artifacts: `cycle.py` (re-gather with the filled retro) -> `author.py` (2 Confluence
+   pages: `<sprint> - Review Analysis`, `<next> - Planning`) -> `pdf.py` (bilingual ES+EN mgmt PDF,
+   render via Edge `--headless --print-to-pdf`).
+5. Draft the exec email -> `reports/sprint-N-exec-email.md` (NO em dashes).
+6. **Close the sprint in Jira AFTER the review**, not before.
+
+### Sprint selection (baked into find_sprints / pick_sprints)
+- Review sprint = the **ACTIVE (open)** sprint if one exists, else latest closed. This is because
+  the review runs while the sprint is still open. Planning sprint = first future sprint.
+
+### Standing report decisions (do NOT re-litigate each cycle)
+- Goal-aware health: goal met = GREEN even at low completion %. Use **"substantially met"** (not
+  "MET") when any goal pillar is only partial.
+- Velocity is a **BASELINE, not a trend**, until ~5-6 fully-sized sprints. Capacity vs one recent
+  sprint is a planning sanity check, not a hard ceiling. Never claim a trend you cannot defend.
+- **Scope decomposition**: always split committed-at-start vs added-mid-sprint using the GreenHopper
+  sprint report (`/rest/greenhopper/1.0/rapid/charts/sprintreport`, `rapidViewId` == board == 3;
+  `issueKeysAddedDuringSprint` / `puntedIssues`). It defends the raw completion %.
+- **Bugs are unsized by design**, tracked in the Production Bugs bucket; the readiness gate ignores
+  unsized bugs (only non-bug stories must be sized).
+- A carryover blocked on a CEO/exec decision since UAT is an **escalation**: recommend the concrete
+  action (e.g. pull the dependent feature from the application until the legal/pricing decision
+  lands) and name the decision-gate ticket.
+- Management report is **bilingual, Spanish section first**. `pdf.py` reads the planning goal LIVE
+  from Jira for EN; the ES goal is a hand translation (retranslate if the Jira goal changes).
+
+### Confluence structure (RAPD)
+- `Reform AI Product Documentation` (38928654) > `Sprint Reviews` (164921346) holds the retros.
+  Template `SPRINT RETRO - TEMPLATE` (166297602) sits under a `Templates` subfolder (166330369).
+- Retro pages are auto-discovered by title `<sprint> Retro`. Instance agent_id
+  `5544edd7-fe39-4340-9063-f9f71aef85b9`; oversight `https://agent-oversight.vercel.app`.

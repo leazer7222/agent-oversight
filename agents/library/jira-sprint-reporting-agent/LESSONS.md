@@ -6,6 +6,11 @@ Per-agent rules learned building this capability. Read before working on it.
 > NOT the Atlassian MCP. The MCP tool names below (`editJiraIssue`, `getJiraIssue`) are historical
 > from the pre-token mechanism; the token equivalent is `PUT /rest/api/3/issue/<key>`. See root
 > `LESSONS_LEARNED.md`.
+>
+> WORKFLOW: run `kickoff.py` while the sprint is still OPEN (it reviews the ACTIVE sprint, pre-fills
+> the retro, gathers, prints the checklist). Then review meeting -> team fills+republishes retro ->
+> `cycle.py` -> `author.py` -> `pdf.py` -> exec email -> close the sprint. Full runbook + standing
+> decisions are in root `LESSONS_LEARNED.md` and this agent's `README.md`. Do not wait to be told.
 
 ## Jira data
 - Query sprint membership by **sprint ID** (`sprint = 540`), NOT name (`sprint = "Sprint 1"`) -

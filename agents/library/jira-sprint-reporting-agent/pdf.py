@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Generate the branded Sprint 2 management report (HTML) from reports/cycle_data.json,
-in English and Spanish. Reuses the ReformAI brand CSS + the localized logo. Render
-each with Edge headless afterwards.
+Generate the branded management report (HTML) for the current cycle from
+reports/cycle_data.json, English only. Reuses the ReformAI brand CSS + logo.
+Render to PDF afterwards with Edge headless (--print-to-pdf).
 
-Framework + agent-authored narrative are translated; Jira ticket titles and verbatim
-retro content stay in their source language (data, not chrome).
+Narrative (headline, cards, story, actions) is authored per-cycle for THIS cycle
+(Sprint 3 review / Sprint 4 planning). Ticket titles + retro text stay verbatim.
 """
 from __future__ import annotations
 import json, html as _html
@@ -31,113 +31,62 @@ def trunc(s, n=70):
 LZ = {"To Do": "lz-todo", "In Progress": "lz-prog", "QA / Testing": "lz-qa", "Done": "lz-done", "Blocked": "lz-block"}
 ORDER = {"Done": 0, "QA / Testing": 1, "In Progress": 2, "To Do": 3, "Blocked": 4}
 
-STR = {
- "en": {
-  "logo": "logo_en.png", "meta": "Sprint Review", "out": "sprint-2-review.html",
-  "eyebrow1": "Sprint 2 &middot; Jun 2026", "h1": "Sprint 2<br>Review",
-  "sub": "Goal: switch Wompi billing to the ReformAI account and ship the 3 user dashboards.",
-  "badge": "SPRINT HEALTH: GREEN &middot; GOAL PARTIAL",
-  "kpi": [("Sprint Goal","Partial","amber","Dashboards yes; Wompi pending"),
+# ---- per-cycle English narrative (Sprint 3 review / Sprint 4 planning) --------
+S = {
+  "logo": "logo_en.png", "meta": "Sprint Review", "out": "sprint-3-review.html",
+  "eyebrow1": "Sprint 3 &middot; Jul 2026", "h1": "Sprint 3<br>Review",
+  "sub": "Goal: technical hardening - Wompi switch, ops health + Google Cloud monitoring, code review, and create-a-project-from-a-visualization.",
+  "badge": "SPRINT HEALTH: GREEN &middot; GOAL MET",
+  "kpi": [("Sprint Goal","Met","green","4 of 6 pillars done"),
           ("Completion","{pct}%","teal","{done} of {committed} items"),
-          ("Carried Over","{carry}","","Roll into Sprint 3"),
-          ("Best Yet","{pct}%","green","Highest completion to date")],
+          ("Committed Work","{cstart_pct}%","green","{cstart_done} of {cstart} committed-at-start"),
+          ("Carried Over","{carry}","","Roll into Sprint 4")],
   "s_headline": "The Headline",
-  "headline": ("<strong>Strongest sprint to date - {done} of {committed} done ({pct}%).</strong> "
-               "The 3 user dashboards shipped. The Wompi account switch is still pending on Wompi's side - an external "
-               "dependency, not a team miss (the CEO met Wompi and the switch carries into Sprint 3). "
-               "<strong>Standout:</strong> analytics was scoped only as a research task; the team found PostHog and fully "
-               "implemented it in-sprint, ahead of plan."),
+  "headline": ("<strong>The Wompi switch landed - {done} of {committed} done ({pct}%).</strong> "
+               "Of the {cstart} items committed at sprint start, {cstart_done} shipped ({cstart_pct}%); the team also absorbed "
+               "{added} items added mid-sprint and finished {added_done} of them. The Sprint 2 external blocker is resolved, "
+               "code review is stood up in GitHub, and the operational health dashboard is in production with Google Cloud "
+               "monitoring added. Four of six goal pillars are complete; the other two are in progress, not missed."),
   "s_delivery": "Delivery at a Glance", "byinit": "By initiative",
-  "bytype": "<strong>By type:</strong> Bugs {bd} / {bt} done &middot; Stories {sd} / {st} done. Tech Debt slipped (0 of 2).",
+  "bytype": "<strong>By type:</strong> Bugs {bd} / {bt} done &middot; Stories {sd} / {st} done.",
   "complete": "{done} of {committed} complete",
   "s_shipped": "What We Shipped &amp; Why It Matters",
-  "cards": [("DASHBOARDS","3 user dashboards live","Goal"),
-            ("POSTHOG","Analytics found + shipped in-sprint","Ahead of plan"),
-            ("OPS HEALTH","New operational health dashboard","Infrastructure"),
-            ("EMAIL","Notification templates for every user type","Visuals this sprint"),
-            ("ADMIN LOGS","User activity logs in the admin module","Product"),
-            ("PLATFORM","Landing pages live + email notifications","Product")],
+  "cards": [("WOMPI","Account switched to the ReformAI bank account","Goal"),
+            ("CODE REVIEW","Stood up in GitHub","Goal"),
+            ("OPS HEALTH","Operational health dashboard productionized","Goal"),
+            ("GCP MONITORING","Google Cloud health monitoring added","Goal"),
+            ("ASSET PIPELINE","Asset Discovery Pipeline shipped","Product"),
+            ("TEAMS","Team member functionality delivered","Product")],
   "s_story": "The Story Behind the Numbers",
-  "story": ["<strong>Cloudflare fallout -&gt; a new dashboard.</strong> Old account references left from the Sprint 1 infra migration broke production images and took major unplanned effort to fix. That pain inspired the operational health dashboard - now being handed to Kay to productionize.",
-            "<strong>Google-registration bug</strong> was a significant time sink (fix expected end of day) - a real driver of the carryover.",
-            "<strong>Seller module (from UAT)</strong> is blocked on CEO input: broker-agreement update + white-glove service pricing. It keeps rolling over until that decision lands."],
-  "s_velocity": "Velocity - Completed by Size", "v_baseline": "First sized baseline",
+  "story": ["<strong>Scope grew mid-sprint.</strong> 7 items were added after the sprint started; the team completed 4. The 3 that carried over are all reactive homeowner-registration bugs - the reason a <strong>Production Bugs bucket</strong> now exists in Sprint 4.",
+            "<strong>Prod regressions from hotfixes.</strong> Flagged in the retro; it motivates a per-build test suite and standard user-checks across all tabs and pages.",
+            "<strong>Supplier Catalog is hard to design</strong> without enough client catalogs to generalize from. It carries into Sprint 4 and needs unblocking (sample catalogs, or a research spike) before more design effort.",
+            "<strong>Venezuela new-market design</strong> pulled focus from sprint initiatives."],
+  "s_velocity": "Velocity - Completed by Size", "v_baseline": "M throughput doubled",
   "v_text": ("The team delivered <strong>{sized} sized items</strong> ({xs} XS, {s} S, {m} M, {spk} Spike) plus {un} "
-             "unsized carryover. <strong>No L or larger</strong> was completed. This is the first throughput baseline; it sharpens each fully-sized sprint."),
+             "unsized. Mid-size (M) throughput <strong>doubled versus Sprint 2</strong> (3 &rarr; {m}). <strong>No L or larger</strong> "
+             "was completed - the second sprint running - which is the key input to Sprint 4 capacity."),
   "s_selfcorr": "How We're Self-Correcting", "fromretro": "From the retro", "actions": "Actions next sprint",
-  "action_items": ["Unblock the seller module (CEO: broker agreement + white-glove pricing)",
-                   "Protect tech-debt capacity (slipped 0/2 this sprint)", "Dedicated production-bug time"],
-  "ahead": "Looking ahead", "h1_plan": "Sprint 3 Planning", "plan_eyebrow": "Technical hardening sprint",
-  "plan_goal": ('Complete the Wompi switch, productionize the ops health dashboard, add GCP health, '
-                'stand up code review + Jira/GitHub - plus ship "create a project from a visualization".'),
-  "kpi_plan": [("Committed","{committed}","teal","{carry} carry &middot; {new} new"),
+  "action_items": ["Unblock Supplier Catalog before designing it (sample catalogs, or a spike)",
+                   "Stand up a per-build test suite to catch prod regressions",
+                   "Track ad-hoc bugs against the new Production Bugs bucket"],
+  "ahead": "Looking ahead", "h1_plan": "Sprint 4 Planning", "plan_eyebrow": "Infrastructure + Partner UI",
+  "plan_goal": "Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul.",
+  "kpi_plan": [("Committed","{pcommitted}","teal","{pcarry} carry &middot; {new} new"),
                ("Readiness","Ready","green","gate passed"),
-               ("Sized","{committed}/{committed}","green","all sized"),
-               ("Goal","Set","green","Wompi + technical")],
+               ("Bugs","Bucketed","amber","unsized by design"),
+               ("Goal","Set","green","infra + partner UI")],
   "s_scope": "Committed Scope", "bysize": "By size", "s_capacity": "Capacity vs Last Sprint",
-  "cap_text": ("<strong>Capacity watch.</strong> Sprint 3 commits {m} M and {l} L items; Sprint 2 delivered "
-               "{dm} M and {dl} L. The committed mix is heavier than proven throughput - confirm capacity or trim the larger items before locking. "
-               "Velocity baseline is one sprint old and partly unsized, so treat as directional."),
-  "eyebrow3": "Sprint 3", "h1_scope": "What's in Scope",
-  "scope_intro": 'All {committed} committed items. <span class="cotag">CO</span> = carryover from Sprint 2.',
+  "cap_text": ("<strong>Capacity watch.</strong> Sprint 4 commits {m} M and {l} L items; Sprint 3 delivered "
+               "{dm} M and {dl} L (zero L). The committed mix is heavier than proven throughput - confirm capacity or "
+               "trim/split the larger items before locking. The two carryover L's are Business Design (owner-acknowledged); "
+               "RAI-546 (Supplier Catalog) is the one to watch, as the retro flagged it blocked."),
+  "eyebrow3": "Sprint 4", "h1_scope": "What's in Scope",
+  "scope_intro": 'All {pcommitted} committed items. <span class="cotag">CO</span> = carryover from Sprint 3.',
   "cols": ["Key","Type","Size","Status","Owner","","Summary"],
   "st": {"To Do":"To Do","In Progress":"In Prog","QA / Testing":"QA","Done":"Done","Blocked":"Blocked"},
   "cat": {"Business Design":"Business Design","Product":"Product","Tech Debt":"Tech Debt","Infrastructure":"Infrastructure"},
-  "footer": "Reform-A.i &middot; Sprint 2 Review", "conf": "Confidential",
- },
- "es": {
-  "logo": "logo_es.png", "meta": "Revisión de Sprint", "out": "sprint-2-review-es.html",
-  "eyebrow1": "Sprint 2 &middot; Jun 2026", "h1": "Revisión<br>Sprint 2",
-  "sub": "Objetivo: cambiar la facturación de Wompi a la cuenta de ReformAI y entregar los 3 tableros de usuario.",
-  "badge": "ESTADO DEL SPRINT: VERDE &middot; OBJETIVO PARCIAL",
-  "kpi": [("Objetivo","Parcial","amber","Tableros sí; Wompi pendiente"),
-          ("Completado","{pct}%","teal","{done} de {committed} ítems"),
-          ("Trasladado","{carry}","","Pasan al Sprint 3"),
-          ("Mejor a la fecha","{pct}%","green","Mayor completado hasta ahora")],
-  "s_headline": "Lo Más Importante",
-  "headline": ("<strong>El sprint más fuerte hasta la fecha - {done} de {committed} ({pct}%).</strong> "
-               "Los 3 tableros de usuario se entregaron. El cambio de la cuenta Wompi sigue pendiente por parte de Wompi - una "
-               "dependencia externa, no una falla del equipo (el CEO se reunió con Wompi y el cambio pasa al Sprint 3). "
-               "<strong>Destacado:</strong> el análisis estaba previsto solo como tarea de investigación; el equipo encontró PostHog "
-               "y lo implementó por completo dentro del sprint, adelantándose al plan."),
-  "s_delivery": "Entrega de un Vistazo", "byinit": "Por iniciativa",
-  "bytype": "<strong>Por tipo:</strong> Bugs {bd} / {bt} &middot; Historias {sd} / {st}. La deuda técnica se quedó atrás (0 de 2).",
-  "complete": "{done} de {committed} completados",
-  "s_shipped": "Lo Que Entregamos y Por Qué Importa",
-  "cards": [("TABLEROS","3 tableros de usuario en vivo","Objetivo"),
-            ("POSTHOG","Análisis encontrado + implementado en el sprint","Adelanta el plan"),
-            ("SALUD OPS","Nuevo tablero de salud operativa","Infraestructura"),
-            ("CORREOS","Plantillas de notificación para cada tipo de usuario","Diseño este sprint"),
-            ("LOGS ADMIN","Registros de actividad de usuario en el módulo admin","Producto"),
-            ("PLATAFORMA","Páginas de aterrizaje en vivo + notificaciones por correo","Producto")],
-  "s_story": "La Historia Detrás de los Números",
-  "story": ["<strong>Secuela de Cloudflare -&gt; un nuevo tablero.</strong> Referencias de cuentas antiguas que quedaron de la migración de infraestructura del Sprint 1 dañaron las imágenes en producción y costaron un esfuerzo no planeado significativo. Ese dolor inspiró el tablero de salud operativa - ahora se entrega a Kay para llevarlo a producción.",
-            "<strong>El bug de registro con Google</strong> consumió mucho tiempo (corrección esperada para fin de día) - un motor real del trabajo trasladado.",
-            "<strong>El módulo de vendedor (de UAT)</strong> está bloqueado esperando decisión del CEO: actualización del acuerdo de corretaje + precios del servicio White-Glove. Seguirá trasladándose hasta que esa decisión llegue."],
-  "s_velocity": "Velocidad - Completado por Tamaño", "v_baseline": "Primera línea base con tamaños",
-  "v_text": ("El equipo entregó <strong>{sized} ítems con tamaño</strong> ({xs} XS, {s} S, {m} M, {spk} Spike) más {un} "
-             "trasladados sin tamaño. <strong>No se completó ningún L o mayor</strong>. Esta es la primera línea base de rendimiento; se afina con cada sprint totalmente dimensionado."),
-  "s_selfcorr": "Cómo Nos Auto-Corregimos", "fromretro": "De la retro", "actions": "Acciones próximo sprint",
-  "action_items": ["Desbloquear el módulo de vendedor (CEO: acuerdo de corretaje + precios White-Glove)",
-                   "Proteger capacidad para deuda técnica (0/2 este sprint)", "Tiempo dedicado a bugs de producción"],
-  "ahead": "Mirando hacia adelante", "h1_plan": "Planeación Sprint 3", "plan_eyebrow": "Sprint de fortalecimiento técnico",
-  "plan_goal": ('Completar el cambio de Wompi, llevar a producción el tablero de salud operativa, agregar salud de GCP, '
-                'montar revisión de código + Jira/GitHub - y entregar "crear un proyecto desde una visualización".'),
-  "kpi_plan": [("Comprometido","{committed}","teal","{carry} traslado &middot; {new} nuevos"),
-               ("Preparación","Listo","green","filtro aprobado"),
-               ("Dimensionado","{committed}/{committed}","green","todo con tamaño"),
-               ("Objetivo","Definido","green","Wompi + técnico")],
-  "s_scope": "Alcance Comprometido", "bysize": "Por tamaño", "s_capacity": "Capacidad vs Sprint Anterior",
-  "cap_text": ("<strong>Alerta de capacidad.</strong> El Sprint 3 compromete {m} M y {l} L; el Sprint 2 entregó "
-               "{dm} M y {dl} L. La mezcla comprometida es más pesada que el rendimiento comprobado - confirme la capacidad o reduzca los ítems grandes antes de cerrar. "
-               "La línea base de velocidad tiene un sprint de antigüedad y está parcialmente sin tamaños, trátela como referencial."),
-  "eyebrow3": "Sprint 3", "h1_scope": "Qué Está en el Alcance",
-  "scope_intro": 'Los {committed} ítems comprometidos. <span class="cotag">CO</span> = trasladado del Sprint 2.',
-  "cols": ["Clave","Tipo","Tamaño","Estado","Responsable","","Resumen"],
-  "st": {"To Do":"Por Hacer","In Progress":"En Curso","QA / Testing":"QA","Done":"Hecho","Blocked":"Bloqueado"},
-  "cat": {"Business Design":"Diseño de Negocio","Product":"Producto","Tech Debt":"Deuda Técnica","Infrastructure":"Infraestructura"},
-  "footer": "Reform-A.i &middot; Revisión Sprint 2", "conf": "Confidencial",
- },
+  "footer": "Reform-A.i &middot; Sprint 3 Review", "conf": "Confidential",
 }
 
 def bar(label, right, pct, color):
@@ -148,26 +97,28 @@ def tile(label, val, vclass, foot):
 
 COLORS = {"Product":"var(--orange)","Infrastructure":"var(--green)","Business Design":"var(--blue)","Tech Debt":"var(--amber)"}
 
-def build(lang, d):
-    S = STR[lang]
+def build(d):
     r, p, retro = d["review"], d["planning"], d["retro"]
     bi = r["by_initiative"]; cbs = r["completed_by_size"]; bt = r["by_type"]
+    sc = r["scope"]; cstart = sc["committed_at_start"]; added = sc["added_mid_sprint"]
     pct = r["completion_pct"]; dash = round(502.6*pct/100, 1)
     F = dict(pct=pct, done=r["completed"], committed=r["committed"], carry=r["carryover"],
-             new=p["committed"]-p["carryover"])
+             new=p["committed"]-p["carryover"], pcommitted=p["committed"], pcarry=p["carryover"],
+             cstart=cstart["count"], cstart_done=cstart["done"], cstart_pct=cstart["pct"],
+             added=added["count"], added_done=added["done"])
     foot = f'<div class="footer"><span>{S["footer"]}</span><span>{S["conf"]}</span></div>'
     H = []
 
     # PAGE 1
     H.append('<div class="page">')
     H.append(f'<div class="topbar"><div class="brand"><img class="logo" src="{S["logo"]}" alt="Reform-A.i"></div>'
-             f'<div class="meta">{S["meta"]}<br>Sprint 2</div></div>')
+             f'<div class="meta">{S["meta"]}<br>{esc(r["sprint"])}</div></div>')
     H.append(f'<div class="hero"><div class="eyebrow">{S["eyebrow1"]}</div><h1>{S["h1"]}</h1>'
              f'<div class="sub">{S["sub"]}</div><div class="healthbadge"><span class="dot"></span> {S["badge"]}</div></div>')
     H.append('<div class="kpis">' + "".join(tile(l, v.format(**F), c, ft.format(**F)) for l, v, c, ft in S["kpi"]) + '</div>')
     H.append(f'<h2 class="sec"><span class="bar"></span>{S["s_headline"]}</h2><div class="panel-goal">{S["headline"].format(**F)}</div>')
     cats = sorted(bi.items(), key=lambda x: -x[1]["total"]); maxt = max(v["total"] for _, v in cats)
-    bars = "".join(bar(S["cat"][k], f'{v["done"]} / {v["total"]}', round(100*v["total"]/maxt), COLORS.get(k, "var(--teal)")) for k, v in cats)
+    bars = "".join(bar(S["cat"].get(k, k), f'{v["done"]} / {v["total"]}', round(100*v["total"]/maxt), COLORS.get(k, "var(--teal)")) for k, v in cats)
     bytype = S["bytype"].format(bd=bt.get("Bug",{}).get("done",0), bt=bt.get("Bug",{}).get("total",0),
                                 sd=bt.get("Story",{}).get("done",0), st=bt.get("Story",{}).get("total",0))
     H.append(f'<h2 class="sec"><span class="bar"></span>{S["s_delivery"]}</h2><div class="chartrow"><div class="donutwrap">'
@@ -201,7 +152,7 @@ def build(lang, d):
              f'<div class="card"><strong style="font-size:13px;">{S["actions"]}</strong><ul class="clean">{acts}</ul></div></div>')
     H.append(foot + '</div>')
 
-    # PAGE 4: Sprint 3 planning
+    # PAGE 4: planning
     pby = p["by_initiative"]; psz = p["sizes"]
     H.append(f'<div class="page"><div class="eyebrow">{S["ahead"]}</div><h1 style="font-size:32px; margin-top:6px;">{S["h1_plan"]}</h1>')
     H.append(f'<div class="panel-goal" style="border-left-color:var(--teal); background:#f0fbfb; margin-top:14px;">'
@@ -209,7 +160,7 @@ def build(lang, d):
              f'<strong style="font-size:14px; display:block; margin-top:4px;">{S["plan_goal"]}</strong></div>')
     H.append('<div class="kpis" style="margin-top:16px;">' + "".join(tile(l, v.format(**F), c, ft.format(**F)) for l, v, c, ft in S["kpi_plan"]) + '</div>')
     pmax = max(v["total"] for v in pby.values())
-    pbars = "".join(bar(S["cat"][k], v["total"], round(100*v["total"]/pmax), COLORS.get(k, "var(--teal)")) for k, v in sorted(pby.items(), key=lambda x:-x[1]["total"]))
+    pbars = "".join(bar(S["cat"].get(k, k), v["total"], round(100*v["total"]/pmax), COLORS.get(k, "var(--teal)")) for k, v in sorted(pby.items(), key=lambda x:-x[1]["total"]))
     smax = max(psz.values())
     sbars = "".join(bar(k, psz.get(k,0), round(100*psz.get(k,0)/smax), "var(--teal)") for k in ["XS","S","M","L","Spike"] if psz.get(k))
     H.append(f'<h2 class="sec"><span class="bar"></span>{S["s_scope"]}</h2><div class="two"><div>'
@@ -239,14 +190,13 @@ def build(lang, d):
 
 def main():
     d = json.loads((REPO / "reports" / "cycle_data.json").read_text(encoding="utf-8"))
-    head = ('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Reform-A.i - Sprint 2 Review (ES/EN)</title>'
+    head = ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Reform-A.i - Sprint 3 Review</title>'
             '<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">'
             f'<style>{CSS}</style><style>{OVERRIDE}</style></head><body>')
-    # Spanish section first, then English section, in one document.
-    html = head + build("es", d) + build("en", d) + "</body></html>"
-    out = REPO / "reports" / "sprint-2-review.html"
+    html = head + build(d) + "</body></html>"
+    out = REPO / "reports" / S["out"]
     out.write_text(html, encoding="utf-8")
-    print("wrote", out, "(ES + EN, one document)")
+    print("wrote", out, "(EN)")
 
 if __name__ == "__main__":
     main()

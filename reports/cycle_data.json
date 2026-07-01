@@ -465,19 +465,19 @@
   "planning": {
     "sprint": "Sprint 4",
     "id": 608,
-    "goal": "",
+    "goal": "Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul",
     "committed": 24,
     "carryover": 12,
-    "unsized": 5,
+    "unsized": 3,
     "unassigned": 0,
     "no_epic": 0,
     "sizes": {
       "XS": 1,
       "S": 8,
-      "M": 6,
+      "M": 8,
       "L": 3,
       "Spike": 1,
-      "Unsized": 5
+      "Unsized": 3
     },
     "by_initiative": {
       "Product": {
@@ -688,7 +688,7 @@
         "epic_key": "RAI-629",
         "epic": "Business Design",
         "cat": "Business Design",
-        "size": null,
+        "size": "M",
         "owner": "David",
         "summary": "Testing Notification Emails",
         "carryover": false
@@ -714,7 +714,7 @@
         "epic_key": "RAI-629",
         "epic": "Business Design",
         "cat": "Business Design",
-        "size": null,
+        "size": "M",
         "owner": "Charles",
         "summary": "Design how Team Members login and Profile Pages",
         "carryover": false

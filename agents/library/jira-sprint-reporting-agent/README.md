@@ -65,6 +65,24 @@ First reports are live in Confluence space RAPD:
 - Sprint 2 - Planning (page `166985730`)
 - Management PDF: `reports/sprint-1-review.pdf`
 
+## Cycle kickoff (start of each review/planning session)
+
+Run this first each cycle. It does the three session-opening steps in one shot:
+1. Copies `SPRINT RETRO - TEMPLATE` into `<review sprint> Retro` under **RAPD > Reform AI Product
+   Documentation > Sprint Reviews** (idempotent - skips if it already exists).
+2. Copies over the Jira sprint info (runs the gather -> `reports/cycle_data.json` + prints the summary).
+3. Prints the 1-hour-before pre-meeting checklist (`PRE_MEETING_CHECKLIST.md`).
+
+```
+python agents/library/jira-sprint-reporting-agent/kickoff.py              # auto: latest closed sprint
+python agents/library/jira-sprint-reporting-agent/kickoff.py --sprint "Sprint 4"
+python agents/library/jira-sprint-reporting-agent/kickoff.py --dry-run    # validate, no writes
+```
+
+Order: **close the sprint in Jira first**, then run kickoff (so the gather reviews it and the retro
+is named for it). After the retro meeting fills the page and it is re-published, run
+`cycle.py` -> `author.py` -> `pdf.py` to produce the review/planning pages + management PDF.
+
 ## Registration status
 
 ACTIVE. Registered in Supabase (`agent_definitions` + `agents`); `metadata.runtime_implemented=true`.

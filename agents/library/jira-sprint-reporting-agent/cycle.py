@@ -80,6 +80,22 @@ def sprint_issues(sprint_id: int) -> list[dict]:
         start += 50
     return out
 
+def scope_changes(sprint_id: int) -> dict:
+    """Issues added or removed AFTER the sprint started. The Agile REST API cannot
+    express this; the GreenHopper sprint report can, and the token can read it.
+    rapidViewId == board id here (3)."""
+    try:
+        d = jget("/rest/greenhopper/1.0/rapid/charts/sprintreport",
+                 {"rapidViewId": BOARD, "sprintId": sprint_id})
+    except Exception as ex:
+        print(f"[WARN] sprint report unavailable for {sprint_id}: {ex}")
+        return {"added": [], "removed": []}
+    c = d.get("contents", {})
+    return {
+        "added": list(c.get("issueKeysAddedDuringSprint", {}).keys()),
+        "removed": [i.get("key") for i in c.get("puntedIssues", [])],
+    }
+
 def find_sprints():
     """Return (closed_latest, future_next) sprint dicts for the board."""
     vals, start = [], 0
@@ -173,6 +189,21 @@ def main():
     for i in s3:
         i["carryover"] = i["key"] in s2_keys
 
+    # Scope change on the review sprint: what was added/removed after it started.
+    sc = scope_changes(closed["id"])
+    added_keys = set(sc["added"])
+    for i in s2:
+        i["added_after_start"] = i["key"] in added_keys
+    def _decomp(items):
+        dn = sum(1 for i in items if i["done"])
+        return {"count": len(items), "done": dn, "carryover": len(items) - dn,
+                "pct": round(100.0 * dn / len(items)) if items else 0}
+    scope = {
+        "committed_at_start": _decomp([i for i in s2 if not i["added_after_start"]]),
+        "added_mid_sprint": _decomp([i for i in s2 if i["added_after_start"]]),
+        "removed": sc["removed"],
+    }
+
     retro_id = RETRO_PAGE_ID_OVERRIDE or find_retro_page_id(closed["name"])
     if retro_id:
         retro = parse_retro(retro_id)
@@ -182,7 +213,8 @@ def main():
         retro = {"good": [], "bad": [], "ideas": [], "page_id": None}
     data = {
         "review": {"sprint": closed["name"], "id": closed["id"],
-                   "goal": closed.get("goal", ""), **summarize(s2), "issues": s2},
+                   "goal": closed.get("goal", ""), **summarize(s2),
+                   "scope": scope, "issues": s2},
         "planning": {"sprint": future["name"], "id": future["id"],
                      "goal": future.get("goal", ""),
                      "committed": len(s3),
@@ -200,6 +232,10 @@ def main():
     r = data["review"]
     print(f"\n=== {r['sprint']} REVIEW ===")
     print(f"  committed {r['committed']} | completed {r['completed']} | carryover {r['carryover']} | {r['completion_pct']}%")
+    sc = r["scope"]
+    cs, am = sc["committed_at_start"], sc["added_mid_sprint"]
+    print(f"  SCOPE: committed-at-start {cs['count']} (done {cs['done']}, {cs['pct']}%) | "
+          f"added mid-sprint {am['count']} (done {am['done']}) | removed {len(sc['removed'])}")
     print(f"  by initiative: {json.dumps(r['by_initiative'])}")
     print(f"  by type: {json.dumps(r['by_type'])}")
     print(f"  VELOCITY - completed by size: {json.dumps(r['completed_by_size'])}")

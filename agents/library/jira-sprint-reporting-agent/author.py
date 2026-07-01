@@ -148,14 +148,15 @@ def build_review(d):
                "<li><strong>Wompi account switched over.</strong> The Sprint 2 external blocker is resolved - billing now runs on the ReformAI account.</li>"
                "<li><strong>Health monitoring implemented.</strong> Operational health dashboard productionized and Google Cloud monitoring added (retro flags a few gaps still to close).</li>"
                "<li><strong>Code review stood up</strong> in GitHub, with Jira/GitHub integration in progress.</li>"
-               "<li><strong>Asset Discovery Pipeline</strong> shipped.</li>"
+               "<li><strong>Asset Discovery Pipeline</strong> and the <strong>Airbnb Investor Landing Page</strong> shipped.</li>"
+               "<li><strong>Project creation from a visualization</strong> (partial) is now Sprint 4's top goal - currently in the QA environment.</li>"
                "</ul>")
     out.append("<h2>Watch Items (from the retro)</h2>")
     out.append("<ul>"
                "<li><strong>Prod regressions from hotfixes.</strong> Directly motivated the Production Bugs bucket + a per-build test-suite idea for Sprint 4.</li>"
                "<li><strong>Operational Health still missing some things</strong> - follow-up scope.</li>"
                "<li><strong>Service Providers' projects not showing up</strong> - now filed as a Sprint 4 bug.</li>"
-               "<li><strong>Supplier Catalog is hard to design</strong> without enough client catalogs to generalize from - blocks the design work carried into Sprint 4.</li>"
+               "<li><strong>Supplier Catalog moved to a research spike.</strong> Retro flagged it hard to design without enough client catalogs; for Sprint 4 it converts from a large story to a spike to de-risk it while sample catalogs are gathered.</li>"
                "<li><strong>Venezuela new-market design pulled focus</strong> from sprint initiatives.</li>"
                "</ul>")
     out.append("<h2>Work Completed</h2>")
@@ -174,7 +175,8 @@ def build_review(d):
     out.append(panel("info", "<p><strong>Ideas</strong></p><ul>" + "".join(f"<li>{esc(x)}</li>" for x in retro["ideas"]) + "</ul>"))
     out.append("<h2>Recommendations</h2>")
     recs = [
-        "<li><strong>Unblock Supplier Catalog before designing it.</strong> The retro says it's hard to generalize without enough client catalogs - secure sample catalogs first, or split RAI-546 into a research spike, rather than re-committing a blocked L.</li>",
+        "<li><strong>Pull the Seller Module (RAI-437) from the application</strong> if the CEO broker-agreement and white-glove pricing decisions are not settled - do not expose seller functionality without the legal and pricing terms in place. RAI-622 is the decision gate; both have carried since UAT.</li>",
+        "<li><strong>Supplier Catalog converted to a research spike (done).</strong> RAI-546 moves from a large story to a spike for Sprint 4; gather sample client catalogs to design against before committing full design effort.</li>",
         "<li><strong>Stand up a per-build test suite.</strong> Retro idea; directly targets the prod regressions from hotfixes.</li>",
         "<li><strong>Add standard user-checks across all tabs/pages.</strong> Retro idea; catches the class of bugs (service-provider projects, homeowner registration) that leaked to prod.</li>",
         "<li><strong>Track ad-hoc bugs against the new Production Bugs bucket.</strong> The 3 late-added homeowner-registration bugs that carried over show why the reserved bucket matters.</li>",
@@ -230,9 +232,10 @@ def build_planning(d):
         [td(s, p["sizes"].get(s, 0), cbs.get(s, 0)) for s in ["XS", "S", "M", "L", "XL", "Spike"]]))
     out.append(panel("warning",
         f"<p><strong>Capacity watch:</strong> {p['sprint']} commits {big(p['sizes'])} items at M or larger; "
-        f"{review_sprint} delivered {big(cbs)} that big (and zero L). The committed mix is heavier than proven "
-        f"throughput - confirm capacity or trim/split the larger items before locking. The two carryover L's are "
-        f"Business Design (owner-acknowledged); RAI-546 (Supplier Catalog) is the one to watch, as the retro flagged it blocked.</p>"))
+        f"{review_sprint} delivered {big(cbs)} that big (and zero L). Top-end load eased: Supplier Catalog (RAI-546) "
+        f"was converted from a large story to a research spike, so the remaining L's are the infrastructure report "
+        f"(RAI-677) and Moodboard Design (RAI-654). Still confirm M capacity - the committed M count sits above last "
+        f"sprint's delivered M.</p>"))
     if unsized_stories:
         out.append("<h2>Needs Estimate (non-bug)</h2>")
         out.append(table(["Key", "Status", "Epic", "Owner", "Summary"],

@@ -17,8 +17,10 @@ import httpx
 REPO = Path(__file__).resolve().parents[3]
 SITE = "https://reform-ai-team.atlassian.net"
 BOARD = 3
-RETRO_PAGE_ID = "170721281"          # Sprint 2 Retro
 SPACE_KEY = "RAPD"
+# Retro page is auto-discovered by title ("<closed sprint name> Retro") in SPACE_KEY.
+# Override per-run with RETRO_PAGE_ID_OVERRIDE if the page uses a non-standard title.
+RETRO_PAGE_ID_OVERRIDE = None
 
 EPIC_CAT = {  # parent epic key -> initiative
     "RAI-629": "Business Design",
@@ -91,10 +93,21 @@ def find_sprints():
     future = [s for s in vals if s["state"] == "future"]
     return (closed[-1] if closed else None), (future[0] if future else None)
 
-def parse_retro() -> dict:
-    """Read the Sprint 2 retro page storage and extract Good/Bad/Ideas + actions count."""
+def find_retro_page_id(sprint_name: str) -> str | None:
+    """Locate the retro Confluence page for a sprint by title in SPACE_KEY.
+    Uses the direct content API (?title=), NOT CQL search (search index lags for
+    just-published pages). Tries '<name> Retro' then '<name> - Retro'."""
+    for title in (f"{sprint_name} Retro", f"{sprint_name} - Retro"):
+        res = jget("/wiki/rest/api/content",
+                   {"title": title, "spaceKey": SPACE_KEY, "limit": 5})
+        for r in res.get("results", []):
+            return r["id"]
+    return None
+
+def parse_retro(page_id: str) -> dict:
+    """Read a retro page storage and extract Good/Bad/Ideas + actions count."""
     import re, html
-    data = jget(f"/wiki/rest/api/content/{RETRO_PAGE_ID}", {"expand": "body.storage"})
+    data = jget(f"/wiki/rest/api/content/{page_id}", {"expand": "body.storage"})
     s = data["body"]["storage"]["value"]
     def section(name: str, nxt: str) -> list[str]:
         m = re.search(rf"<h2[^>]*>{name}</h2>(.*?)<h2", s, re.S) or \
@@ -115,7 +128,7 @@ def parse_retro() -> dict:
         "good": section("Good", "Bad"),
         "bad": section("Bad / could be better", "Ideas"),
         "ideas": section("Ideas", "Actions"),
-        "page_id": RETRO_PAGE_ID,
+        "page_id": page_id,
     }
 
 def summarize(issues: list[dict]) -> dict:
@@ -160,7 +173,13 @@ def main():
     for i in s3:
         i["carryover"] = i["key"] in s2_keys
 
-    retro = parse_retro()
+    retro_id = RETRO_PAGE_ID_OVERRIDE or find_retro_page_id(closed["name"])
+    if retro_id:
+        retro = parse_retro(retro_id)
+    else:
+        print(f"[WARN] no retro page found for {closed['name']!r} in {SPACE_KEY} "
+              f"(is it published, not a draft?)")
+        retro = {"good": [], "bad": [], "ideas": [], "page_id": None}
     data = {
         "review": {"sprint": closed["name"], "id": closed["id"],
                    "goal": closed.get("goal", ""), **summarize(s2), "issues": s2},

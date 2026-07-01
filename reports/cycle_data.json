@@ -465,7 +465,7 @@
   "planning": {
     "sprint": "Sprint 4",
     "id": 608,
-    "goal": "Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul",
+    "goal": "Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul + Productionize Email Notifications",
     "committed": 24,
     "carryover": 12,
     "unsized": 3,

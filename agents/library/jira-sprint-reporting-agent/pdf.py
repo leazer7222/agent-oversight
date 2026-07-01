@@ -56,9 +56,10 @@ S = {
             ("OPS HEALTH","Operational health dashboard productionized","Goal"),
             ("GCP MONITORING","Google Cloud health monitoring added","Goal"),
             ("ASSET PIPELINE","Asset Discovery Pipeline shipped","Product"),
-            ("TEAMS","Team member functionality delivered","Product")],
+            ("AIRBNB","Airbnb Investor Landing Page shipped","Product")],
   "s_story": "The Story Behind the Numbers",
   "story": ["<strong>Scope grew mid-sprint.</strong> 7 items were added after the sprint started; the team completed 4. The 3 that carried over are all reactive homeowner-registration bugs - the reason a <strong>Production Bugs bucket</strong> now exists in Sprint 4.",
+            "<strong>Two UAT-era stories are still blocked on the CEO.</strong> Create Home Seller User Type (RAI-437) and the White-Glove broker-agreement update (RAI-622) have carried since UAT, waiting on the broker-agreement decision and white-glove pricing. They will keep rolling over until that call is made.",
             "<strong>Prod regressions from hotfixes.</strong> Flagged in the retro; it motivates a per-build test suite and standard user-checks across all tabs and pages.",
             "<strong>Supplier Catalog is hard to design</strong> without enough client catalogs to generalize from. It carries into Sprint 4 and needs unblocking (sample catalogs, or a research spike) before more design effort.",
             "<strong>Venezuela new-market design</strong> pulled focus from sprint initiatives."],
@@ -70,12 +71,12 @@ S = {
   "action_items": ["Unblock Supplier Catalog before designing it (sample catalogs, or a spike)",
                    "Stand up a per-build test suite to catch prod regressions",
                    "Track ad-hoc bugs against the new Production Bugs bucket"],
-  "ahead": "Looking ahead", "h1_plan": "Sprint 4 Planning", "plan_eyebrow": "Infrastructure + Partner UI",
-  "plan_goal": "Compiled Infrastructure Report + GCP Visualization Insight + Partner Projects UI Overhaul.",
+  "ahead": "Looking ahead", "h1_plan": "Sprint 4 Planning", "plan_eyebrow": "Infrastructure + Partner UI + Email",
+  "plan_goal": "(read live from Jira)",
   "kpi_plan": [("Committed","{pcommitted}","teal","{pcarry} carry &middot; {new} new"),
                ("Readiness","Ready","green","gate passed"),
                ("Bugs","Bucketed","amber","unsized by design"),
-               ("Goal","Set","green","infra + partner UI")],
+               ("Goal","Set","green","infra + UI + email")],
   "s_scope": "Committed Scope", "bysize": "By size", "s_capacity": "Capacity vs Last Sprint",
   "cap_text": ("<strong>Capacity watch.</strong> Sprint 4 commits {m} M and {l} L items; Sprint 3 delivered "
                "{dm} M and {dl} L (zero L). The committed mix is heavier than proven throughput - confirm capacity or "
@@ -157,7 +158,7 @@ def build(d):
     H.append(f'<div class="page"><div class="eyebrow">{S["ahead"]}</div><h1 style="font-size:32px; margin-top:6px;">{S["h1_plan"]}</h1>')
     H.append(f'<div class="panel-goal" style="border-left-color:var(--teal); background:#f0fbfb; margin-top:14px;">'
              f'<div class="eyebrow" style="color:var(--teal);">{S["plan_eyebrow"]}</div>'
-             f'<strong style="font-size:14px; display:block; margin-top:4px;">{S["plan_goal"]}</strong></div>')
+             f'<strong style="font-size:14px; display:block; margin-top:4px;">{esc(p["goal"])}</strong></div>')
     H.append('<div class="kpis" style="margin-top:16px;">' + "".join(tile(l, v.format(**F), c, ft.format(**F)) for l, v, c, ft in S["kpi_plan"]) + '</div>')
     pmax = max(v["total"] for v in pby.values())
     pbars = "".join(bar(S["cat"].get(k, k), v["total"], round(100*v["total"]/pmax), COLORS.get(k, "var(--teal)")) for k, v in sorted(pby.items(), key=lambda x:-x[1]["total"]))

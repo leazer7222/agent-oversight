@@ -62,10 +62,30 @@ Write-Step "Migration check"
 
 # Find migration files modified since last push (HEAD vs remote)
 $remoteBranch = if ($Branch) { "$Remote/$Branch" } else { "$Remote/$currentBranch" }
-$baseRef = git merge-base HEAD $remoteBranch 2>&1
-if ($LASTEXITCODE -ne 0) {
-    # No remote ref yet (first push) -- compare against all committed migrations
-    $baseRef = "HEAD~1"
+# Determine the comparison base WITHOUT letting git write to stderr.
+#
+# In PowerShell 5.1 any native-command stderr becomes a NativeCommandError that
+# aborts the script, and neither `2>&1` nor `2>$null` prevents that - so the
+# original first-push fallback could never run and every brand-new worktree
+# branch failed to push here. `git show-ref --quiet` emits nothing and only
+# sets an exit code, which sidesteps the problem entirely.
+# See LESSONS_LEARNED, "Avoid 2>&1 on native executables".
+git show-ref --verify --quiet "refs/remotes/$remoteBranch"
+$remoteBranchExists = ($LASTEXITCODE -eq 0)
+
+if ($remoteBranchExists) {
+    $baseRef = git merge-base HEAD $remoteBranch
+} else {
+    # First push of this branch. Compare against main so the migration and
+    # review checks see the branch's real changes, not just the last commit.
+    git show-ref --verify --quiet "refs/remotes/$Remote/main"
+    if ($LASTEXITCODE -eq 0) {
+        $baseRef = git merge-base HEAD "$Remote/main"
+        Write-Host "  (first push of this branch - comparing against $Remote/main)" -ForegroundColor DarkGray
+    } else {
+        $baseRef = "HEAD~1"
+        Write-Host "  (first push, no $Remote/main - comparing against HEAD~1)" -ForegroundColor DarkGray
+    }
 }
 
 $changedMigrations = git diff --name-only $baseRef HEAD -- "supabase/migrations/*.sql" 2>&1 |
@@ -173,7 +193,11 @@ if (-not $NoDocCheck) {
 # -- 4. Final status ----------------------------------------------------------
 Write-Step "Pre-push summary"
 
-$ahead = git rev-list --count $remoteBranch..HEAD 2>&1
+if ($remoteBranchExists) {
+    $ahead = git rev-list --count "$remoteBranch..HEAD"
+} else {
+    $ahead = $null   # no remote ref yet; the message below handles this
+}
 if ($LASTEXITCODE -eq 0) {
     Write-Ok "$ahead commit(s) ahead of $remoteBranch"
 } else {

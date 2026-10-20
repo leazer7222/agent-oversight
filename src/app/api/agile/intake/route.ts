@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -13,6 +14,9 @@ const SOURCE_TYPES = new Set([
  * Enqueues an intake job for the agile worker (worker.py) to execute via PCA run_intake.
  */
 export async function POST(req: NextRequest) {
+  const denied = await requireAdminOrDeny(req)
+  if (denied) return denied
+
   const body = await req.json().catch(() => ({}))
   const text = (body.text ?? '').toString().trim()
   const sourceType = (body.source_type ?? 'paragraph').toString()

@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -18,6 +19,9 @@ const PutSchema = z.object({
 })
 
 export async function PUT(request: NextRequest) {
+  const denied = await requireAdminOrDeny(request)
+  if (denied) return denied
+
   const secret = request.headers.get('x-agent-secret')
   if (!secret || secret !== process.env.INGEST_SECRET) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })

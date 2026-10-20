@@ -15,6 +15,7 @@ import {
   Calculator,
   ClipboardList,
   Inbox,
+  Waves,
 } from 'lucide-react'
 
 const nav = [
@@ -29,6 +30,7 @@ const nav = [
   { href: '/dashboard/ai-ops',      label: 'AI Ops',      icon: Gauge },
   { href: '/dashboard/estimation',  label: 'Estimation',  icon: Calculator },
   { href: '/dashboard/invariants',  label: 'Invariants',  icon: ShieldCheck },
+  { href: '/dashboard/sourcing',    label: 'Facility Sourcing', icon: Waves },
 ]
 
 export function Sidebar() {

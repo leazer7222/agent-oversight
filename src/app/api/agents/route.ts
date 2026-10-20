@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { parsePagination, paginationMeta } from '@/lib/api/pagination'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +15,9 @@ export const runtime = 'nodejs'
  *   offset   - page offset (default 0)
  */
 export async function GET(request: NextRequest) {
+  const denied = await requireAdminOrDeny(request)
+  if (denied) return denied
+
   const url = new URL(request.url)
   const { limit, offset } = parsePagination(url)
   const statusFilter  = url.searchParams.get('status')

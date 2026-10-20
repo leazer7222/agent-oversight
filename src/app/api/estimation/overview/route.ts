@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -11,6 +12,9 @@ export const runtime = 'nodejs'
  *   - public.get_biggest_misses(20)
  */
 export async function GET() {
+  const denied = await requireAdminOrDeny()
+  if (denied) return denied
+
   const supabase = createServiceRoleClient()
 
   const [overviewRes, missesRes] = await Promise.all([

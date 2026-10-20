@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +15,9 @@ export const runtime = 'nodejs'
  *   limit    - max rows (default 50, max 200)
  */
 export async function GET(request: NextRequest) {
+  const denied = await requireAdminOrDeny(request)
+  if (denied) return denied
+
   const url = new URL(request.url)
   const groupBy      = url.searchParams.get('group_by') ?? 'agent'
   const companyFilter = url.searchParams.get('company')

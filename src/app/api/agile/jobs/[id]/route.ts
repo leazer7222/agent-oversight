@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -7,7 +8,10 @@ export const runtime = 'nodejs'
  * GET /api/agile/jobs/[id] -> the job + its linked intake_assessment and clarification_brief
  * artifact bodies (from agent_outputs), so the console can render the full result.
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdminOrDeny(req)
+  if (denied) return denied
+
   const { id } = await params
   const sb = createServiceRoleClient()
 

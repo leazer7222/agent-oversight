@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -11,6 +12,9 @@ export const runtime = 'nodejs'
  * Body: { provider, quota_reset_period, quota_reset_anchor, plan_tier? }
  */
 export async function POST(request: NextRequest) {
+  const denied = await requireAdminOrDeny(request)
+  if (denied) return denied
+
   let body: any
   try {
     body = await request.json()

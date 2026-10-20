@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -10,6 +11,9 @@ async function resolveTenant(sb: ReturnType<typeof createServiceRoleClient>, nam
 
 /** GET /api/scoping?product=reformai-product&tenant=ReformAI -> features + ratification backlog */
 export async function GET(req: NextRequest) {
+  const denied = await requireAdminOrDeny(req)
+  if (denied) return denied
+
   const url = new URL(req.url)
   const product = url.searchParams.get('product') ?? 'reformai-product'
   const tenantName = url.searchParams.get('tenant') ?? 'ReformAI'

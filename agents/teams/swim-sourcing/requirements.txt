@@ -1,0 +1,6 @@
+# Worker runtime dependencies. Deliberately small: the worker uses urllib for
+# HTTP rather than adding requests, so there is less to keep patched on a
+# long-running host.
+cryptography>=42.0.0
+python-dotenv>=1.0.0
+anthropic>=0.40.0

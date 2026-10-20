@@ -683,3 +683,155 @@ production data**, not in Cameron's project. It landed on this plan's critical p
 onboarding a second tenant is what makes it unacceptable. If you would rather treat it as its own
 piece of work, that is reasonable - but it must complete before Cameron's tenant is created, not
 after.
+
+---
+
+## P0-0 Implementation Status (2026-10-20, approved and implemented in-repo)
+
+**Authorization:** P0-0 only. Migration prepared and validated as far as is possible without a
+production apply. **Not applied. Not deployed. Not merged.** A prepared migration is not an applied
+security fix.
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `supabase/migrations/047_p0_0_database_hardening.sql` | The hardening migration, sections A-F. |
+| `supabase/migrations/047_rollback.sql` | Full reverse. Restores the vulnerable state - last resort only. |
+| `scripts/verify_p0_0_security.py` | External HTTP probe suite using the public anon key. Baseline and `--expect-hardened` modes. |
+| `scripts/tests/047_assertions.sql` | 12 catalog invariants. Strictly read-only; safe on production post-apply. |
+| `scripts/tests/047_behaviour_probes.sql` | Role-impersonation probes, wrapped `BEGIN..ROLLBACK`. |
+| `scripts/tests/047_fixture.sql` | Replicates production preconditions on a scratch Postgres or Supabase branch. |
+
+### What the migration changes
+
+- **A** - Revokes `EXECUTE` from `anon` and `authenticated` on all 42 functions in `public`,
+  `platform`, `product_graph` (the 35 SECURITY DEFINER RPCs plus 7 SECURITY INVOKER, including
+  `claim_intake_job`), and revokes the default privilege so new functions do not inherit it.
+- **B** - `ENABLE ROW LEVEL SECURITY` on the 8 unprotected tables, with explicit `service_role`
+  policies following the existing `public.runs` convention.
+- **C** - Drops all 36 `authenticated_*` policies across the 9 ledger/registry tables, including the
+  UPDATE and DELETE policies on `agent_outputs` and `audit_log`.
+- **D** - Replaces the permissive `roles=public` policies on `agile_intake_jobs` (and
+  `platform.cbc_identity_registry`) with `service_role`-only, while **preserving** the restrictive
+  `no_delete` policy. Closes anonymous job injection.
+- **E** - Revokes Supabase's stock blanket table/sequence grants to `anon`/`authenticated` on
+  `public` (203 table grants) and the matching default privileges.
+- **F** - Pins `search_path` on the 7 functions that lacked it and flips the 3 cost views to
+  `security_invoker = on`.
+
+### Verification - what was actually run
+
+**Executed and passed:**
+- Migration linter on both SQL files: `0 hard failures, 0 warnings` (`check_migrations.py`).
+- `scripts/verify_p0_0_security.py` baseline, 32 checks, 0 failed. This documents the **vulnerable
+  pre-fix state** as a measured artifact: all 8 tables anon-reachable (5 returning live data, 3
+  reachable but empty), all 6 probed RPCs anon-callable, and all 17 `service_role` paths working -
+  which is the no-regression baseline the post-apply run is compared against.
+- Live catalog introspection confirming every precondition the migration asserts: exact function
+  signatures including the `write_run_started_artifacts` overload pair, policy names, commands,
+  roles and permissiveness, table RLS state, grant inventory, view ownership, PG 17.6, and - the
+  check that prevents an aborted apply - **zero extension-owned functions** in the three target
+  schemas, all 42 owned by `postgres`.
+- Static confirmation that the revokes are behaviour-neutral: `src/lib/supabase/client.ts` has zero
+  importers, no `"use client"` component touches Supabase, and all 30 `.rpc()` call sites plus all
+  28 API routes use `createServiceRoleClient`.
+
+**Executed and failed, then fixed:** the first version of `verify_p0_0_security.py` treated an
+`HTTP 200 []` response as "access denied". An empty table returns exactly that, so three of the
+eight tables scored a false PASS purely because they held no rows. Tightened to treat only
+401/403/404 as denial, which is correct because 047 revokes the table grant and PostgREST then
+returns `permission denied for table`. The flawed check would have reported a clean bill of health
+on a still-open table.
+
+**Not executed:**
+- **Applying 047 to any database.** No syntax-execution validation has occurred. Docker was
+  available but the user ruled it out, and this machine has no local Postgres (`psql`, `initdb`,
+  `pg_ctl`, `supabase` CLI all absent). The SQL has been reviewed statement by statement against
+  live catalog metadata, but **"applies cleanly" is unproven**. A Supabase preview branch is the
+  one remaining way to prove it without touching production; say the word and I will prepare that
+  rather than assume.
+- All post-apply checks in the migration footer: catalog assertions, behaviour probes, the
+  `--expect-hardened` HTTP run, the dashboard and agent/worker no-regression checks, and the
+  advisor re-run.
+
+### Findings status
+
+| Finding | Status |
+|---|---|
+| 35 SECURITY DEFINER functions anon-executable (incl. ledger writers) | Remediated in code, pending deployment |
+| 8 public tables with RLS disabled | Remediated in code, pending deployment |
+| `authenticated` UPDATE/DELETE on `agent_outputs`, `audit_log`, ledger tables | Remediated in code, pending deployment |
+| Blanket `anon`/`authenticated` grants on all 203 public tables | Remediated in code, pending deployment |
+| Anonymous job injection into `agile_intake_jobs` | Remediated in code, pending deployment |
+| 7 functions with mutable `search_path` | Remediated in code, pending deployment |
+| 3 SECURITY DEFINER cost views | Remediated in code, pending deployment |
+| **Caller-supplied tenant identity in RPCs (`p_tenant`)** | **Requires P0-1.** Partially mitigated: only `service_role` can now reach these functions, so the trust boundary moves into the app. The app still has no verified identity to bind, so the GUC is still set from a parameter. Documented in 047 Section D. |
+| **Ledger immutability against the service-role key** | **Unresolved by design.** RLS does not bind `service_role` (BYPASSRLS). 047 stops *authenticated* mutation; it cannot stop a holder of the service key. True append-only needs BEFORE UPDATE/DELETE triggers. Out of P0-0 scope; recommended for P0-1. |
+| No app-layer authentication; `/dashboard` publicly readable | Requires P0-1 |
+| `ratified_by` self-asserted in gate-a | Requires P0-1 |
+
+### Operational impact
+
+Expected: **none**. Every current caller is `service_role`, which retains all privileges and
+bypasses RLS. Specifically unaffected: the 28 API routes, `/api/ingest`, the Python agents, the
+agile worker's `claim_intake_job`, and `/api/cost` (the view change is neutral for a `service_role`
+reader). Breaks by design: any direct PostgREST access using the anon key or an end-user JWT - there
+is no such caller today. Assertion C3/A3 and the `service_role` half of the probe suite exist
+precisely to catch it if this reasoning is wrong.
+
+### Remaining risks after P0-0 deploys
+
+1. The service-role key becomes the single thing standing between the internet and all tenant data.
+   It is in Vercel env vars and on any machine running an agent. Rotation and scoping is a P0-1/P2 concern.
+2. Ledger immutability is still not enforced against that key (see table above).
+3. Tenant identity is still caller-asserted inside the RPCs.
+4. `/dashboard` remains publicly readable until P0-1.
+5. Production `/api/agents` still returns `500 TypeError: fetch failed` - unrelated to 047, still open.
+
+---
+
+## Proposed P0-1 tasks (for approval - not started)
+
+Sequenced so each is independently testable. Decision 5 is honoured: legacy routes are retrofitted
+here, not deferred to P2.
+
+**P0-1a. Supabase Auth + session plumbing.** `src/middleware.ts` protecting `/dashboard/*` and
+`/api/*` except the two agent-secret ingest paths; magic-link login at `src/app/login/page.tsx`;
+sign-out. Acceptance: unauthenticated `/dashboard` -> 302; unauthenticated `/api/*` -> 401.
+
+**P0-1b. Company membership and RBAC.** Migration 048: `public.company_members(user_id -> auth.users,
+company_id -> companies, role CHECK(owner|operator|admin))`, unique `(user_id, company_id)`. Seed
+the platform administrator as `admin` across existing companies to preserve current oversight
+(Decision 5's "preserve legitimate platform-administrator functionality"). Acceptance: a user with
+no membership row can reach nothing.
+
+**P0-1c. `requireTenant()` helper.** `src/lib/auth/require-tenant.ts` returning
+`{ userId, companyId, role }` from the verified session; **rejects any request whose `?company=`
+disagrees** with the session unless the caller is `admin`; admin cross-tenant reads write an
+`audit_log` row. Acceptance: operator of A requesting `?company=B` -> 403; admin -> 200 plus an
+audit row.
+
+**P0-1d. Retrofit all 28 existing routes.** Insert `requireTenant` and replace the optional
+`?company=` filter with the resolved tenant on every route. Grouped into four reviewable commits:
+agents/runs/events; cost/errors/estimation/invariants; scoping/agile; project-state/ai-ops. Ingest
+routes keep the agent-secret model but gain per-agent scoping (see P0-1f). Acceptance: a route-by-route
+curl matrix for anon / operator-A / operator-B / admin.
+
+**P0-1e. Bind tenant identity in the RPCs (closes P0-0D).** Stop setting
+`app.current_tenant_id` from `p_tenant`. Either set the GUC from the verified session in a
+`SECURITY INVOKER` wrapper, or re-grant the RPCs to `authenticated` with the GUC bound to
+`auth.uid()`-derived membership. Acceptance: calling an RPC with another tenant's UUID returns no
+rows regardless of the parameter.
+
+**P0-1f. Scope the ingest secret per agent.** Replace the single global `INGEST_SECRET` with a
+per-agent credential so the holder of one agent's secret cannot emit telemetry as another agent of
+another company. Acceptance: agent A's secret rejected for agent B's `agent_id`.
+
+**P0-1g. Ledger immutability triggers.** `BEFORE UPDATE OR DELETE` triggers on `agent_outputs`,
+`agent_events`, `telemetry.raw_events` and `audit_log` that raise unconditionally, closing the
+service-role gap P0-0 cannot. Acceptance: a `service_role` UPDATE on `agent_outputs` raises.
+
+**P0-1h. Tenant-scoped RLS policies.** Replace the dropped `authenticated_*` policies with
+membership-based ones so the database enforces isolation even if a route forgets. Acceptance:
+Supabase advisors clean; a direct authenticated PostgREST read returns only the caller's tenant.

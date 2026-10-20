@@ -318,14 +318,26 @@ ALTER VIEW public.company_cost_summary SET (security_invoker = on);
 COMMIT;
 
 -- ===========================================================================
--- POST-APPLY VERIFICATION (must be run; do not assume)
+-- POST-APPLY VERIFICATION (must be run; none of it has been run yet)
 -- ===========================================================================
---   python scripts/verify_p0_0_security.py --expect-hardened
---   -> all anon probes must fail; all service-role probes must succeed.
+-- This migration has NOT been applied. Nothing below has been executed, and a
+-- prepared migration is not an applied security fix.
 --
--- Then confirm no regression in live behaviour:
---   1. Load /dashboard, /dashboard/runs, /dashboard/costs, /dashboard/scoping.
---   2. Run one agent end to end and confirm run_started + run_completed land:
---        python agents/library/code-review-agent/agent.py --smoke   (or equivalent)
---   3. Start agents/teams/agile/worker.py --once against a queued job.
---   4. Re-run the Supabase security advisors; expect zero ERROR-level lints.
+-- 1. Catalog assertions (strictly read-only, safe immediately after apply):
+--      scripts/tests/047_assertions.sql        -> 12 invariants, raises on first failure
+-- 2. Behavioural probes (impersonates anon/authenticated; wrapped BEGIN..ROLLBACK
+--    so nothing persists even if a probe unexpectedly succeeds):
+--      scripts/tests/047_behaviour_probes.sql
+-- 3. External HTTP probes with the public anon key, which is the actual threat
+--    model (the key ships in any browser bundle):
+--      python scripts/verify_p0_0_security.py --expect-hardened --include-write-probes
+--    -> every anon probe must be denied; every service_role probe must succeed.
+-- 4. No-regression checks against the live app:
+--      a. Load /dashboard, /dashboard/runs, /dashboard/costs, /dashboard/scoping.
+--      b. Run one agent end to end; confirm run_started + run_completed persist.
+--      c. Run agents/teams/agile/worker.py --once against a queued job.
+--      d. Confirm /api/cost still returns data (the 3 cost views changed).
+-- 5. Re-run the Supabase security advisors; expect zero ERROR-level lints.
+--
+-- If a break appears, prefer a narrow forward GRANT for the one object that
+-- broke over running 047_rollback.sql, which restores the whole vulnerable state.

@@ -13,6 +13,12 @@
 --
 -- This is NOT a replay of migrations 001-046. It is a faithful stand-in for the
 -- starting state of the objects under test, which is what 047 must transform.
+--
+-- HOW TO USE: apply this to any throwaway Postgres 17 instance, then apply
+-- 047_p0_0_database_hardening.sql, then 047_assertions.sql and
+-- 047_behaviour_probes.sql. A Supabase preview branch is the most faithful
+-- target. This file is NOT needed for the production apply path - there, run the
+-- two companion files directly after the migration.
 
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;

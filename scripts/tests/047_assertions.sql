@@ -1,7 +1,12 @@
--- Post-apply assertions for migration 047 (P0-0 hardening).
--- Run against the local fixture database AFTER applying 047.
--- Raises an exception on the first violated invariant, so a non-zero psql exit
--- means the migration did not produce the intended end state.
+-- Post-apply CATALOG assertions for migration 047 (P0-0 hardening).
+--
+-- STRICTLY READ-ONLY. Every statement inspects system catalogs; nothing is
+-- written, so this is safe to run against production immediately after 047 is
+-- applied. Raises on the first violated invariant, so a non-zero exit means the
+-- migration did not produce the intended end state.
+--
+-- Companion: 047_behaviour_probes.sql proves the same conclusions behaviourally
+-- by impersonating anon/authenticated (wrapped in a transaction that rolls back).
 
 DO $$
 DECLARE
@@ -92,97 +97,4 @@ BEGIN
   END LOOP;
 
   RAISE NOTICE 'ALL 047 ASSERTIONS PASSED (A1-A3, B1, C1-C3, D1-D3, F1-F2)';
-END $$;
-
--- Behavioural proof, not just catalog inspection: impersonate anon and confirm
--- the previously-open paths now raise insufficient_privilege.
-DO $$
-DECLARE ok boolean;
-BEGIN
-  SET LOCAL ROLE anon;
-  BEGIN
-    PERFORM public.get_calibration_readiness();
-    RESET ROLE;
-    RAISE EXCEPTION 'BEHAVIOUR FAILED: anon could still execute get_calibration_readiness()';
-  EXCEPTION WHEN insufficient_privilege THEN
-    ok := true;
-  END;
-  RESET ROLE;
-  RAISE NOTICE 'BEHAVIOUR: anon RPC execution correctly denied';
-END $$;
-
-DO $$
-DECLARE ok boolean; c int;
-BEGIN
-  SET LOCAL ROLE anon;
-  BEGIN
-    SELECT count(*) INTO c FROM public.contractor_rows;
-    RESET ROLE;
-    RAISE EXCEPTION 'BEHAVIOUR FAILED: anon could still read contractor_rows';
-  EXCEPTION WHEN insufficient_privilege THEN
-    ok := true;
-  END;
-  RESET ROLE;
-  RAISE NOTICE 'BEHAVIOUR: anon table read correctly denied';
-END $$;
-
-DO $$
-DECLARE ok boolean;
-BEGIN
-  SET LOCAL ROLE anon;
-  BEGIN
-    INSERT INTO public.agile_intake_jobs (product_key, intake) VALUES ('injected', '[]'::jsonb);
-    RESET ROLE;
-    RAISE EXCEPTION 'BEHAVIOUR FAILED: anon could still inject a job into the agent queue';
-  EXCEPTION WHEN insufficient_privilege THEN
-    ok := true;
-  END;
-  RESET ROLE;
-  RAISE NOTICE 'BEHAVIOUR: anon job injection correctly denied';
-END $$;
-
-DO $$
-DECLARE ok boolean;
-BEGIN
-  SET LOCAL ROLE authenticated;
-  BEGIN
-    DELETE FROM public.audit_log;
-    RESET ROLE;
-    RAISE EXCEPTION 'BEHAVIOUR FAILED: authenticated could still delete the audit log';
-  EXCEPTION WHEN insufficient_privilege THEN
-    ok := true;
-  END;
-  RESET ROLE;
-  RAISE NOTICE 'BEHAVIOUR: authenticated audit_log deletion correctly denied';
-END $$;
-
-DO $$
-DECLARE ok boolean;
-BEGIN
-  SET LOCAL ROLE authenticated;
-  BEGIN
-    UPDATE public.agent_outputs SET output_type = 'tampered';
-    RESET ROLE;
-    RAISE EXCEPTION 'BEHAVIOUR FAILED: authenticated could still mutate agent_outputs';
-  EXCEPTION WHEN insufficient_privilege THEN
-    ok := true;
-  END;
-  RESET ROLE;
-  RAISE NOTICE 'BEHAVIOUR: authenticated artifact mutation correctly denied';
-END $$;
-
--- No-regression proof: service_role must still do real work.
-DO $$
-DECLARE c int;
-BEGIN
-  SET LOCAL ROLE service_role;
-  PERFORM public.get_calibration_readiness();
-  SELECT count(*) INTO c FROM public.contractor_rows;
-  SELECT count(*) INTO c FROM public.agent_outputs;
-  SELECT count(*) INTO c FROM public.agent_cost_summary;
-  INSERT INTO public.agile_intake_jobs (product_key, intake) VALUES ('svc-ok', '[]'::jsonb);
-  UPDATE public.agile_intake_jobs SET status = 'running' WHERE product_key = 'svc-ok';
-  PERFORM public.claim_intake_job('test-worker');
-  RESET ROLE;
-  RAISE NOTICE 'NO-REGRESSION: service_role RPC, reads, views, queue insert/update/claim all OK';
 END $$;

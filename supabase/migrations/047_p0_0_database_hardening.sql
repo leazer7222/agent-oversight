@@ -65,6 +65,25 @@ BEGIN;
 -- REVOKE here can fail on ownership and abort the migration.
 -- RAISE NOTICE records the count for the apply log.
 
+-- MUST REVOKE FROM **PUBLIC**, NOT JUST anon/authenticated.
+-- The live ACL on these functions is:
+--     =X/postgres  postgres=X/postgres  anon=X/postgres  authenticated=X/postgres  service_role=X/postgres
+-- The leading `=X/postgres` is a grant of EXECUTE to PUBLIC, and PUBLIC includes
+-- every role - anon among them. Revoking only the explicit anon/authenticated
+-- entries would leave the PUBLIC grant intact and anon would KEEP execute access:
+-- the migration would appear to succeed and close nothing. Verified against the
+-- live catalog: all 42 functions carry a PUBLIC grant (39 in public, 2 in
+-- platform, 1 in product_graph; 3 of them via a NULL proacl, whose built-in
+-- default for functions is also EXECUTE to PUBLIC).
+--
+-- Tables are NOT affected by this: their relacl carries no PUBLIC entry
+-- (postgres=.../anon=.../authenticated=.../service_role=... only), so Section E's
+-- revoke is sufficient there. PUBLIC is included there anyway as a no-op guard.
+--
+-- Because revoking PUBLIC also strips the 3 NULL-ACL functions' only grant,
+-- service_role is re-granted EXECUTE explicitly afterwards. service_role is the
+-- sole legitimate caller, and assertion A3 checks this did not regress.
+
 DO $$
 DECLARE
   r        record;
@@ -80,22 +99,39 @@ BEGIN
       AND p.prokind = 'f'
   LOOP
     EXECUTE format(
-      'REVOKE ALL ON FUNCTION %I.%I(%s) FROM anon, authenticated',
+      'REVOKE ALL ON FUNCTION %I.%I(%s) FROM PUBLIC, anon, authenticated',
+      r.schema_name, r.fn_name, r.args
+    );
+    EXECUTE format(
+      'GRANT EXECUTE ON FUNCTION %I.%I(%s) TO service_role',
       r.schema_name, r.fn_name, r.args
     );
     n_count := n_count + 1;
   END LOOP;
-  RAISE NOTICE '[047A] Revoked anon/authenticated EXECUTE on % function(s)', n_count;
+  RAISE NOTICE '[047A] Revoked PUBLIC/anon/authenticated and re-granted service_role on % function(s)', n_count;
 END $$;
 
 -- Stop recurrence: functions created later must not inherit EXECUTE for anon.
 -- Supabase's stock defaults grant it, which is how all 42 above became exposed.
+--
+-- PARTIAL COVERAGE, stated honestly: ALTER DEFAULT PRIVILEGES only affects the
+-- default-ACL entry of the role running it. Schema public has TWO such entries -
+-- one owned by `postgres` and one by `supabase_admin`. This migration runs as
+-- `postgres`, which is NOT a member of `supabase_admin` (verified:
+-- pg_has_role -> false) and therefore cannot amend that second entry. Objects
+-- created by `supabase_admin` would still inherit anon grants. In practice every
+-- object in this project is created by migrations running as postgres, so the gap
+-- is theoretical - but it is a gap, not a guarantee, and closing it would need
+-- Supabase support or a dashboard-level change.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform
-  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA product_graph
-  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public        GRANT EXECUTE ON FUNCTIONS TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA platform      GRANT EXECUTE ON FUNCTIONS TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA product_graph GRANT EXECUTE ON FUNCTIONS TO service_role;
 
 -- ===========================================================================
 -- SECTION B (P0-0B) - Enable RLS on the 8 unprotected public tables
@@ -270,10 +306,12 @@ CREATE POLICY service_role_update ON platform.cbc_identity_registry
 -- is not instantly world-writable, which is the failure mode that produced
 -- Section B's eight tables.
 
-REVOKE ALL ON ALL TABLES    IN SCHEMA public        FROM anon, authenticated;
-REVOKE ALL ON ALL SEQUENCES IN SCHEMA public        FROM anon, authenticated;
-REVOKE ALL ON ALL TABLES    IN SCHEMA platform      FROM anon, authenticated;
-REVOKE ALL ON ALL TABLES    IN SCHEMA product_graph FROM anon, authenticated;
+-- PUBLIC is included as a no-op guard: the live relacl on these tables carries no
+-- PUBLIC entry (verified), unlike the function ACLs in Section A.
+REVOKE ALL ON ALL TABLES    IN SCHEMA public        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON ALL TABLES    IN SCHEMA platform      FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON ALL TABLES    IN SCHEMA product_graph FROM PUBLIC, anon, authenticated;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   REVOKE ALL ON TABLES FROM anon, authenticated;

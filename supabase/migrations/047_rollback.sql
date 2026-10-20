@@ -14,10 +14,33 @@
 
 BEGIN;
 
--- Section F reverse: cost views back to SECURITY DEFINER (the PG default).
-ALTER VIEW public.agent_cost_summary   SET (security_invoker = off);
-ALTER VIEW public.project_cost_summary SET (security_invoker = off);
-ALTER VIEW public.company_cost_summary SET (security_invoker = off);
+-- ---------------------------------------------------------------------------
+-- FIDELITY NOTES (what this script can and cannot restore exactly)
+-- ---------------------------------------------------------------------------
+-- Post-deployment rollback is NOT the same thing as a transaction rollback. If
+-- 047 fails before COMMIT, Postgres reverts everything automatically and this
+-- file is irrelevant. This file is for deliberately reversing an ALREADY
+-- COMMITTED 047, and it cannot be byte-identical:
+--
+--  1. Three functions originally had a NULL proacl (no ACL row at all, relying on
+--     the built-in default of EXECUTE to PUBLIC). Once 047 materialises an ACL,
+--     "NULL" cannot be recreated. Granting EXECUTE to PUBLIC below is
+--     FUNCTIONALLY equivalent but catalog-visibly different.
+--  2. Default privileges: schemas platform and product_graph had NO default-ACL
+--     entry before 047. This script restores the built-in behaviour (EXECUTE to
+--     PUBLIC) rather than the absence of an entry.
+--  3. Views: the three cost views had no reloptions at all. RESET removes the
+--     option rather than setting it to false, which is the closest restoration.
+--  4. Default privileges owned by supabase_admin were never touched by 047 and
+--     are not touched here.
+--
+-- Prefer a NARROW FORWARD GRANT for an isolated regression over running this
+-- whole file, which re-opens every hole P0-0 closed.
+
+-- Section F reverse: cost views back to the PG default (no explicit option).
+ALTER VIEW public.agent_cost_summary   RESET (security_invoker);
+ALTER VIEW public.project_cost_summary RESET (security_invoker);
+ALTER VIEW public.company_cost_summary RESET (security_invoker);
 
 -- Section F reverse: unpin search_path on the 7 SECURITY INVOKER functions.
 ALTER FUNCTION public.updated_at_now()                        RESET search_path;
@@ -28,18 +51,21 @@ ALTER FUNCTION platform.apply_append_only_rls(text, text)      RESET search_path
 ALTER FUNCTION platform.enforce_cbc_frozen_fields()            RESET search_path;
 ALTER FUNCTION product_graph.enforce_node_immutability()       RESET search_path;
 
--- Section E reverse: restore Supabase's stock blanket grants on public.
+-- Section E reverse: restore Supabase's stock blanket grants on public ONLY.
+--
+-- DEFECT FIXED 2026-10-20: earlier versions of this file also granted ALL on
+-- platform and product_graph tables to anon/authenticated. Those grants NEVER
+-- EXISTED - verified against the live catalog, which returned "(none)" for
+-- anon/authenticated table grants outside schema public, and anon holds no USAGE
+-- on either schema. Restoring them would have granted MORE than the original
+-- state, i.e. a rollback that quietly escalated privilege. Removed.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT ALL ON TABLES TO anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT ALL ON SEQUENCES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA platform      GRANT ALL ON TABLES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA product_graph GRANT ALL ON TABLES TO anon, authenticated;
 
-GRANT ALL ON ALL TABLES    IN SCHEMA public        TO anon, authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public        TO anon, authenticated;
-GRANT ALL ON ALL TABLES    IN SCHEMA platform      TO anon, authenticated;
-GRANT ALL ON ALL TABLES    IN SCHEMA product_graph TO anon, authenticated;
+GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- Section D reverse: permissive roles=public policies on the job queue.
 DROP POLICY IF EXISTS service_role_select ON public.agile_intake_jobs;
@@ -84,10 +110,20 @@ BEGIN
   END LOOP;
 END $$;
 
--- Section A reverse: restore EXECUTE to anon/authenticated on all functions.
-ALTER DEFAULT PRIVILEGES IN SCHEMA public        GRANT EXECUTE ON FUNCTIONS TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA platform      GRANT EXECUTE ON FUNCTIONS TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA product_graph GRANT EXECUTE ON FUNCTIONS TO anon, authenticated;
+-- Section A reverse: restore EXECUTE on all functions.
+--
+-- DEFECT FIXED 2026-10-20: this must restore the grant to **PUBLIC** as well as
+-- to anon/authenticated. The original ACL was
+--   =X/postgres  postgres=X/postgres  anon=X/postgres  authenticated=X/postgres  service_role=X/postgres
+-- and the leading `=X/postgres` is the PUBLIC grant. An earlier version restored
+-- only anon/authenticated, which would have left a rollback that did not actually
+-- return the database to its prior state.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO PUBLIC, anon, authenticated;
+-- platform / product_graph had no default-ACL entry originally; PUBLIC is the
+-- built-in default for functions, so this restores equivalent behaviour.
+ALTER DEFAULT PRIVILEGES IN SCHEMA platform      GRANT EXECUTE ON FUNCTIONS TO PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA product_graph GRANT EXECUTE ON FUNCTIONS TO PUBLIC;
 
 DO $$
 DECLARE r record;
@@ -98,7 +134,7 @@ BEGIN
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname IN ('public','platform','product_graph') AND p.prokind = 'f'
   LOOP
-    EXECUTE format('GRANT EXECUTE ON FUNCTION %I.%I(%s) TO anon, authenticated',
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %I.%I(%s) TO PUBLIC, anon, authenticated',
                    r.schema_name, r.fn_name, r.args);
   END LOOP;
 END $$;

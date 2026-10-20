@@ -28,6 +28,20 @@ BEGIN
     AND has_function_privilege('authenticated', p.oid, 'EXECUTE');
   IF n > 0 THEN RAISE EXCEPTION 'A2 FAILED: % function(s) still authenticated-executable', n; END IF;
 
+  -- A1b. No function may carry a PUBLIC grant, and none may have a NULL acl.
+  -- This is the specific defect that made the first draft of 047 ineffective:
+  -- EXECUTE was granted to PUBLIC (ACL entry `=X/postgres`), so revoking the
+  -- explicit anon entry changed nothing. A1/A2 above would also catch it via
+  -- has_function_privilege, but this names the cause rather than the symptom.
+  SELECT count(*) INTO n
+  FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+  WHERE ns.nspname IN ('public','platform','product_graph') AND p.prokind = 'f'
+    AND (p.proacl IS NULL
+         OR EXISTS (SELECT 1 FROM unnest(p.proacl) a WHERE a::text LIKE '=%'));
+  IF n > 0 THEN
+    RAISE EXCEPTION 'A1b FAILED: % function(s) still grant EXECUTE to PUBLIC (or have a NULL acl)', n;
+  END IF;
+
   -- A3. service_role must RETAIN execute on every one of them (no-regression).
   SELECT count(*) INTO n
   FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace

@@ -309,17 +309,48 @@ def main() -> int:
 
     finally:
         print("\n[iso] cleaning up")
+        # Order matters. facilities.company_id is ON DELETE RESTRICT, so a
+        # company owning a facility cannot be deleted. An earlier version of this
+        # teardown skipped the facilities and silently orphaned 8 iso-test
+        # companies across runs. Delete children first, and report loudly if a
+        # company still will not go.
+        #
+        # swim_sourcing is not exposed over PostgREST, so this needs the direct
+        # connection.
+        db_url = os.environ.get("SUPABASE_DB_URL")
+        removed_facilities = 0
+        if db_url and created["companies"]:
+            try:
+                import psycopg
+                with psycopg.connect(db_url, connect_timeout=30) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("delete from swim_sourcing.qualifications "
+                                    "where company_id = any(%s)", (created["companies"],))
+                        cur.execute("delete from swim_sourcing.facilities "
+                                    "where company_id = any(%s)", (created["companies"],))
+                        removed_facilities = cur.rowcount
+                    conn.commit()
+            except Exception as exc:
+                print(f"[iso] WARNING: could not remove test facilities: {exc}")
+                print("[iso] the test companies will fail to delete as a result")
+
         for mid in created["members"]:
             call(url, f"/rest/v1/company_members?id=eq.{mid}", key=svc, method="DELETE")
+        leftover = []
         for cid in created["companies"]:
-            call(url, f"/rest/v1/companies?id=eq.{cid}", key=svc, method="DELETE")
+            status, _ = call(url, f"/rest/v1/companies?id=eq.{cid}", key=svc, method="DELETE")
+            if status >= 400:
+                leftover.append(cid)
         for user in created["users"]:
             call(url, f"/auth/v1/admin/users/{user['id']}", key=svc, method="DELETE")
+
         print(f"[iso] removed {len(created['members'])} membership(s), "
-              f"{len(created['companies'])} company/ies, {len(created['users'])} user(s)")
-        print("[iso] NOTE: the ISO TEST facility in swim_sourcing.facilities is left "
-              "in place - facilities have no delete path by design (append-only "
-              "discipline). Remove it manually if you want a pristine table.")
+              f"{removed_facilities} facility/ies, "
+              f"{len(created['companies']) - len(leftover)} company/ies, "
+              f"{len(created['users'])} user(s)")
+        if leftover:
+            print(f"[iso] WARNING: {len(leftover)} test company/ies could not be "
+                  f"deleted and are now ORPHANED: {leftover}")
 
     print(f"\n[iso] {len(r.rows)} checks, {r.failures} failure(s)")
     return 1 if r.failures else 0

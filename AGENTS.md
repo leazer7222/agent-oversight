@@ -14,8 +14,9 @@ company, per-tenant provider credentials, agent registration, the worker
 pattern, reusable components, and the live deployment state. It exists so a new
 thread does not have to repeat the architecture audit.
 
-Deployment state as of 2026-10-20: migrations 047-050 are committed and
-verified but **NOT APPLIED**. See `docs/p0-activation-plan.md`.
+Deployment state as of 2026-10-20: migrations **047-052 are APPLIED and
+VERIFIED in production**. Security advisor lints 46 -> 0; cross-tenant isolation
+proven live (23 checks, 0 failures). See `docs/p0-activation-plan.md`.
 
 ---
 

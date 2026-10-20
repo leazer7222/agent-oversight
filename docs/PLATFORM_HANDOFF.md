@@ -6,9 +6,10 @@ the architecture audit**. Read this plus the file paths it names.
 Branch: `claude/agent-oversight-implementation-b25688`
 As of: 2026-10-20
 
-> **Deployment state in one line:** migrations 047-050 are committed, linted and
-> precondition-verified, and **none is applied**. The platform is secure *in
-> code* and **not yet secure in production**. Section 2 is what changes that.
+> **Deployment state in one line:** migrations **047-052 are APPLIED and
+> VERIFIED in production** as of 2026-10-20. Anonymous access is closed, the
+> ledger is append-only even against the service-role key, and cross-tenant
+> isolation is proven against the live database (23 checks, 0 failures).
 
 ---
 
@@ -81,15 +82,20 @@ was approved deliberately; `product_graph`, `feature_lifecycle` and
 
 | Migration | File | Status |
 |---|---|---|
-| 047 | `supabase/migrations/047_p0_0_database_hardening.sql` | **Not applied** |
-| 048 | `supabase/migrations/048_auth_and_tenant_credentials.sql` | **Not applied** |
-| 049 | `supabase/migrations/049_swim_sourcing_schema.sql` | **Not applied** |
-| 050 | `supabase/migrations/050_swim_sourcing_rpcs.sql` | **Not applied** |
+| 047 | `047_p0_0_database_hardening.sql` | **Applied + verified** |
+| 048 | `048_auth_and_tenant_credentials.sql` | **Applied + verified** |
+| 049 | `049_swim_sourcing_schema.sql` | **Applied + verified** |
+| 050 | `050_swim_sourcing_rpcs.sql` | **Applied + verified** |
+| 051 | `051_activate_rls_defense_in_depth.sql` | **Applied** - fixes a dead-RLS defect the live test caught |
+| 052 | `052_current_user_companies_security_invoker.sql` | **Applied** - clears the last advisor WARN |
 
-Live production is therefore still in the pre-047 state, which means **the
-exposure documented in the audit is still open**: 42 functions carry a PUBLIC
-EXECUTE grant (including ledger writers), 8 `public` tables have RLS disabled,
-and `agile_intake_jobs` accepts anonymous inserts.
+All six are recorded in `supabase_migrations.schema_migrations`.
+
+**Verified in production:** anon-executable functions 42 -> 0; functions
+granting PUBLIC 42 -> 0; tables with RLS off 8 -> 0; `authenticated_*` policies
+36 -> 0; anon table grants 203 -> 0; security advisor lints **46 -> 0**.
+Anonymous ledger forgery and job injection both return 401. Service-role
+UPDATE and DELETE on `agent_outputs` are refused by trigger with `42501`.
 
 Apply sequence, preconditions and post-apply validation:
 **`docs/p0-activation-plan.md`** sections 4 and 5. Apply one at a time via the
@@ -108,13 +114,13 @@ Honest split. "Verified" means a test ran and passed.
 | Cost attribution | **Operational** (pre-existing) | `/dashboard/costs`, cost views |
 | Agent status kill switch | **Operational** | `/api/ingest` 403s a non-active agent |
 | Dashboard read APIs | **Operational** | `/api/agents`, `/api/runs`, `/api/cost` all 200 |
-| Credential vault (encrypt/resolve/fail-closed) | **Code verified, 17/17 tests** | `agents/tests/test_credentials.py` |
+| Credential vault | **Verified live, 13/13** | `scripts/tests/validate_credential_vault_live.py` against applied 048, plus 17/17 unit tests |
 | Qualification scoring | **Code verified, 19/19** | deterministic, no live dependency |
 | Discovery | **Fixtures only** | no `GOOGLE_PLACES_API_KEY` |
 | Outreach safety + exactly-once send | **Code verified, 30/30** | mock transport |
-| Authentication / tenant isolation | **NOT verified** | needs 048 applied |
-| Durable worker | **NOT run against a DB** | needs 049/050 applied |
-| Backup | **Partial, verified** | 29 objects / 2,485 rows, public schema only |
+| Authentication / tenant isolation | **Verified live** | 23/23 checks incl. cross-tenant facility isolation |
+| Durable worker | **Schema live, worker unrun** | `swim_*` RPCs applied; worker not yet executed against the queue |
+| Backup | **Complete, verified** | 7 schemas, 2,110 DDL objects, 3,560 rows, 0 failures |
 
 ---
 
@@ -274,11 +280,12 @@ them by adding job types.
 
 ## 10. Limitations and risks
 
-**Blocking:**
-1. **Migrations not applied.** The pre-047 exposure is live.
-2. **No full backup.** `backup_full.py` needs `SUPABASE_DB_URL` in `.env.local`.
-   The six private schemas are currently unbacked; PostgREST cannot reach them.
-3. **Restore never rehearsed.** Needs a second database.
+**Resolved since the last revision:** migrations applied; full backup taken and
+verified; the 26 legacy routes are admin-only; cross-tenant isolation proven live.
+
+**Remaining:**
+1. **Restore never rehearsed.** The backup is complete and internally valid, but
+   replaying it needs a second Postgres instance.
 
 **Significant:**
 4. **Free-tier auto-pause.** Root-caused from edge logs: the project slept and
@@ -287,8 +294,9 @@ them by adding job types.
    queue-polling worker on a sleeping database will still fail intermittently
    and it will look like application bugs. Pro tier or a keep-warm ping. Paid -
    needs authorization.
-5. **Auth and isolation unverified at runtime.** The cross-tenant 403 is the
-   most important behaviour in P0-1 and is currently only compiled.
+5. **The app layer's `?company=` 403 is still unproven end to end.** The
+   database layer is proven; the `requireTenant` route check needs a deployed
+   app with a browser session (Layer 5 of the live test, currently SKIP).
 6. **Service-role key is the main boundary** after 047, and it sits in Vercel
    env vars, on any agent host, and in plaintext in
    `.claude/settings.local.json` (gitignored, never committed - verified).

@@ -1,0 +1,813 @@
+{
+  "indoor swimming pool": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_001",
+        "displayName": {
+          "text": "FIXTURE Facility 001 (fitness_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1001 Fixture Rd, Katy, TX 77491, USA",
+        "location": {
+          "latitude": 29.940872,
+          "longitude": -95.771
+        },
+        "primaryType": "fitness_center",
+        "types": [
+          "fitness_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1001",
+        "websiteUri": "https://fixture-facility-001.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_002",
+        "displayName": {
+          "text": "FIXTURE Facility 002 (gym)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1002 Fixture Rd, Katy, TX 77492, USA",
+        "location": {
+          "latitude": 29.935075,
+          "longitude": -95.773
+        },
+        "primaryType": "gym",
+        "types": [
+          "gym",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1002",
+        "websiteUri": "https://fixture-facility-002.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_003",
+        "displayName": {
+          "text": "FIXTURE Facility 003 (hotel)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1003 Fixture Rd, Katy, TX 77493, USA",
+        "location": {
+          "latitude": 29.948119,
+          "longitude": -95.7685
+        },
+        "primaryType": "hotel",
+        "types": [
+          "hotel",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1003",
+        "websiteUri": "https://fixture-facility-003.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_004",
+        "displayName": {
+          "text": "FIXTURE Facility 004 (lodging)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1004 Fixture Rd, Katy, TX 77494, USA",
+        "location": {
+          "latitude": 29.839423,
+          "longitude": -95.806
+        },
+        "primaryType": "lodging",
+        "types": [
+          "lodging",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1004",
+        "websiteUri": "https://fixture-facility-004.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_900",
+        "displayName": {
+          "text": "FIXTURE Facility 900 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1900 Fixture Rd, Katy, TX 77490, USA",
+        "location": {
+          "latitude": 29.843771,
+          "longitude": -95.8045
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "CLOSED_PERMANENTLY",
+        "nationalPhoneNumber": "(281) 555-1900",
+        "websiteUri": "https://fixture-facility-900.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_901",
+        "displayName": {
+          "text": "FIXTURE Facility 901 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1901 Fixture Rd, Katy, TX 77491, USA",
+        "location": {
+          "latitude": 30.481452,
+          "longitude": -95.5845
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1901",
+        "websiteUri": "https://fixture-facility-901.example.com"
+      },
+      {
+        "id": null,
+        "displayName": {
+          "text": "FIXTURE Facility 902 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1902 Fixture Rd, Katy, TX 77492, USA",
+        "location": {
+          "latitude": 29.858264,
+          "longitude": -95.7995
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1902",
+        "websiteUri": "https://fixture-facility-902.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_001",
+        "displayName": {
+          "text": "FIXTURE Facility 001 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1001 Fixture Rd, Katy, TX 77491, USA",
+        "location": {
+          "latitude": 29.814786,
+          "longitude": -95.8145
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1001",
+        "websiteUri": "https://fixture-facility-001.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_903",
+        "displayName": {
+          "text": "FIXTURE Facility 903 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1903 Fixture Rd, Katy, TX 77493, USA",
+        "location": {
+          "latitude": 29.872757,
+          "longitude": -95.7945
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1903"
+      }
+    ]
+  },
+  "aquatic center": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_005",
+        "displayName": {
+          "text": "FIXTURE Facility 005 (sports_complex)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1005 Fixture Rd, Katy, TX 77495, USA",
+        "location": {
+          "latitude": 29.811887,
+          "longitude": -95.8155
+        },
+        "primaryType": "sports_complex",
+        "types": [
+          "sports_complex",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1005",
+        "websiteUri": "https://fixture-facility-005.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_006",
+        "displayName": {
+          "text": "FIXTURE Facility 006 (community_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1006 Fixture Rd, Katy, TX 77496, USA",
+        "location": {
+          "latitude": 29.955365,
+          "longitude": -95.766
+        },
+        "primaryType": "community_center",
+        "types": [
+          "community_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1006",
+        "websiteUri": "https://fixture-facility-006.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_007",
+        "displayName": {
+          "text": "FIXTURE Facility 007 (school)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1007 Fixture Rd, Katy, TX 77497, USA",
+        "location": {
+          "latitude": 29.890148,
+          "longitude": -95.7885
+        },
+        "primaryType": "school",
+        "types": [
+          "school",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1007",
+        "websiteUri": "https://fixture-facility-007.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_008",
+        "displayName": {
+          "text": "FIXTURE Facility 008 (country_club)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1008 Fixture Rd, Katy, TX 77498, USA",
+        "location": {
+          "latitude": 29.827829,
+          "longitude": -95.81
+        },
+        "primaryType": "country_club",
+        "types": [
+          "country_club",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1008",
+        "websiteUri": "https://fixture-facility-008.example.com"
+      }
+    ]
+  },
+  "swim school": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_009",
+        "displayName": {
+          "text": "FIXTURE Facility 009 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1009 Fixture Rd, Katy, TX 77499, USA",
+        "location": {
+          "latitude": 29.858264,
+          "longitude": -95.7995
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1009",
+        "websiteUri": "https://fixture-facility-009.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_010",
+        "displayName": {
+          "text": "FIXTURE Facility 010 (fitness_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1010 Fixture Rd, Katy, TX 77490, USA",
+        "location": {
+          "latitude": 29.836525,
+          "longitude": -95.807
+        },
+        "primaryType": "fitness_center",
+        "types": [
+          "fitness_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1010",
+        "websiteUri": "https://fixture-facility-010.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_011",
+        "displayName": {
+          "text": "FIXTURE Facility 011 (gym)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1011 Fixture Rd, Katy, TX 77491, USA",
+        "location": {
+          "latitude": 29.84522,
+          "longitude": -95.804
+        },
+        "primaryType": "gym",
+        "types": [
+          "gym",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1011",
+        "websiteUri": "https://fixture-facility-011.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_012",
+        "displayName": {
+          "text": "FIXTURE Facility 012 (hotel)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1012 Fixture Rd, Katy, TX 77492, USA",
+        "location": {
+          "latitude": 29.816235,
+          "longitude": -95.814
+        },
+        "primaryType": "hotel",
+        "types": [
+          "hotel",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1012",
+        "websiteUri": "https://fixture-facility-012.example.com"
+      }
+    ]
+  },
+  "hotel with indoor pool": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_013",
+        "displayName": {
+          "text": "FIXTURE Facility 013 (lodging)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1013 Fixture Rd, Katy, TX 77493, USA",
+        "location": {
+          "latitude": 29.840872,
+          "longitude": -95.8055
+        },
+        "primaryType": "lodging",
+        "types": [
+          "lodging",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1013",
+        "websiteUri": "https://fixture-facility-013.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_014",
+        "displayName": {
+          "text": "FIXTURE Facility 014 (sports_complex)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1014 Fixture Rd, Katy, TX 77494, USA",
+        "location": {
+          "latitude": 29.922032,
+          "longitude": -95.7775
+        },
+        "primaryType": "sports_complex",
+        "types": [
+          "sports_complex",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1014",
+        "websiteUri": "https://fixture-facility-014.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_015",
+        "displayName": {
+          "text": "FIXTURE Facility 015 (community_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1015 Fixture Rd, Katy, TX 77495, USA",
+        "location": {
+          "latitude": 29.839423,
+          "longitude": -95.806
+        },
+        "primaryType": "community_center",
+        "types": [
+          "community_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1015",
+        "websiteUri": "https://fixture-facility-015.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_016",
+        "displayName": {
+          "text": "FIXTURE Facility 016 (school)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1016 Fixture Rd, Katy, TX 77496, USA",
+        "location": {
+          "latitude": 29.808988,
+          "longitude": -95.8165
+        },
+        "primaryType": "school",
+        "types": [
+          "school",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1016",
+        "websiteUri": "https://fixture-facility-016.example.com"
+      }
+    ]
+  },
+  "gym with swimming pool": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_017",
+        "displayName": {
+          "text": "FIXTURE Facility 017 (country_club)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1017 Fixture Rd, Katy, TX 77497, USA",
+        "location": {
+          "latitude": 29.829278,
+          "longitude": -95.8095
+        },
+        "primaryType": "country_club",
+        "types": [
+          "country_club",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1017",
+        "websiteUri": "https://fixture-facility-017.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_018",
+        "displayName": {
+          "text": "FIXTURE Facility 018 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1018 Fixture Rd, Katy, TX 77498, USA",
+        "location": {
+          "latitude": 29.975655,
+          "longitude": -95.759
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1018",
+        "websiteUri": "https://fixture-facility-018.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_019",
+        "displayName": {
+          "text": "FIXTURE Facility 019 (fitness_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1019 Fixture Rd, Katy, TX 77499, USA",
+        "location": {
+          "latitude": 29.935075,
+          "longitude": -95.773
+        },
+        "primaryType": "fitness_center",
+        "types": [
+          "fitness_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1019",
+        "websiteUri": "https://fixture-facility-019.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_020",
+        "displayName": {
+          "text": "FIXTURE Facility 020 (gym)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1020 Fixture Rd, Katy, TX 77490, USA",
+        "location": {
+          "latitude": 29.849568,
+          "longitude": -95.8025
+        },
+        "primaryType": "gym",
+        "types": [
+          "gym",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1020",
+        "websiteUri": "https://fixture-facility-020.example.com"
+      }
+    ]
+  },
+  "recreation center pool": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_021",
+        "displayName": {
+          "text": "FIXTURE Facility 021 (hotel)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1021 Fixture Rd, Katy, TX 77491, USA",
+        "location": {
+          "latitude": 29.874206,
+          "longitude": -95.794
+        },
+        "primaryType": "hotel",
+        "types": [
+          "hotel",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1021",
+        "websiteUri": "https://fixture-facility-021.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_022",
+        "displayName": {
+          "text": "FIXTURE Facility 022 (lodging)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1022 Fixture Rd, Katy, TX 77492, USA",
+        "location": {
+          "latitude": 29.980003,
+          "longitude": -95.7575
+        },
+        "primaryType": "lodging",
+        "types": [
+          "lodging",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1022",
+        "websiteUri": "https://fixture-facility-022.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_023",
+        "displayName": {
+          "text": "FIXTURE Facility 023 (sports_complex)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1023 Fixture Rd, Katy, TX 77493, USA",
+        "location": {
+          "latitude": 29.977104,
+          "longitude": -95.7585
+        },
+        "primaryType": "sports_complex",
+        "types": [
+          "sports_complex",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1023",
+        "websiteUri": "https://fixture-facility-023.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_024",
+        "displayName": {
+          "text": "FIXTURE Facility 024 (community_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1024 Fixture Rd, Katy, TX 77494, USA",
+        "location": {
+          "latitude": 29.837974,
+          "longitude": -95.8065
+        },
+        "primaryType": "community_center",
+        "types": [
+          "community_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1024",
+        "websiteUri": "https://fixture-facility-024.example.com"
+      }
+    ]
+  },
+  "community pool": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_025",
+        "displayName": {
+          "text": "FIXTURE Facility 025 (school)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1025 Fixture Rd, Katy, TX 77495, USA",
+        "location": {
+          "latitude": 29.92493,
+          "longitude": -95.7765
+        },
+        "primaryType": "school",
+        "types": [
+          "school",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1025",
+        "websiteUri": "https://fixture-facility-025.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_026",
+        "displayName": {
+          "text": "FIXTURE Facility 026 (country_club)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1026 Fixture Rd, Katy, TX 77496, USA",
+        "location": {
+          "latitude": 29.966959,
+          "longitude": -95.762
+        },
+        "primaryType": "country_club",
+        "types": [
+          "country_club",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1026",
+        "websiteUri": "https://fixture-facility-026.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_027",
+        "displayName": {
+          "text": "FIXTURE Facility 027 (swimming_pool)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1027 Fixture Rd, Katy, TX 77497, USA",
+        "location": {
+          "latitude": 29.932177,
+          "longitude": -95.774
+        },
+        "primaryType": "swimming_pool",
+        "types": [
+          "swimming_pool",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1027",
+        "websiteUri": "https://fixture-facility-027.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_028",
+        "displayName": {
+          "text": "FIXTURE Facility 028 (fitness_center)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1028 Fixture Rd, Katy, TX 77498, USA",
+        "location": {
+          "latitude": 29.980003,
+          "longitude": -95.7575
+        },
+        "primaryType": "fitness_center",
+        "types": [
+          "fitness_center",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1028",
+        "websiteUri": "https://fixture-facility-028.example.com"
+      }
+    ]
+  },
+  "YMCA pool": {
+    "places": [
+      {
+        "id": "FIXTURE_PLACE_029",
+        "displayName": {
+          "text": "FIXTURE Facility 029 (gym)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1029 Fixture Rd, Katy, TX 77499, USA",
+        "location": {
+          "latitude": 29.94522,
+          "longitude": -95.7695
+        },
+        "primaryType": "gym",
+        "types": [
+          "gym",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1029",
+        "websiteUri": "https://fixture-facility-029.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_030",
+        "displayName": {
+          "text": "FIXTURE Facility 030 (hotel)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1030 Fixture Rd, Katy, TX 77490, USA",
+        "location": {
+          "latitude": 29.943771,
+          "longitude": -95.77
+        },
+        "primaryType": "hotel",
+        "types": [
+          "hotel",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1030",
+        "websiteUri": "https://fixture-facility-030.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_031",
+        "displayName": {
+          "text": "FIXTURE Facility 031 (lodging)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1031 Fixture Rd, Katy, TX 77491, USA",
+        "location": {
+          "latitude": 29.817684,
+          "longitude": -95.8135
+        },
+        "primaryType": "lodging",
+        "types": [
+          "lodging",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1031",
+        "websiteUri": "https://fixture-facility-031.example.com"
+      },
+      {
+        "id": "FIXTURE_PLACE_032",
+        "displayName": {
+          "text": "FIXTURE Facility 032 (sports_complex)",
+          "languageCode": "en"
+        },
+        "formattedAddress": "1032 Fixture Rd, Katy, TX 77492, USA",
+        "location": {
+          "latitude": 29.90609,
+          "longitude": -95.783
+        },
+        "primaryType": "sports_complex",
+        "types": [
+          "sports_complex",
+          "point_of_interest",
+          "establishment"
+        ],
+        "businessStatus": "OPERATIONAL",
+        "nationalPhoneNumber": "(281) 555-1032",
+        "websiteUri": "https://fixture-facility-032.example.com"
+      }
+    ]
+  },
+  "no results query": {
+    "places": []
+  }
+}

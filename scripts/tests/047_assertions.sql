@@ -101,6 +101,22 @@ BEGIN
           SELECT 1 FROM unnest(p.proconfig) cfg WHERE cfg LIKE 'search_path=%'));
   IF n > 0 THEN RAISE EXCEPTION 'F1 FAILED: % function(s) still have a mutable search_path', n; END IF;
 
+  -- F1b. Default privileges must deny EXECUTE to PUBLIC/anon for FUTURE functions,
+  -- including in schemas that do not exist yet (the global postgres entry).
+  -- Without this, creating swim_sourcing (or any new schema) silently reopens
+  -- the exposure 047 closes the first time a function lands there.
+  SELECT count(*) INTO n
+  FROM pg_default_acl d
+  WHERE d.defaclobjtype = 'f'
+    AND pg_get_userbyid(d.defaclrole) = 'postgres'
+    AND d.defaclnamespace = 0            -- 0 = global (no IN SCHEMA)
+    AND NOT EXISTS (
+      SELECT 1 FROM unnest(d.defaclacl) a
+      WHERE a::text LIKE '=%' OR a::text LIKE 'anon=%' OR a::text LIKE 'authenticated=%');
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'F1b FAILED: global postgres default privileges for functions do not deny PUBLIC/anon (matched % rows, expected 1)', n;
+  END IF;
+
   -- F2. All 3 cost views must be security_invoker.
   FOREACH v IN ARRAY ARRAY['agent_cost_summary','project_cost_summary','company_cost_summary']
   LOOP

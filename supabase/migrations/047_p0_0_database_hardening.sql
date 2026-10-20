@@ -133,6 +133,25 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public        GRANT EXECUTE ON FUNCTIONS TO s
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform      GRANT EXECUTE ON FUNCTIONS TO service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA product_graph GRANT EXECUTE ON FUNCTIONS TO service_role;
 
+-- GLOBAL guard, covering schemas that do not exist yet.
+-- The three per-schema statements above only protect schemas named today. Any
+-- NEW schema - swim_sourcing being the immediate case - would otherwise fall
+-- back to PostgreSQL's built-in default, which grants EXECUTE on new functions
+-- to PUBLIC, and the exposure this migration closes would silently reappear the
+-- first time a function is created there.
+--
+-- A default-privilege entry with no IN SCHEMA clause applies to every schema for
+-- objects created by this role. Scoped to `postgres` because that is the role
+-- migrations run as (verified: current_user = session_user = postgres); it does
+-- not touch supabase_admin-owned entries for storage/realtime/auth internals,
+-- which postgres does not create and is not a member of.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  GRANT EXECUTE ON FUNCTIONS TO service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE ALL ON TABLES FROM anon, authenticated;
+
 -- ===========================================================================
 -- SECTION B (P0-0B) - Enable RLS on the 8 unprotected public tables
 -- ===========================================================================

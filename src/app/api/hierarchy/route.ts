@@ -94,8 +94,8 @@ export function buildTenantTree(rows: any[]): TenantGroup[] {
  * this route serves organizational structure and minimal operational
  * health signals only.
  */
-export async function GET() {
-  const denied = await requireAdminOrDeny()
+export async function GET(request: Request) {
+  const denied = await requireAdminOrDeny(request)
   if (denied) return denied
 
   const supabase = createServiceRoleClient()

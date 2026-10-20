@@ -316,6 +316,23 @@ BEGIN
   RETURN v_id;
 END $$;
 
+-- Attributes for one facility, for the qualification agent. Separate from
+-- swim_list_facilities because that is a lean projection for the table view and
+-- attributes are a jsonb payload the list does not need.
+CREATE OR REPLACE FUNCTION public.swim_facility_attributes(p_facility_id UUID)
+RETURNS JSONB
+LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, swim_sourcing, public STABLE
+AS $$
+  SELECT jsonb_build_object(
+    'facility_id', id,
+    'company_id', company_id,
+    'distance_miles', distance_miles,
+    'attributes', attributes,
+    'attributes_confidence', attributes_confidence,
+    'unknown_fields', to_jsonb(unknown_fields))
+  FROM swim_sourcing.facilities WHERE id = p_facility_id;
+$$;
+
 -- ===========================================================================
 -- Dashboard reads
 -- ===========================================================================

@@ -71,3 +71,6 @@ src/app/seller-test/
 src/app/seller-v7/
 agents/instances/*/outputs/seller_test/
 *.code-workspace
+
+# Worktree node_modules junction (created on demand for typechecking)
+node_modules

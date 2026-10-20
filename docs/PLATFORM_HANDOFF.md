@@ -6,10 +6,11 @@ the architecture audit**. Read this plus the file paths it names.
 Branch: `claude/agent-oversight-implementation-b25688`
 As of: 2026-10-20
 
-> **Deployment state in one line:** migrations **047-052 are APPLIED and
-> VERIFIED in production** as of 2026-10-20. Anonymous access is closed, the
-> ledger is append-only even against the service-role key, and cross-tenant
-> isolation is proven against the live database (23 checks, 0 failures).
+> **Deployment state in one line:** **DEPLOYED AND VERIFIED** as of 2026-10-20.
+> Migrations 047-052 applied; the secured application is live at
+> `agent-oversight.vercel.app` (merge `e7f7cbf`). Anonymous callers get 401, the
+> ledger is append-only even against the service-role key, and the cross-tenant
+> 403 is proven against the deployed app, not just the database.
 
 ---
 
@@ -118,7 +119,8 @@ Honest split. "Verified" means a test ran and passed.
 | Qualification scoring | **Code verified, 19/19** | deterministic, no live dependency |
 | Discovery | **Fixtures only** | no `GOOGLE_PLACES_API_KEY` |
 | Outreach safety + exactly-once send | **Code verified, 30/30** | mock transport |
-| Authentication / tenant isolation | **Verified live** | 23/23 checks incl. cross-tenant facility isolation |
+| Authentication | **Live** | anon 401, `/dashboard` 307 -> `/login`, admin 200 on all surfaces |
+| Tenant isolation | **Verified live, both layers** | database 23/23; application 13/13 incl. the cross-tenant 403 |
 | Durable worker | **Schema live, worker unrun** | `swim_*` RPCs applied; worker not yet executed against the queue |
 | Backup | **Complete, verified** | 7 schemas, 2,110 DDL objects, 3,560 rows, 0 failures |
 
@@ -294,9 +296,12 @@ verified; the 26 legacy routes are admin-only; cross-tenant isolation proven liv
    queue-polling worker on a sleeping database will still fail intermittently
    and it will look like application bugs. Pro tier or a keep-warm ping. Paid -
    needs authorization.
-5. **The app layer's `?company=` 403 is still unproven end to end.** The
-   database layer is proven; the `requireTenant` route check needs a deployed
-   app with a browser session (Layer 5 of the live test, currently SKIP).
+5. **CI does not run on GitHub.** The workflow is complete at
+   `ci/github-workflow-ci.yml` but cannot sit under `.github/workflows/` without
+   a token carrying the `workflow` scope - `leazer7222` can push but lacks the
+   scope, `reformai-admin` has the scope but no push access, and the SSH key
+   authenticates as `reformai-admin` too. See `ci/README.md`. Every check it
+   defines passes locally.
 6. **Service-role key is the main boundary** after 047, and it sits in Vercel
    env vars, on any agent host, and in plaintext in
    `.claude/settings.local.json` (gitignored, never committed - verified).

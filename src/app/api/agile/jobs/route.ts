@@ -4,8 +4,8 @@ import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 export const runtime = 'nodejs'
 
 /** GET /api/agile/jobs -> recent intake jobs (newest first). */
-export async function GET() {
-  const denied = await requireAdminOrDeny()
+export async function GET(request: Request) {
+  const denied = await requireAdminOrDeny(request)
   if (denied) return denied
 
   const sb = createServiceRoleClient()

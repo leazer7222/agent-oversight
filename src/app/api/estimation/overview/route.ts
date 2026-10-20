@@ -11,8 +11,8 @@ export const runtime = 'nodejs'
  *   - public.get_estimation_accuracy_overview()
  *   - public.get_biggest_misses(20)
  */
-export async function GET() {
-  const denied = await requireAdminOrDeny()
+export async function GET(request: Request) {
+  const denied = await requireAdminOrDeny(request)
   if (denied) return denied
 
   const supabase = createServiceRoleClient()

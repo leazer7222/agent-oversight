@@ -835,3 +835,96 @@ service-role gap P0-0 cannot. Acceptance: a `service_role` UPDATE on `agent_outp
 **P0-1h. Tenant-scoped RLS policies.** Replace the dropped `authenticated_*` policies with
 membership-based ones so the database enforces isolation even if a route forgets. Acceptance:
 Supabase advisors clean; a direct authenticated PostgREST read returns only the caller's tenant.
+
+---
+
+## P0-0 Validation Attempt (2026-10-20) - BLOCKED, no environment provisioned
+
+Outcome: **migration 047 remains reviewed but unproven.** No validation environment was created, no
+resource was provisioned, nothing was charged, and production was not modified.
+
+### Why branch validation was abandoned
+
+1. **Branching requires the Pro plan.** `create_branch` returned
+   `PaymentRequiredException: Branching is supported only on the Pro plan or above`. The org
+   (`Chucks Personal Team`, `jwngphxssmlsnatpwvth`) is on the Free plan. Unlocking it means a $25/month
+   recurring upgrade - far beyond the ~3 cents of branch compute that had been approved, and not a
+   purchase to make on someone's behalf.
+2. **A branch would not have been representative anyway.** Supabase's own docs state: *"If you have
+   run migrations on main, new branches will be created from existing migrations instead of a full
+   schema dump."* Production's migration ledger stops at 023 and is missing 001, 002 and 024-046
+   (see drift finding below), so a branch would have come up without `companies`, `agents`, `runs`,
+   `product_graph` or `agile_intake_jobs`. Migration 047 would have partially no-op'd and the result
+   would have been misleading rather than merely incomplete.
+3. The free alternatives were declined or unavailable: Docker was ruled out by the user, this machine
+   has no local Postgres (`psql`, `initdb`, `pg_ctl`, `supabase` CLI all absent), and the user elected
+   to verify at production-apply time instead of creating a throwaway free project.
+
+### Side effect to be aware of (benign, no cost)
+
+The failed `create_branch` call registered a `main` branch row on the production project. This is
+documented behaviour: *"on a brand-new project the production branch hasn't been registered yet. The
+first 'Create branch' click populates this row behind the scenes - technically enabling branching on
+the project."* The row's `project_ref` is the production project itself, not a separate instance.
+Billing applies to *preview* branch compute hours only and there is no fixed branch fee, so this
+incurred nothing. **It was deliberately left in place:** deleting a branch record whose `project_ref`
+is production is risk without benefit.
+
+### Required report - results
+
+| Section | Result |
+|---|---|
+| Preview environment configuration | **Not provisioned.** Would have been: own isolated DB, own API keys, no production data (per docs), schema from re-run migrations, no seed (repo has no `supabase/seed.sql`). Cost $0.01344/hr, no fixed fee. |
+| Migration execution results | **Not executed.** 047 has never been applied to any database. |
+| Security assertion results | **Not executed.** 12 catalog invariants in `scripts/tests/047_assertions.sql` are written and ready. |
+| Behavioural test results | **Not executed.** `scripts/tests/047_behaviour_probes.sql` written, `BEGIN..ROLLBACK`-wrapped. |
+| Service-role regression results | **Baseline only, and it passed:** `verify_p0_0_security.py` recorded 17/17 service-role paths working pre-change. The post-change half is not executed. |
+| Rollback test results | **Not executed.** `047_rollback.sql` is written and linted but has never been run. |
+| Remaining migration defects | **None found - but note that no defect-finding execution occurred.** The only defect found and fixed this cycle was in the test suite itself (the `HTTP 200 []` false-pass, fixed earlier). Static review against live catalog metadata found no further issues: signatures, policy names, roles, permissiveness, ownership and PG version all verified, and zero extension-owned functions means no REVOKE can abort the apply. |
+| Production deployment readiness | **Ready to apply, with the apply itself as the first real test.** See below. |
+
+### Production deployment readiness assessment
+
+The migration is as validated as it can be without execution: linter clean, every precondition
+verified against the live catalog, and a reasoned basis for behaviour-neutrality (no anon client
+importers; all 30 `.rpc()` sites and all 28 routes on the service-role path). What is *not* proven is
+that the SQL executes without error. The residual risks are the ordinary ones for a
+privileges-and-policies migration:
+
+- A `DROP POLICY IF EXISTS` naming a policy that does not exist is a no-op, so section C cannot fail
+  on a missing policy.
+- Section A's loop is generated from `pg_proc` at run time, so it cannot reference a stale signature.
+- The statements most likely to fail are the seven `ALTER FUNCTION ... SET search_path` calls, which
+  name signatures explicitly. These were read from the live catalog, so they should match, but an
+  overload added between audit and apply would break one.
+- Blast radius if it fails mid-way: the migration is wrapped in a single `BEGIN`/`COMMIT`, so a
+  failure rolls the whole thing back and leaves production exactly as it is now.
+
+Recommendation: apply it inside the transaction it already has, then immediately run, in order,
+`047_assertions.sql`, `047_behaviour_probes.sql`,
+`verify_p0_0_security.py --expect-hardened --include-write-probes`, the four app no-regression checks
+in the migration footer, and the advisor re-run. Keep `047_rollback.sql` on standby but prefer a
+narrow forward `GRANT` for any single object that breaks. **This still needs explicit authorization -
+it has not been given and 047 has not been applied.**
+
+### Migration drift finding (reported only, per decision - no action taken)
+
+Production and this repo have diverged in both directions:
+
+- Production's `supabase_migrations.schema_migrations` holds 22 rows ending at **023**. It records
+  **`021_cost_risk_engine_public_rpc_wrappers`, for which there is no file in this repo** - there is
+  no `021_*.sql` at all.
+- **Migrations 024-046 are absent from the ledger** because they were applied through
+  `scripts/apply_sql.py` (raw Management API), which does not write migration records. The files
+  exist; the ledger does not know about them.
+- 001 and 002 are also unrecorded. Migration 026 is in the repo but `AGENTS.md` states it was never
+  applied to production.
+- `LESSONS_LEARNED.md` additionally records that 022 was repaired in production via
+  `CREATE OR REPLACE` and that 041's first apply failed and was amended - repairs that may not be
+  reflected in the files.
+
+Consequence: **the repo cannot currently reproduce production, and production does not record what
+the repo contains.** This blocks any future branch-based or replay-based testing regardless of plan
+tier, and it is why the branch route would have failed even on Pro. Left as a reported finding by
+decision; it is not on the critical path for Cameron's tenant, but it is a prerequisite for ever
+trusting a replay-built environment.

@@ -14,6 +14,11 @@
 -- This is NOT a replay of migrations 001-046. It is a faithful stand-in for the
 -- starting state of the objects under test, which is what 047 must transform.
 --
+-- STATUS: UNEXERCISED. Branch validation was blocked (Free plan; branching needs
+-- Pro) and Docker/local Postgres are unavailable, so this fixture has never been
+-- run. It is retained because it encodes the production preconditions measured on
+-- 2026-10-20, which is the reference for any future validation environment.
+--
 -- HOW TO USE: apply this to any throwaway Postgres 17 instance, then apply
 -- 047_p0_0_database_hardening.sql, then 047_assertions.sql and
 -- 047_behaviour_probes.sql. A Supabase preview branch is the most faithful

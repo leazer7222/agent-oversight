@@ -14,13 +14,16 @@ Needs a direct Postgres connection string, which is NOT in the repository and
 must never be pasted into a chat, a log, or a commit. Supply it the same way
 every other secret here is supplied:
 
-  1. Get the connection string from
-     https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh/settings/database
-     (use the "Connection string" -> URI, session pooler or direct).
+  1. Get the connection string by clicking **Connect** at the top of the
+     project dashboard:
+       https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh?showConnect=true
+     Choose the **Session pooler** tab. Not Direct (IPv6-only on the Free plan)
+     and NOT Transaction pooler on port 6543 - this script uses server-side
+     named cursors, which require a session-scoped connection.
   2. Append it to `.env.local` in the repo root, which is gitignored
      (`.gitignore:34` matches `.env*`):
 
-         SUPABASE_DB_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+         SUPABASE_DB_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 
   3. Run this script. It reads the variable, never prints it, and redacts the
      password from every message and from the manifest.
@@ -91,10 +94,15 @@ def load_db_url() -> str:
         print("[backup] SUPABASE_DB_URL is not set.\n")
         print("  A complete backup needs a direct Postgres connection. Add this")
         print("  line to .env.local (gitignored), then re-run:\n")
-        print("    SUPABASE_DB_URL=postgresql://postgres:<password>@db."
-              "hdhovyrlnfojtkqbcegh.supabase.co:5432/postgres\n")
-        print("  Get it from Supabase dashboard -> Settings -> Database ->")
-        print("  Connection string (URI). Do not paste it into chat.")
+        print("    SUPABASE_DB_URL=postgresql://postgres.<ref>:<password>"
+              "@aws-0-<region>.pooler.supabase.com:5432/postgres\n")
+        print("  Click 'Connect' at the TOP of the project dashboard")
+        print("  (dashboard/project/<ref>?showConnect=true) - it is no longer")
+        print("  under Settings -> Database. Use the SESSION POOLER tab:")
+        print("    * Direct connection is IPv6-only on the Free plan")
+        print("    * Transaction pooler (6543) breaks the server-side cursors")
+        print("      this script uses to stream large tables")
+        print("  Do not paste the connection string into chat.")
         sys.exit(3)
     return url
 

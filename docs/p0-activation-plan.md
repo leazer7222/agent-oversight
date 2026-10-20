@@ -140,9 +140,10 @@ connection string. There is none in `.env.local`, and the stored Supabase
 management PAT is **invalid** (`401 Invalid access token` on every Management API
 call), so one cannot be fetched programmatically.
 
-Get the connection string from
-`https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh/settings/database`
-then, with the Supabase CLI (`npm i -g supabase`):
+Get the connection string by clicking **Connect** at the top of the project
+dashboard (`?showConnect=true`), choosing the **Session pooler** tab - the
+direct connection is IPv6-only on the Free plan, and transaction mode breaks
+server-side cursors. Then, with the Supabase CLI (`npm i -g supabase`):
 
 ```bash
 supabase db dump --db-url "postgresql://postgres:<PASSWORD>@db.hdhovyrlnfojtkqbcegh.supabase.co:5432/postgres" -f backup-pre-047-schema.sql
@@ -367,16 +368,30 @@ zero authorization. All three properties were negative-tested.
 `SUPABASE_DB_URL` is still unset, so the complete backup cannot be taken, and by
 the stated rule the migrations therefore stay unapplied. Exact steps:
 
-1. Open https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh/settings/database
-2. Under **Connection string**, select **URI**, and copy it. Reveal the password
-   with the eye icon (or use **Reset database password** if unknown).
-3. Append one line to `.env.local` in the repo root - gitignored at
-   `.gitignore:34`, and `scripts/backup_full.py` never prints it and redacts the
-   password from all output and from the manifest:
+1. Open the project dashboard and click **Connect** at the top:
+   https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh?showConnect=true
+   (The connection string is NOT under Settings -> Database any more; that page
+   only resets the password and sets pool size.)
+2. Choose the **Session pooler** tab, not Direct connection and NOT Transaction
+   pooler. Two reasons:
+     * On the Free plan the direct connection is IPv6-only - IPv4 requires a
+       paid add-on - so a direct string fails on an IPv4-only network with a
+       confusing connection error.
+     * scripts/backup_full.py uses server-side named cursors to stream large
+       tables. Those need a session-scoped connection, so transaction mode
+       (port 6543) would break the backup.
+   Session pooler is IPv4 on every tier and session-scoped:
+       postgresql://postgres.hdhovyrlnfojtkqbcegh:[YOUR-PASSWORD]@aws-0-us-west-2.pooler.supabase.com:5432/postgres
+3. Substitute the database password. If unknown, reset it at
+   https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh/database/settings
+   (a reset invalidates the previous password - update anything else using it).
+4. Append ONE line to `.env.local` in the repo root (gitignored, `.gitignore:34`).
+   backup_full.py never prints it and redacts the password from all output and
+   from the manifest:
 
-       SUPABASE_DB_URL=postgresql://postgres:<password>@db.hdhovyrlnfojtkqbcegh.supabase.co:5432/postgres
+       SUPABASE_DB_URL=postgresql://postgres.hdhovyrlnfojtkqbcegh:<password>@aws-0-us-west-2.pooler.supabase.com:5432/postgres
 
-4. Confirm here. Do **not** paste the password into chat.
+5. Confirm. Do **not** paste the password into chat.
 
 Then the sequence resumes automatically: `backup_full.py` -> verify -> apply 047
 -> verify -> 048 -> verify -> 049 -> 050 -> admin account -> live isolation test.

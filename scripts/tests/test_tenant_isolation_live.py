@@ -169,12 +169,20 @@ def main() -> int:
 
         # Give company A one facility so "cannot see B's rows" is a real claim
         # rather than an artefact of both tenants being empty.
-        status, body = call(url, "/rest/v1/rpc/swim_upsert_facility", key=svc,
-                            method="POST",
-                            body={"p_company_id": co_a, "p_facility": {
-                                "name": "ISO TEST Facility A", "source": "fixture",
-                                "source_ref": f"iso-{uuid.uuid4().hex[:8]}"}})
-        r.check("fixture: company A has a facility", status == 200, f"HTTP {status}")
+        # Both companies get a facility. Without a row on each side, "A cannot
+        # see B's data" would pass trivially because B has no data.
+        fac_ids = {}
+        for label, co in (("A", co_a), ("B", co_b)):
+            status, body = call(url, "/rest/v1/rpc/swim_upsert_facility", key=svc,
+                                method="POST",
+                                body={"p_company_id": co, "p_facility": {
+                                    "name": f"ISO TEST Facility {label}",
+                                    "source": "fixture",
+                                    "source_ref": f"iso-{uuid.uuid4().hex[:8]}"}})
+            r.check(f"fixture: company {label} has a facility", status == 200,
+                    f"HTTP {status}")
+            row = (body[0] if isinstance(body, list) and body else body) or {}
+            fac_ids[label] = row.get("facility_id")
 
         # ---------- sign in as each user ------------------------------------
         tokens = {}
@@ -196,6 +204,60 @@ def main() -> int:
                 bool(rows) and rows[0].get("company_id") == co_a)
         r.check("user A cannot see user B's membership",
                 all(row.get("company_id") != co_b for row in rows))
+
+        print("\n[iso] LAYER 1b - CROSS-TENANT DATA, tested at the database")
+        # swim_sourcing is NOT exposed by PostgREST (only `public` is), so a REST
+        # probe returns 404 and proves nothing about the policy. The RLS policy
+        # still governs any direct Postgres session, so test it there by
+        # impersonating each user with their real JWT claims.
+        db_url = os.environ.get("SUPABASE_DB_URL")
+        if not db_url:
+            r.check("cross-tenant facility isolation", False,
+                    "SKIPPED - set SUPABASE_DB_URL to test the RLS policy directly")
+        else:
+            import psycopg
+
+            def as_user(user_id, sql, params=()):
+                """Run a query as `authenticated` with auth.uid() = user_id."""
+                with psycopg.connect(db_url, connect_timeout=30) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("select set_config('request.jwt.claims', %s, true)",
+                                    (json.dumps({"sub": user_id, "role": "authenticated"}),))
+                        cur.execute("set local role authenticated")
+                        cur.execute(sql, params)
+                        return cur.fetchall()
+
+            rows_a = as_user(user_a["id"],
+                             "select id, company_id from swim_sourcing.facilities")
+            r.check("user A sees exactly 1 facility", len(rows_a) == 1,
+                    f"{len(rows_a)} row(s)")
+            r.check("the facility user A sees belongs to company A",
+                    bool(rows_a) and str(rows_a[0][1]) == co_a)
+            r.check("user A CANNOT see company B's facility",
+                    all(str(row[1]) != co_b for row in rows_a))
+
+            rows_b = as_user(user_b["id"],
+                             "select id, company_id from swim_sourcing.facilities")
+            r.check("user B sees exactly 1 facility, and it is B's",
+                    len(rows_b) == 1 and str(rows_b[0][1]) == co_b,
+                    f"{len(rows_b)} row(s)")
+
+            if fac_ids.get("B"):
+                got = as_user(user_a["id"],
+                              "select id from swim_sourcing.facilities where id = %s",
+                              (fac_ids["B"],))
+                r.check("user A asking for B's facility BY ID gets nothing",
+                        len(got) == 0, f"{len(got)} row(s)")
+
+            orphan = as_user(str(uuid.uuid4()),
+                             "select id from swim_sourcing.facilities")
+            r.check("a user with no membership sees zero facilities",
+                    len(orphan) == 0, f"{len(orphan)} row(s)")
+
+        print("\n[iso] LAYER 1c - swim_sourcing is unreachable over PostgREST")
+        status, _ = call(url, "/rest/v1/facilities?select=id", key=anon, bearer=tokens["a"])
+        r.check("authenticated cannot reach swim_sourcing via REST",
+                status in (401, 403, 404), f"HTTP {status}")
 
         print("\n[iso] LAYER 2 - authenticated users cannot reach swim_* RPCs")
         # These are granted to service_role only. An authenticated session must

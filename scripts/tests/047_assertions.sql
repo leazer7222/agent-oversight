@@ -120,9 +120,16 @@ BEGIN
   -- F2. All 3 cost views must be security_invoker.
   FOREACH v IN ARRAY ARRAY['agent_cost_summary','project_cost_summary','company_cost_summary']
   LOOP
+    -- Postgres stores the literal spelling used in ALTER VIEW, so
+    -- `SET (security_invoker = on)` persists as 'security_invoker=on', NOT
+    -- '...=true'. An earlier version of this assertion matched only 'true' and
+    -- reported a correctly-applied migration as failed. Parse the option and
+    -- accept any spelling Postgres treats as boolean true.
     SELECT count(*) INTO n FROM pg_class c JOIN pg_namespace ns ON ns.oid=c.relnamespace
       WHERE ns.nspname='public' AND c.relname=v AND c.relkind='v'
-        AND c.reloptions @> ARRAY['security_invoker=true'];
+        AND lower(coalesce((SELECT option_value FROM pg_options_to_table(c.reloptions)
+                             WHERE option_name='security_invoker'), 'off'))
+            IN ('on','true','yes','1');
     IF n <> 1 THEN RAISE EXCEPTION 'F2 FAILED: view public.% is not security_invoker', v; END IF;
   END LOOP;
 

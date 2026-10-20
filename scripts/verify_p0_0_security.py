@@ -53,10 +53,17 @@ ANON_CALLABLE_RPCS_READONLY = [
 ]
 # Ledger WRITERS. Write probes - gated.
 ANON_CALLABLE_RPCS_WRITE = [
+    # NOTE: this function has TWO overloads (6-arg and 8-arg), and the 8-arg one
+    # has defaults on its last two parameters - so a 6-arg payload matches BOTH
+    # and PostgREST answers 300 Multiple Choices at the ROUTING layer, before any
+    # permission check. That is inconclusive, not a pass and not a failure.
+    # Sending all 8 arguments targets exactly one overload, so the response
+    # reflects the actual permission decision (401 permission denied).
     ("write_run_started_artifacts", {
         "p_run_id": None, "p_tenant_id": None, "p_model": "claude-sonnet-4-6",
         "p_provider": "anthropic", "p_task_type_code": "code_gen",
-        "p_task_complexity_bucket": "simple"}),
+        "p_task_complexity_bucket": "simple",
+        "p_tokens_in_hint": 10, "p_declared_max_steps": 1}),
     ("graph_ratify_node", {
         "p_tenant": None, "p_product": "reformai-product",
         "p_node_key": "CON-0001", "p_new_status": "ratified",
@@ -210,8 +217,14 @@ def main():
                         body_payload[k] = str(uuid.uuid4())
                 status, _ = request(url, anon_key, f"rpc/{fn}", method="POST",
                                     body=body_payload)
-                r.record("anon ledger forgery (must be denied)", fn,
-                         "PASS" if denied(status) else "FAIL", f"HTTP {status}")
+                if status == 300:
+                    r.record("anon ledger forgery (must be denied)", fn, "FAIL",
+                             "HTTP 300 Multiple Choices - overload ambiguity, so "
+                             "this probe never reached a permission check. Send a "
+                             "payload matching exactly one overload.")
+                else:
+                    r.record("anon ledger forgery (must be denied)", fn,
+                             "PASS" if denied(status) else "FAIL", f"HTTP {status}")
 
             status, _ = request(url, anon_key, "agile_intake_jobs", method="POST", body={
                 "company_id": str(uuid.uuid4()), "product_key": "p0-0-probe",

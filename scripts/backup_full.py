@@ -261,7 +261,14 @@ def take_backup(out_root: Path) -> Path:
 
         print("[backup] capturing DDL")
         for name, sql in DDL_QUERIES.items():
-            cur.execute(sql, (SCHEMAS,))
+            # default_privileges is queried globally from pg_default_acl and has
+            # no %s placeholder, unlike every other query here. Passing params
+            # to a query with none is an error in psycopg, so bind only when the
+            # query actually takes one.
+            if "%s" in sql:
+                cur.execute(sql, (SCHEMAS,))
+            else:
+                cur.execute(sql)
             data = rows_as_dicts(cur)
             (dest / "ddl" / f"{name}.json").write_text(
                 json.dumps(data, indent=2, default=str), encoding="utf-8")

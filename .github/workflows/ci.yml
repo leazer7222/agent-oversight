@@ -1,0 +1,115 @@
+name: CI
+
+# Gate for the Agent Oversight platform. Everything here runs with NO live
+# services: no database, no Supabase, no LLM provider, no mail, no Places API.
+# That is deliberate - a security gate that needs production credentials is a
+# gate that gets skipped.
+#
+# Tests that genuinely require live services live in scripts/tests/ and are
+# listed in the "live-only" job below, which does not run in CI. They are
+# operator-run steps in docs/p0-activation-plan.md.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  migrations:
+    name: Migration lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Only migrations from 047 are linted. 001-011 predate the linter and
+      # carry 14 known hard failures; gating on them would block every change
+      # for reasons unrelated to that change.
+      - name: Lint migrations from 047
+        run: python scripts/check_migrations.py --from-migration 047
+
+  python-tests:
+    name: Python tests (security-critical)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: pip install cryptography
+      # Named individually rather than discovered, so that a suite silently
+      # failing to import registers as a CI failure instead of as zero tests.
+      - name: Credential isolation (billing separation)
+        run: python agents/tests/test_credentials.py
+      - name: Outreach safety (prompt injection, approval gate, exactly-once)
+        run: python agents/tests/test_outreach_safety.py
+      - name: Qualification scoring (determinism, unknown handling)
+        run: python agents/tests/test_qualification.py
+      - name: Discovery (no-fabrication, provenance, cost ceiling)
+        run: python agents/tests/test_discovery.py
+      - name: End-to-end pipeline (mocked externals)
+        run: python agents/tests/test_end_to_end.py
+
+  typescript:
+    name: TypeScript compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx next lint
+        continue-on-error: true
+
+  api-authorization:
+    name: API authorization regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # Static assertions over the route sources. These catch the specific
+      # regressions that would silently re-open the holes P0-0/P0-1 closed, and
+      # they need no database to do it.
+      - name: Assert every sourcing route resolves a verified tenant
+        run: python scripts/tests/check_route_authorization.py
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # The detector is self-tested before it is trusted. An inline-grep version
+      # of this gate fired on a bare `sk-ant-api03-` prefix in documentation and
+      # on two obviously-fake test fixtures. A gate that cries wolf gets
+      # disabled, so the detection logic is itself under test.
+      - name: Self-test the secret detector
+        run: python scripts/tests/check_no_secrets.py --self-test
+      - name: Scan for committed credentials
+        run: python scripts/tests/check_no_secrets.py
+
+  # ---------------------------------------------------------------------------
+  # NOT RUN IN CI - requires live services and production authorization.
+  # Kept here as documentation of what the gate deliberately does not cover.
+  #
+  #   scripts/tests/047_assertions.sql              needs an applied 047
+  #   scripts/tests/047_behaviour_probes.sql        needs an applied 047
+  #   scripts/verify_p0_0_security.py               needs live Supabase + anon key
+  #   scripts/tests/test_tenant_isolation_live.py   needs applied 048-050, writes
+  #                                                 throwaway users to production
+  #   scripts/backup_full.py                        needs SUPABASE_DB_URL
+  #
+  # These are operator steps in docs/p0-activation-plan.md sections 4 and 5.
+  # ---------------------------------------------------------------------------

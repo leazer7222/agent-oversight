@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { createHash } from 'node:crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { renderFeatureSpec } from '@/lib/scoping/render-feature-spec'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -22,6 +23,9 @@ async function resolveTenant(sb: ReturnType<typeof createServiceRoleClient>, nam
  * Option B: self-contained in agent_outputs (no feature_lifecycle spine yet).
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ feature: string }> }) {
+  const denied = await requireAdminOrDeny(req)
+  if (denied) return denied
+
   const { feature } = await params
   const body = await req.json().catch(() => ({}))
   const product = body.product ?? 'reformai-product'

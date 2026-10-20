@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -9,9 +10,12 @@ export const runtime = 'nodejs'
  * Returns full agent record enriched with run stats and recent runs.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminOrDeny(request)
+  if (denied) return denied
+
   const { id } = await params
   const supabase = createServiceRoleClient()
 

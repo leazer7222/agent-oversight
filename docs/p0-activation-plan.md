@@ -344,3 +344,39 @@ the agent weekly.
 
 Nothing was applied, no external email was sent, no autonomous job was activated,
 and no paid resource was provisioned.
+
+
+---
+
+## 9. Addendum (2026-10-20, closeout pass)
+
+### Legacy API authorization gap - CLOSED in code
+The 26 platform-oversight routes had no authorization at all. They now require a
+platform administrator (`src/lib/auth/require-admin.ts`); a non-admin receives
+403 and the denial is audited. Tenant-scoping was rejected as the wrong fix,
+because aggregating across companies is these routes' purpose.
+
+Supporting change: `apiFetch` forwards the session cookie on the server-to-server
+hop, without which every dashboard page would have silently rendered empty.
+
+CI enforcement (`check_route_authorization.py`, 499 checks) asserts the guard
+exists, runs before any database client is constructed, and that no route has
+zero authorization. All three properties were negative-tested.
+
+### The single remaining human action
+`SUPABASE_DB_URL` is still unset, so the complete backup cannot be taken, and by
+the stated rule the migrations therefore stay unapplied. Exact steps:
+
+1. Open https://supabase.com/dashboard/project/hdhovyrlnfojtkqbcegh/settings/database
+2. Under **Connection string**, select **URI**, and copy it. Reveal the password
+   with the eye icon (or use **Reset database password** if unknown).
+3. Append one line to `.env.local` in the repo root - gitignored at
+   `.gitignore:34`, and `scripts/backup_full.py` never prints it and redacts the
+   password from all output and from the manifest:
+
+       SUPABASE_DB_URL=postgresql://postgres:<password>@db.hdhovyrlnfojtkqbcegh.supabase.co:5432/postgres
+
+4. Confirm here. Do **not** paste the password into chat.
+
+Then the sequence resumes automatically: `backup_full.py` -> verify -> apply 047
+-> verify -> 048 -> verify -> 049 -> 050 -> admin account -> live isolation test.

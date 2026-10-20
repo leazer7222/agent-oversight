@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -10,6 +11,9 @@ export const runtime = 'nodejs'
  * The worker runs it; the original job stays as the audit record of the clarify round.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdminOrDeny(req)
+  if (denied) return denied
+
   const { id } = await params
   const body = await req.json().catch(() => ({}))
   const answers = Array.isArray(body.answers) ? body.answers : []

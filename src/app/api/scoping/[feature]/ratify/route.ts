@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { requireAdminOrDeny } from '@/lib/auth/require-admin'
 
 export const runtime = 'nodejs'
 
@@ -16,6 +17,9 @@ async function resolveTenant(sb: ReturnType<typeof createServiceRoleClient>, nam
  * The DB immutability trigger guards illegal transitions (accepted nodes are content-frozen).
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ feature: string }> }) {
+  const denied = await requireAdminOrDeny(req)
+  if (denied) return denied
+
   await params
   const body = await req.json().catch(() => ({}))
   const product = body.product ?? 'reformai-product'

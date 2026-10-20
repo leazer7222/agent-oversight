@@ -33,10 +33,15 @@ MIDDLEWARE = REPO / "src" / "middleware.ts"
 # this set is a deliberate security decision and should be reviewed as one.
 AGENT_SECRET_ROUTES = {"ingest/route.ts", "telemetry/ingest/route.ts"}
 
-# Pre-existing ReformAI-internal routes that predate requireTenant. They are
-# tracked here rather than ignored: the list must only ever shrink. A new route
-# cannot be added to it without someone editing this file, which is the point.
-LEGACY_UNSCOPED = {
+# Platform-oversight routes. These aggregate operational data ACROSS companies
+# by design (/api/hierarchy walks every company, /api/cost aggregates all spend),
+# so tenant-scoping them would defeat their purpose. They are instead restricted
+# to platform administrators via requireAdminOrDeny, because no tenant user
+# should call them - tenant data is served by /api/sourcing/*, which is scoped.
+#
+# This list was previously LEGACY_UNSCOPED: 26 routes with NO authorization at
+# all. It is now ADMIN_ONLY and every entry is enforced below.
+ADMIN_ONLY = {
     "agents/route.ts", "agents/[id]/route.ts", "agents/[id]/runs/route.ts",
     "agile/intake/route.ts", "agile/jobs/route.ts", "agile/jobs/[id]/route.ts",
     "agile/jobs/[id]/answer/route.ts", "ai-ops/feedback/route.ts",
@@ -85,7 +90,7 @@ def main() -> int:
 
     print("[gate] 1. every non-legacy, non-agent-secret route resolves a verified tenant")
     for rel in routes:
-        if rel in AGENT_SECRET_ROUTES or rel in LEGACY_UNSCOPED:
+        if rel in AGENT_SECRET_ROUTES or rel in ADMIN_ONLY:
             continue
         src = (API / rel).read_text(encoding="utf-8")
         g.check("requireTenant" in src,
@@ -94,7 +99,7 @@ def main() -> int:
 
     print("[gate] 2. no route uses a caller-supplied company id as a filter")
     for rel in routes:
-        if rel in LEGACY_UNSCOPED or rel in AGENT_SECRET_ROUTES:
+        if rel in ADMIN_ONLY or rel in AGENT_SECRET_ROUTES:
             continue
         src = (API / rel).read_text(encoding="utf-8")
         # Reading ?company= is fine ONLY if it is handed to requireTenant for
@@ -157,11 +162,45 @@ def main() -> int:
         g.check(re.search(r"body\.(ratified_by|approver|approved_by)", src) is None,
                 "approvals route reads an approver identity from the request body")
 
-    print("[gate] 7. the legacy unscoped list has not grown")
-    unknown = [r for r in LEGACY_UNSCOPED if r not in routes]
-    g.check(not unknown,
-            f"LEGACY_UNSCOPED lists routes that no longer exist: {unknown}. "
-            f"Remove them - the list must only shrink.")
+    print("[gate] 7. every platform-oversight route requires an administrator")
+    for rel in sorted(ADMIN_ONLY):
+        path = API / rel
+        if not path.exists():
+            g.check(False, f"ADMIN_ONLY lists {rel} which no longer exists - remove it")
+            continue
+        src = path.read_text(encoding="utf-8")
+        g.check("requireAdminOrDeny" in src,
+                f"{rel} is a platform-oversight route but does not call "
+                f"requireAdminOrDeny() - it would expose cross-company data to "
+                f"any caller")
+        # The guard must run BEFORE any data access. A guard placed after the
+        # query would authorize nothing - the rows would already be fetched.
+        handler_re = re.compile(
+            r"export async function (GET|POST|PUT|PATCH|DELETE)\s*\([^)]*\)"
+            r"[^{]*\{(.*?)(?=\nexport |\Z)", re.S)
+        for h in handler_re.finditer(src):
+            method, body = h.group(1), h.group(2)
+            guard_at = body.find("requireAdminOrDeny")
+            client_at = min([i for i in (body.find("createServiceRoleClient("),
+                                         body.find("createClient(")) if i != -1]
+                            or [-1])
+            # Two distinct failures with distinct causes. Reporting both through
+            # one message cost real debugging time during the negative test.
+            if guard_at == -1:
+                g.check(False, f"{rel} {method}: no admin guard at all - this "
+                               f"handler would serve cross-company data to any caller")
+            else:
+                g.check(client_at == -1 or guard_at < client_at,
+                        f"{rel} {method}: the admin guard runs AFTER a database "
+                        f"client is constructed, so it authorizes nothing")
+
+    print("[gate] 8. no route is left with zero authorization")
+    for rel in routes:
+        if rel in AGENT_SECRET_ROUTES:
+            continue
+        src = (API / rel).read_text(encoding="utf-8")
+        g.check("requireAdminOrDeny" in src or "requireTenant" in src,
+                f"{rel} has NO authorization of any kind")
 
     return g.report()
 

@@ -138,10 +138,24 @@ Four layers. Each holds if the others fail:
 Roles: `owner`, `operator`, `admin`. `admin` may act cross-tenant and every such
 access writes `privileged_action_log`.
 
-**Known gap:** the 26 legacy ReformAI routes still use the optional `?company=`
-pattern and have **not** been retrofitted. They are listed explicitly in
-`scripts/tests/check_route_authorization.py::LEGACY_UNSCOPED`, and that list is
-CI-enforced to only ever shrink.
+**Closed 2026-10-20:** the 26 legacy ReformAI routes previously had no
+authorization at all. They now require a platform administrator via
+`requireAdminOrDeny` (`src/lib/auth/require-admin.ts`). Tenant-scoping them
+would have been the wrong fix - aggregating across companies IS their purpose
+(`/api/hierarchy` walks every company, `/api/cost` aggregates all spend) - and no
+tenant user should call them, because tenant data is served by
+`/api/sourcing/*`. A non-admin gets 403 and the denial is written to
+`privileged_action_log`.
+
+This required one supporting change: `apiFetch` now forwards the caller's
+session cookie on the server-to-server hop. Dashboard pages are server
+components that re-enter the app over HTTP, so without cookie forwarding every
+page would have rendered as a convincing empty state once the routes started
+requiring auth.
+
+CI enforces it: `check_route_authorization.py` asserts every route in
+`ADMIN_ONLY` calls the guard, that the guard runs BEFORE any database client is
+constructed, and that no route anywhere has zero authorization.
 
 ---
 
@@ -251,7 +265,8 @@ them by adding job types.
 | `src/lib/api/fetch.ts` | server fetch with cold-start retry |
 | `scripts/check_migrations.py` | migration linter (RFC-009 rules) |
 | `scripts/backup_supabase.py` / `backup_full.py` | logical backup + verification |
-| `scripts/tests/check_route_authorization.py` | API authorization regression gate |
+| `src/lib/auth/require-admin.ts` | admin-only guard for platform-oversight routes |
+| `scripts/tests/check_route_authorization.py` | API authorization regression gate (499 checks) |
 | `scripts/tests/check_no_secrets.py` | self-tested credential scanner |
 | `scripts/tests/test_tenant_isolation_live.py` | five-layer live isolation test |
 
@@ -278,8 +293,7 @@ them by adding job types.
    env vars, on any agent host, and in plaintext in
    `.claude/settings.local.json` (gitignored, never committed - verified).
    Rotation unaddressed.
-7. **26 legacy routes not retrofitted** (see section 4).
-8. **Repo cannot reproduce production** - the ledger records a `021` with no
+7. **Repo cannot reproduce production** - the ledger records a `021` with no
    file; 024-046 are unrecorded because they were applied out-of-band. Blocks
    any replay-built environment.
 

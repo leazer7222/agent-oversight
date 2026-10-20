@@ -1,0 +1,17 @@
+{
+  "name": "facility-researcher",
+  "display_name": "Facility Researcher",
+  "version": "0.1.0-prototype",
+  "type": "worker",
+  "owner": "reformai",
+  "description": "Discovery, evidence-bound enrichment, deterministic triage and prioritisation of pool facilities. Never invents a facility, fact or contact.",
+  "entry_point": "agents/teams/swim-sourcing/worker.py",
+  "job_types": ["discover", "enrich", "qualify"],
+  "models": {"enrich": "claude-haiku-5-5"},
+  "mcp_dependencies": [],
+  "external_dependencies": ["Google Places API (New) - optional; recorded fixtures otherwise"],
+  "telemetry": {"run_started": true, "run_completed": true, "cost_reported": true},
+  "capability_tags": ["discovery", "enrichment", "qualification"],
+  "instance_naming": "{tenant}.facility-researcher",
+  "parent": "facility-acquisition-controller"
+}

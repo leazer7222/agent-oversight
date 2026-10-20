@@ -122,6 +122,13 @@ def classify(inbound_text: str, thread: dict, faq: dict, llm: Callable) -> Tuple
     proposed_reply = proposal.get("proposed_reply") or None
     verdict = requires_human_approval(inbound_text, intent, proposed_reply)
     action = decide_action(intent, verdict, faq)
+    safety = verdict.as_dict()
+    if action == "escalate" and not safety["requires_approval"]:
+        # Policy escalations (meeting requests, positive signals in v1) are the
+        # owner's call even when no commitment pattern fired. Record why.
+        safety["requires_approval"] = True
+        safety["reasons"] = list(safety["reasons"]) + [
+            f"intent '{intent}' is reserved for the owner's decision in v1"]
 
     answered = []
     for q in proposal.get("answered_questions") or []:
@@ -141,7 +148,7 @@ def classify(inbound_text: str, thread: dict, faq: dict, llm: Callable) -> Tuple
         "model_confidence": float(proposal.get("model_confidence") or 0.0),
         "proposed_reply": proposed_reply,
         "proposed_action": action,
-        "safety": verdict.as_dict(),
+        "safety": safety,
         "injection_matches": detect_injection(inbound_text),
         "answered_questions": answered,
         "recommended_followup_at": followup,

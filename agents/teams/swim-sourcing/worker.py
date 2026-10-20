@@ -191,15 +191,14 @@ class Cancelled(Exception):
     """Cooperative cancellation requested through the heartbeat."""
 
 
-def preflight(company_id: str, agent_id: str, *, needs_llm: bool, estimate_usd: float = 0.05):
-    """Returns a ResolvedCredential (or None for non-LLM jobs), or raises Blocked.
+def check_kill_switch(company_id: str, agent_id: str) -> None:
+    """Raises Blocked unless the identity is registered, active and this company's.
 
-    Order matters: the cheapest and most definitive checks run first so a paused
-    agent or an exhausted budget never reaches credential decryption.
+    Runs BEFORE the telemetry run opens: /api/ingest refuses run_started for a
+    non-active agent (403), so a paused identity must be blocked without
+    needing to report - otherwise the job would be aborted mid-flight and left
+    'running' until the reaper, which is what the first pause demo showed.
     """
-    # 1. Kill switch. /api/ingest already returns 403 for a non-active agent,
-    # but that only blocks REPORTING. Checking here stops a paused agent before
-    # it does work and spends money, rather than after.
     try:
         rows = rest_get("agents", {"id": f"eq.{agent_id}", "select": "status,company_id"})
     except Exception as exc:
@@ -211,6 +210,17 @@ def preflight(company_id: str, agent_id: str, *, needs_llm: bool, estimate_usd: 
                       "agent_paused")
     if rows[0].get("company_id") != company_id:
         raise Blocked("agent does not belong to the job's company", "cross_tenant")
+
+
+def preflight(company_id: str, agent_id: str, *, needs_llm: bool, estimate_usd: float = 0.05):
+    """Returns a ResolvedCredential (or None for non-LLM jobs), or raises Blocked.
+
+    Order matters: the cheapest and most definitive checks run first so a paused
+    agent or an exhausted budget never reaches credential decryption.
+    """
+    # 1. Kill switch (re-checked here too, so a pause between claim and run start
+    # is still honoured).
+    check_kill_switch(company_id, agent_id)
 
     # 2. Spend ceiling.
     budget = CRED.check_tenant_budget(company_id, estimate_usd)
@@ -435,7 +445,8 @@ def handle_poll_inbox(job: dict, cred, heartbeat, ctx) -> dict:
     # already recorded is the offset, so a second poll continues the script
     # instead of replaying scenario 1.
     already = sum(int(t.get("inbound_count") or 0) for t in threads)
-    pending = scenarios[already:already + limit]
+    start = already % len(scenarios) if scenarios else 0
+    pending = scenarios[start:start + limit]
 
     written = 0
     for scenario, t in zip(pending, open_threads):
@@ -509,6 +520,20 @@ HANDLERS = {
 # Loop
 # ---------------------------------------------------------------------------
 
+class run_cm_guard:
+    """Re-enter an already-opened run context so the body below can stay a plain
+    `with` block while run_started errors are handled separately above."""
+
+    def __init__(self, cm, ctx):
+        self.cm, self.ctx = cm, ctx
+
+    def __enter__(self):
+        return self.ctx
+
+    def __exit__(self, exc_type, exc, tb):
+        return self.cm.__exit__(exc_type, exc, tb)
+
+
 def process_one() -> bool:
     """Claim and process one job. Returns False when the queue is empty."""
     claimed = rpc("swim_claim_job",
@@ -543,10 +568,12 @@ def process_one() -> bool:
     run_id = str(uuid.uuid4())
     job["run_id"] = run_id
 
-    # Identity resolution happens BEFORE the run opens, so a job with no owning
-    # identity is blocked rather than attributed to nobody.
+    # Identity resolution and the kill switch happen BEFORE the run opens: a job
+    # with no owning identity, or a paused identity, is blocked terminally here
+    # rather than attributed to nobody or aborted by ingest's 403.
     try:
         agent = resolve_agent(company_id, IDENTITY_BY_JOB[job_type])
+        check_kill_switch(company_id, agent["id"])
     except Blocked as exc:
         finish("blocked", error=f"[{exc.category}] {exc}")
         print(f"[worker] BLOCKED {job_id}: [{exc.category}] {exc}")
@@ -554,10 +581,21 @@ def process_one() -> bool:
 
     needs_llm = job_type in LLM_JOBS
     model = MODEL_BY_JOB.get(job_type)
-    with oversight().run(agent_id=agent["id"], run_id=run_id,
-                         metadata={"job_id": job_id, "job_type": job_type, "company_id": company_id,
-                                   "worker_id": WORKER_ID, "prototype": True},
-                         model=model, provider="anthropic" if needs_llm else None) as ctx:
+    try:
+        run_cm = oversight().run(agent_id=agent["id"], run_id=run_id,
+                                 metadata={"job_id": job_id, "job_type": job_type,
+                                           "company_id": company_id, "worker_id": WORKER_ID,
+                                           "prototype": True},
+                                 model=model, provider="anthropic" if needs_llm else None)
+        ctx = run_cm.__enter__()
+    except Exception as exc:
+        # Telemetry could not open the run. Do not leave the job leased: record
+        # the failure so bounded retry/backoff applies.
+        finish("failed", error=f"[telemetry] run_started refused: {str(exc)[:300]}")
+        print(f"[worker] FAILED {job_id}: run_started refused: {exc}")
+        return True
+
+    with run_cm_guard(run_cm, ctx) as ctx:
         try:
             cred = preflight(company_id, agent["id"], needs_llm=needs_llm)
             ctx.step("preflight", payload={"agent": agent["name"], "needs_llm": needs_llm})

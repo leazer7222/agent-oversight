@@ -597,3 +597,45 @@ Add new lessons at the end of each session.
 - If every tool suddenly errors with `PreToolUse ... hook error: can't open file
   '...\.workspace\...\scripts\hooks\...'`, the shell CWD has moved. A session restart is the
   reliable escape; on restart, fix the hook to use $CLAUDE_PROJECT_DIR.
+
+---
+
+## Pool Acquisition Prototype (2026-10-20)
+
+### PostgREST exposes only `public` and `graphql_public` - `.schema('swim_sourcing')` fails at runtime
+- Verified live: a service-role request with `Accept-Profile: swim_sourcing` returns
+  `PGRST106 Invalid schema ... Only the following schemas are exposed: public, graphql_public` (HTTP 406).
+- Any app or worker access to a private schema MUST go through a `SECURITY DEFINER` function in `public`
+  (050/053 pattern). `src/app/api/sourcing/approvals/route.ts` still uses `.schema('swim_sourcing')` and is
+  broken as written - fix it with RPCs before it is needed (MVP 2).
+- Do NOT "fix" this by adding the schema to the project's exposed-schemas setting: it widens a production
+  API surface for convenience and diverges from every other private schema in this repo.
+
+### `oversight.py` now reads `AGENT_OVERSIGHT_SECRET` first (verified against production)
+- Production `/api/ingest` compares `x-agent-secret` to its own `INGEST_SECRET` env var, whose VALUE is what
+  `.env.local` stores as `AGENT_OVERSIGHT_SECRET`. The local `INGEST_SECRET` value is rejected (401).
+- Safe way to test a secret without writing anything: POST `run_started` with a NONEXISTENT `agent_id`;
+  `404 Agent not found` means auth passed, `401` means the secret is wrong. No row is created.
+- `OVERSIGHT_URL` must be set (`https://agent-oversight.vercel.app`); the SDK raises without it.
+
+### Check the kill switch BEFORE opening the telemetry run
+- Ingest refuses `run_started` for a non-active agent (403). If the worker opens the run before checking
+  `agents.status`, a paused identity aborts the job mid-flight with an OversightError and the job stays
+  `running` until the lease expires - it is never recorded as `blocked`. Resolve identity + check status,
+  THEN open the run, THEN budget/credential preflight inside it.
+
+### Anthropic strict tool schemas reject `minimum` / `maximum` on numbers
+- `tools.0.custom: For 'number' type, properties maximum, minimum are not supported` (400). Describe the
+  range in `description` instead. `tool_choice` is `auto` plus an instruction to call the tool: forced
+  `any`/`tool` is rejected on current model tiers; retry once on a prose answer, then fail the job.
+
+### Fixtures must label themselves in the data, not only in the file name
+- Provenance comes from the TRANSPORT (`transport.source`), never from the result. Fixture rows carry
+  `source='fixture'` and a `fixture://` source_url; simulated inbound mail must have a `[SIMULATED]`
+  subject (enforced by `swim_record_inbound`). The worker uses fixtures only when the job payload says
+  `use_fixtures: true`; a missing Places key with no opt-in blocks the job rather than improvising.
+
+### Apply DDL with `scripts/apply_migration_db.py`, which records the ledger row
+- Uses `SUPABASE_DB_URL` (psycopg, simple-query protocol so the file's own BEGIN/COMMIT delimits the
+  transaction) and inserts into `supabase_migrations.schema_migrations` after success. `apply_sql.py` does
+  not record anything, which is how 024-046 went missing. Verify afterwards with `to_regprocedure`.

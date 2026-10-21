@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const sb = createServiceRoleClient()
     const company = { p_company_id: ctx.companyId }
 
-    const [summary, pipeline, runs, research, drafts, threads, actions, objective] = await Promise.all([
+    const [summary, pipeline, runs, research, drafts, threads, actions, objective, details, messages] = await Promise.all([
       sb.rpc('swim_operations_summary', company),
       sb.rpc('swim_pipeline_summary', company),
       sb.from('runs')
@@ -31,13 +31,18 @@ export async function GET(request: NextRequest) {
       sb.rpc('swim_list_threads', { ...company, p_limit: 50 }),
       sb.rpc('swim_next_actions', company),
       sb.rpc('swim_objective_progress', company),
+      // Migration 054: full research record per facility and full message
+      // history per thread, so the workspace can open a detail view without a
+      // second round trip.
+      sb.rpc('swim_facility_details', { ...company, p_limit: 200 }),
+      sb.rpc('swim_thread_messages', { ...company, p_limit: 500 }),
     ])
 
     const runRows = (runs.data ?? []) as Array<Record<string, unknown>>
     const spend = runRows.reduce(
       (acc, r) => acc + (typeof r.cost_usd === 'number' ? r.cost_usd : Number(r.cost_usd ?? 0)), 0)
 
-    const errors = [summary, pipeline, runs, research, drafts, threads, actions, objective]
+    const errors = [summary, pipeline, runs, research, drafts, threads, actions, objective, details, messages]
       .map((r) => r.error?.message)
       .filter((m): m is string => Boolean(m))
 
@@ -54,6 +59,8 @@ export async function GET(request: NextRequest) {
       threads: threads.data ?? [],
       next_actions: actions.data ?? [],
       objective: objective.data ?? {},
+      facility_details: details.data ?? [],
+      messages: messages.data ?? [],
       errors,
     })
   } catch (err) {

@@ -170,8 +170,13 @@ class OversightClient:
         timeout: float = 10.0,
     ) -> None:
         self.url = (url or os.environ.get("OVERSIGHT_URL", "")).rstrip("/")
+        # Precedence per LESSONS_LEARNED: AGENT_OVERSIGHT_SECRET is the production
+        # ingest secret; OVERSIGHT_SECRET / INGEST_SECRET are the local dev server's.
+        # Verified 2026-10-20: production /api/ingest accepts AGENT_OVERSIGHT_SECRET
+        # and rejects the local INGEST_SECRET value with 401.
         self.secret = (
             secret
+            or os.environ.get("AGENT_OVERSIGHT_SECRET")
             or os.environ.get("OVERSIGHT_SECRET")
             or os.environ.get("INGEST_SECRET")
             or ""

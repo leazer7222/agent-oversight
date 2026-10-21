@@ -102,6 +102,24 @@ Template to copy from: `/agents/library/_template/`
     - Register: `node scripts/register_jira_sprint_agent.js` | Status flip: `node scripts/set_jira_agent_status.js <active|paused>`
 
 
+### Pool Acquisition (PROTOTYPE tenant - Cameron Swim School)
+Three registered identities, ONE worker process, no inter-agent protocol: the job queue
+(`swim_sourcing.jobs`, migrations 049/050/053) is the only channel. Design:
+[docs/reviews/pool-acquisition-final-design.md](docs/reviews/pool-acquisition-final-design.md).
+Prototype build 2026-10-20: [docs/reviews/pool-acquisition-prototype-implementation-plan.md](docs/reviews/pool-acquisition-prototype-implementation-plan.md).
+Company `Cameron Swim School (PROTOTYPE)` = `16f34273-6744-4ea7-8042-7562e409189c` (cost cap $5/month).
+Seed / status / teardown: `python scripts/seed_prototype.py [--status|--teardown]`.
+- **facility-acquisition-controller** ([teams/swim-sourcing/controller.py](agents/teams/swim-sourcing/controller.py))
+    - Purpose: deterministic, event-driven controller. Reads goal state, enqueues stage jobs by rule, evaluates the saturation / replenishment / radius policies, prints objective progress. **No LLM calls.**
+    - Instance: `swimschool.facility-acquisition-controller` (`b7f92f58-e50e-4e78-919d-ed8550a98c26`) | Type: `orchestrator` | Status: Active (prototype) | Owner: `reformai`
+- **facility-researcher** ([library](agents/library/facility-researcher/))
+    - Purpose: discovery (Places or labelled fixtures, `source='fixture'`), evidence-bound enrichment (every fact needs a verbatim span found in the page, checked in code), deterministic four-state triage, open questions.
+    - Instance: `swimschool.facility-researcher` (`95647641-579e-4795-acc6-f4b056d6819a`) | Type: `worker` | Status: Active (prototype) | Owner: `reformai` | Jobs: `discover`, `enrich`, `qualify`
+- **partnership-coordinator** ([library](agents/library/partnership-coordinator/))
+    - Purpose: templated drafts with one model sentence behind `assert_no_fabrication()`; inbound classification into proposals; deterministic escalation (commitment topics, injection, meetings, opt-outs). **Holds no send capability** - there is no send handler.
+    - Instance: `swimschool.partnership-coordinator` (`828d770e-4a81-4627-8395-b67f46bc69b2`) | Type: `worker` | Status: Active (prototype) | Owner: `reformai` | Jobs: `draft_outreach`, `poll_inbox` (simulated), `classify_reply`
+- Run: `python scripts/demo_prototype.py [--pause-demo]` | Worker: `python agents/teams/swim-sourcing/worker.py --drain`
+
 ## Required at runtime
 
 - [ ] Emits `run_started` to `/api/ingest` at the beginning of every run

@@ -65,8 +65,22 @@ class TestProvenance(unittest.TestCase):
         facilities, _ = D.discover(D.SearchConfig(), transport=D.fixture_transport(FIXTURES))
         self.assertGreater(len(facilities), 0)
         for f in facilities:
-            self.assertEqual(f["source"], "google_places")
+            # Fixture-driven runs must say so. The provenance label comes from
+            # the transport, so a recorded result is never persisted as live
+            # Places research.
+            self.assertEqual(f["source"], "fixture")
             self.assertTrue(f["source_ref"])
+            self.assertTrue(f["source_url"].startswith("fixture://"))
+            self.assertIn(f["source_ref"], f["source_url"])
+
+    def test_live_transport_labels_google_places(self):
+        def fake_live(body):
+            return FIXTURES.get(body.get("textQuery", ""), {"places": []})
+        fake_live.source = "google_places"
+        facilities, _ = D.discover(D.SearchConfig(), transport=fake_live)
+        self.assertTrue(facilities)
+        for f in facilities:
+            self.assertEqual(f["source"], "google_places")
             self.assertIn("place_id:", f["source_url"])
 
     def test_pool_specifics_are_declared_unknown_not_assumed(self):

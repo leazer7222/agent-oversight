@@ -10,7 +10,7 @@ import { cn, formatDateTime } from '@/lib/utils'
 import {
   type Ops, type Facility, type Conversation, type Decision, type Activity,
   buildFacilities, buildConversations, buildDecisions, buildActivity, buildOverview,
-  actionLabel, relTime,
+  actionLabel, relTime, ACTION,
 } from './model'
 import { FacilitiesView } from './facilities'
 import { ConversationsView } from './conversations'
@@ -223,7 +223,7 @@ function OverviewView({ overview, activity, actions, decisions, onFacility, onTh
                     className="group flex w-full items-center justify-between gap-3 py-2.5 text-left hover:bg-zinc-900/70">
                     <div className="min-w-0">
                       <div className={cn('text-sm font-medium', a.priority === 1 ? 'text-amber-300' : 'text-zinc-200')}>{actionLabel(a.action_type)}</div>
-                      <div className="truncate text-xs text-zinc-500">{a.facility_name}{a.detail ? ` - ${a.detail}` : ''}</div>
+                      <div className="truncate text-xs text-zinc-500">{a.facility_name}{a.detail ? ` - ${ACTION[a.detail] ?? a.detail}` : ''}</div>
                     </div>
                     <ChevronRight className="size-4 shrink-0 text-zinc-600 group-hover:text-zinc-300" />
                   </button>

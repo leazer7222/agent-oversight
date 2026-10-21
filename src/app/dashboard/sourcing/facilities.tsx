@@ -80,8 +80,8 @@ export function FacilitiesView({ facilities, selectedId, onSelect, onThread }: {
         ) : (
           <>
             {/* Desktop table */}
-            <div className="hidden overflow-hidden rounded-lg border border-zinc-800 md:block">
-              <table className="w-full text-sm">
+            <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
+              <table className="w-full min-w-[40rem] text-sm">
                 <thead className="bg-zinc-900/70 text-left text-xs text-zinc-500">
                   <tr>
                     <th className="px-3 py-2 font-medium">Facility</th>
@@ -104,10 +104,10 @@ export function FacilitiesView({ facilities, selectedId, onSelect, onThread }: {
                             {f.source === 'fixture' && <span className="ml-1.5 text-amber-400/80">test record</span>}
                           </div>
                         </td>
-                        <td className="px-3 py-2.5"><StateDot f={f} /></td>
-                        <td className="px-3 py-2.5 text-zinc-300">{channelLabel(f.channel_recommended)}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5"><StateDot f={f} /></td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-zinc-300">{channelLabel(f.channel_recommended)}</td>
                         <td className="px-3 py-2.5 text-right tabular-nums text-zinc-300">{f.open_questions?.length ?? 0}</td>
-                        <td className="max-w-[12rem] truncate px-3 py-2.5 text-xs text-zinc-400">{f.nextAction ? actionLabel(f.nextAction.action_type) : '-'}</td>
+                        <td className="max-w-[12rem] truncate whitespace-nowrap px-3 py-2.5 text-xs text-zinc-400">{f.nextAction ? actionLabel(f.nextAction.action_type) : '-'}</td>
                       </tr>
                     )
                   })}

@@ -345,8 +345,15 @@ export function buildActivity(ops: Ops): Activity[] {
           detail = `${n('contact_first')} ready to contact, ${n('research_further')} need research, ${n('disqualified')} ruled out.`
           break
         case 'draft_outreach':
-          what = `Prepared ${n('drafted')} outreach drafts`
-          detail = n('no_contact') ? `${n('no_contact')} facilities skipped - no email address on record.` : 'Nothing was sent.'
+          if (n('drafted') === 0) {
+            what = 'Checked for facilities to draft to'
+            detail = n('no_contact')
+              ? `${n('no_contact')} ready ${n('no_contact') === 1 ? 'facility has' : 'facilities have'} no email address on record - a call or application is the route.`
+              : 'Every contactable facility already has a draft.'
+          } else {
+            what = `Prepared ${n('drafted')} outreach draft${n('drafted') === 1 ? '' : 's'}`
+            detail = n('no_contact') ? `${n('no_contact')} facilities skipped - no email address on record. Nothing was sent.` : 'Nothing was sent.'
+          }
           break
         case 'poll_inbox':
           what = `Received ${n('replies_written')} simulated replies`

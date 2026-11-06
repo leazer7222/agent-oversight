@@ -1,0 +1,250 @@
+{
+  "_note": "FIXTURE pages for the prototype. Not real websites.",
+  "pages": {
+    "FIXTURE_PLACE_001": {
+      "source_ref": "FIXTURE_PLACE_001",
+      "url": "https://fixture-facility-001.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 001 (fitness_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 001 (fitness_center)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>The pool is available to members only. Outside instructors are not permitted to run paid lessons on the premises.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_002": {
+      "source_ref": "FIXTURE_PLACE_002",
+      "url": "https://fixture-facility-002.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 002 (gym)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 002 (gym)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>Pool schedules are posted at the front desk. Please call for details.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_003": {
+      "source_ref": "FIXTURE_PLACE_003",
+      "url": "https://fixture-facility-003.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 003 (hotel)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 003 (hotel)</h1>\n<p>Our indoor heated pool is open year-round. The pool is 20 metres long with a shallow end of 3.5 feet, ideal for families.</p>\n<p>For event and pool enquiries call the front desk at (281) 555-1003.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_004": {
+      "source_ref": "FIXTURE_PLACE_004",
+      "url": "https://fixture-facility-004.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 004 (lodging)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 004 (lodging)</h1>\n<p>Our outdoor pool is open seasonally from May through September and is unheated. The pool is reserved for registered guests.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_900": {
+      "source_ref": "FIXTURE_PLACE_900",
+      "url": "https://fixture-facility-900.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 900 (swimming_pool)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 900 (swimming_pool)</h1>\n<p>Public aquatic center with a 25-yard, 8-lane indoor competition pool and a separate warm-water teaching pool, depth 3 feet to 4 feet.</p>\n<p>Lane rentals are available to certified instructors at $55 per hour; proof of insurance is required. Aquatics Director: Priya Nair, priya.nair@fixture-facility-900.example.com.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_901": {
+      "source_ref": "FIXTURE_PLACE_901",
+      "url": "https://fixture-facility-901.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 901 (swimming_pool)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 901 (swimming_pool)</h1>\n<p>Public aquatic center with a 25-yard, 8-lane indoor competition pool and a separate warm-water teaching pool, depth 3 feet to 4 feet.</p>\n<p>We operate our own learn-to-swim program. We do not rent lanes to outside swim instructors.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_903": {
+      "source_ref": "FIXTURE_PLACE_903",
+      "url": "https://fixture-fixture_place_903.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 903 (swimming_pool)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 903 (swimming_pool)</h1>\n<p>Public aquatic center with a 25-yard, 8-lane indoor competition pool and a separate warm-water teaching pool, depth 3 feet to 4 feet.</p>\n<p>Rental enquiries: call (281) 555-1903.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_005": {
+      "source_ref": "FIXTURE_PLACE_005",
+      "url": "https://fixture-facility-005.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 005 (sports_complex)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 005 (sports_complex)</h1>\n<p>Outdoor 50-metre pool, heated and open year-round, with a 3.5-foot shallow end.</p>\n<p>Organisations wishing to run programs must submit a <a href=\"https://fixture-facility-005.example.com/facility-use-application\">Facility Use Application</a>. The rental rate for the pool is $45 per hour and a certificate of insurance naming the City is required.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_006": {
+      "source_ref": "FIXTURE_PLACE_006",
+      "url": "https://fixture-facility-006.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 006 (community_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 006 (community_center)</h1>\n<p>Municipal community pool, indoor, 25 yards, open to the public.</p>\n<p>Recreation Supervisor: Tomas Ortega - tomas.ortega@fixture-facility-006.example.com. Recurring weekly bookings are considered each season.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_007": {
+      "source_ref": "FIXTURE_PLACE_007",
+      "url": "https://fixture-facility-007.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 007 (school)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 007 (school)</h1>\n<p>District natatorium: 25-yard, 10-lane indoor pool used for athletics and physical education.</p>\n<p>Facilities office: see the district directory.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_008": {
+      "source_ref": "FIXTURE_PLACE_008",
+      "url": "https://fixture-facility-008.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 008 (country_club)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 008 (country_club)</h1>\n<p>Members-only club with an outdoor heated pool (25 metres) and a children's pool, open March through November.</p>\n<p>Outside instructors holding a certificate of insurance may apply to offer lessons to members. General Manager: Elena Rossi, elena.rossi@fixture-facility-008.example.com.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_009": {
+      "source_ref": "FIXTURE_PLACE_009",
+      "url": "https://fixture-facility-009.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 009 (swimming_pool)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 009 (swimming_pool)</h1>\n<p>Public aquatic center with a 25-yard, 8-lane indoor competition pool and a separate warm-water teaching pool, depth 3 feet to 4 feet.</p>\n<p>We operate our own learn-to-swim program. We do not rent lanes to outside swim instructors.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_010": {
+      "source_ref": "FIXTURE_PLACE_010",
+      "url": "https://fixture-facility-010.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 010 (fitness_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 010 (fitness_center)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>Pool schedules are posted at the front desk. Please call for details.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_011": {
+      "source_ref": "FIXTURE_PLACE_011",
+      "url": "https://fixture-facility-011.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 011 (gym)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 011 (gym)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>Aquatics Coordinator: Marcus Lee - marcus.lee@fixture-facility-011.example.com - (281) 555-1011. We welcome enquiries from outside instructors; a certificate of insurance is required and lane time is available on a recurring weekly schedule.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_012": {
+      "source_ref": "FIXTURE_PLACE_012",
+      "url": "https://fixture-facility-012.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 012 (hotel)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 012 (hotel)</h1>\n<p>Our indoor heated pool is open year-round. The pool is 20 metres long with a shallow end of 3.5 feet, ideal for families.</p>\n<p>Group and private swim instruction by outside providers is available by arrangement. Contact Dana Whitfield, Director of Operations, at dana.whitfield@fixture-facility-012.example.com.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_013": {
+      "source_ref": "FIXTURE_PLACE_013",
+      "url": "https://fixture-facility-013.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 013 (lodging)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 013 (lodging)</h1>\n<p>Our indoor heated pool is open year-round. The pool is 20 metres long with a shallow end of 3.5 feet, ideal for families.</p>\n<p>The pool is for registered guests only. Outside programs and instructors are not permitted.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_014": {
+      "source_ref": "FIXTURE_PLACE_014",
+      "url": "https://fixture-facility-014.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 014 (sports_complex)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 014 (sports_complex)</h1>\n<p>Outdoor 50-metre pool, heated and open year-round, with a 3.5-foot shallow end.</p>\n<p>Recreation Supervisor: Tomas Ortega - tomas.ortega@fixture-facility-014.example.com. Recurring weekly bookings are considered each season.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_015": {
+      "source_ref": "FIXTURE_PLACE_015",
+      "url": "https://fixture-facility-015.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 015 (community_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 015 (community_center)</h1>\n<p>Municipal community pool, indoor, 25 yards, open to the public.</p>\n<p>Pool hours vary by season. See the city calendar.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_016": {
+      "source_ref": "FIXTURE_PLACE_016",
+      "url": "https://fixture-facility-016.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 016 (school)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 016 (school)</h1>\n<p>District natatorium: 25-yard, 10-lane indoor pool used for athletics and physical education.</p>\n<p>Community use of district facilities is governed by board policy; apply via the <a href=\"https://fixture-facility-016.example.com/facility-use-agreement\">Facility Use Agreement</a>. Hourly fee $60; insurance certificate required.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_017": {
+      "source_ref": "FIXTURE_PLACE_017",
+      "url": "https://fixture-facility-017.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 017 (country_club)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 017 (country_club)</h1>\n<p>Members-only club with an outdoor heated pool (25 metres) and a children's pool, open March through November.</p>\n<p>Pool access is a benefit of membership.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_018": {
+      "source_ref": "FIXTURE_PLACE_018",
+      "url": "https://fixture-facility-018.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 018 (swimming_pool)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 018 (swimming_pool)</h1>\n<p>Public aquatic center with a 25-yard, 8-lane indoor competition pool and a separate warm-water teaching pool, depth 3 feet to 4 feet.</p>\n<p>Lane rentals are available to certified instructors at $55 per hour; proof of insurance is required. Aquatics Director: Priya Nair, priya.nair@fixture-facility-018.example.com.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_019": {
+      "source_ref": "FIXTURE_PLACE_019",
+      "url": "https://fixture-facility-019.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 019 (fitness_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 019 (fitness_center)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>Aquatics Coordinator: Marcus Lee - marcus.lee@fixture-facility-019.example.com - (281) 555-1019. We welcome enquiries from outside instructors; a certificate of insurance is required and lane time is available on a recurring weekly schedule.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_020": {
+      "source_ref": "FIXTURE_PLACE_020",
+      "url": "https://fixture-facility-020.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 020 (gym)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 020 (gym)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>Aquatics Coordinator: Marcus Lee - marcus.lee@fixture-facility-020.example.com - (281) 555-1020. We welcome enquiries from outside instructors; a certificate of insurance is required and lane time is available on a recurring weekly schedule.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_021": {
+      "source_ref": "FIXTURE_PLACE_021",
+      "url": "https://fixture-facility-021.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 021 (hotel)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 021 (hotel)</h1>\n<p>Our indoor heated pool is open year-round. The pool is 20 metres long with a shallow end of 3.5 feet, ideal for families.</p>\n<p>The pool is for registered guests only. Outside programs and instructors are not permitted.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_022": {
+      "source_ref": "FIXTURE_PLACE_022",
+      "url": "https://fixture-facility-022.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 022 (lodging)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 022 (lodging)</h1>\n<p>Our outdoor pool is open seasonally from May through September and is unheated. The pool is reserved for registered guests.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_023": {
+      "source_ref": "FIXTURE_PLACE_023",
+      "url": "https://fixture-facility-023.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 023 (sports_complex)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 023 (sports_complex)</h1>\n<p>Outdoor 50-metre pool, heated and open year-round, with a 3.5-foot shallow end.</p>\n<p>Pool hours vary by season. See the city calendar.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_024": {
+      "source_ref": "FIXTURE_PLACE_024",
+      "url": "https://fixture-facility-024.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 024 (community_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 024 (community_center)</h1>\n<p>Municipal community pool, indoor, 25 yards, open to the public.</p>\n<p>Organisations wishing to run programs must submit a <a href=\"https://fixture-facility-024.example.com/facility-use-application\">Facility Use Application</a>. The rental rate for the pool is $45 per hour and a certificate of insurance naming the City is required.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_025": {
+      "source_ref": "FIXTURE_PLACE_025",
+      "url": "https://fixture-facility-025.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 025 (school)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 025 (school)</h1>\n<p>District natatorium: 25-yard, 10-lane indoor pool used for athletics and physical education.</p>\n<p>Facilities office: see the district directory.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_026": {
+      "source_ref": "FIXTURE_PLACE_026",
+      "url": "https://fixture-facility-026.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 026 (country_club)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 026 (country_club)</h1>\n<p>Members-only club with an outdoor heated pool (25 metres) and a children's pool, open March through November.</p>\n<p>Pool access is a benefit of membership.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_027": {
+      "source_ref": "FIXTURE_PLACE_027",
+      "url": "https://fixture-facility-027.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 027 (swimming_pool)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 027 (swimming_pool)</h1>\n<p>Public aquatic center with a 25-yard, 8-lane indoor competition pool and a separate warm-water teaching pool, depth 3 feet to 4 feet.</p>\n<p>Rental enquiries: call (281) 555-1027.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_028": {
+      "source_ref": "FIXTURE_PLACE_028",
+      "url": "https://fixture-facility-028.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 028 (fitness_center)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 028 (fitness_center)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>Aquatics Coordinator: Marcus Lee - marcus.lee@fixture-facility-028.example.com - (281) 555-1028. We welcome enquiries from outside instructors; a certificate of insurance is required and lane time is available on a recurring weekly schedule.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_029": {
+      "source_ref": "FIXTURE_PLACE_029",
+      "url": "https://fixture-facility-029.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 029 (gym)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 029 (gym)</h1>\n<p>Members enjoy a 25-metre indoor lap pool, heated year-round, with a shallow teaching lane of 3 feet.</p>\n<p>The pool is available to members only. Outside instructors are not permitted to run paid lessons on the premises.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_030": {
+      "source_ref": "FIXTURE_PLACE_030",
+      "url": "https://fixture-facility-030.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 030 (hotel)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 030 (hotel)</h1>\n<p>Our indoor heated pool is open year-round. The pool is 20 metres long with a shallow end of 3.5 feet, ideal for families.</p>\n<p>Group and private swim instruction by outside providers is available by arrangement. Contact Dana Whitfield, Director of Operations, at dana.whitfield@fixture-facility-030.example.com.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_031": {
+      "source_ref": "FIXTURE_PLACE_031",
+      "url": "https://fixture-facility-031.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 031 (lodging)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 031 (lodging)</h1>\n<p>Our outdoor pool is open seasonally from May through September and is unheated. The pool is reserved for registered guests.</p>\n</body></html>"
+    },
+    "FIXTURE_PLACE_032": {
+      "source_ref": "FIXTURE_PLACE_032",
+      "url": "https://fixture-facility-032.example.com",
+      "fetched_at": "2026-10-20T00:00:00Z",
+      "fixture": true,
+      "html": "<html><head><title>FIXTURE: FIXTURE Facility 032 (sports_complex)</title></head><body>\n<!-- FIXTURE PAGE: recorded for the pool-acquisition prototype. Not a real website. -->\n<div class=\"fixture-banner\">FIXTURE PAGE - this is a recorded page used for a prototype demonstration. It does not describe a real business.</div>\n\n<h1>FIXTURE Facility 032 (sports_complex)</h1>\n<p>Outdoor 50-metre pool, heated and open year-round, with a 3.5-foot shallow end.</p>\n<p>Organisations wishing to run programs must submit a <a href=\"https://fixture-facility-032.example.com/facility-use-application\">Facility Use Application</a>. The rental rate for the pool is $45 per hour and a certificate of insurance naming the City is required.</p>\n</body></html>"
+    }
+  }
+}

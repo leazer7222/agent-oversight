@@ -1,0 +1,17 @@
+{
+  "name": "partnership-coordinator",
+  "display_name": "Partnership Coordinator",
+  "version": "0.1.0-prototype",
+  "type": "worker",
+  "owner": "reformai",
+  "description": "Templated outreach drafts behind an anti-fabrication gate; inbound classification into proposals; deterministic escalation. Holds no send capability.",
+  "entry_point": "agents/teams/swim-sourcing/worker.py",
+  "job_types": ["draft_outreach", "poll_inbox", "classify_reply"],
+  "models": {"draft_outreach": "claude-sonnet-5-5", "classify_reply": "claude-haiku-5-5"},
+  "mcp_dependencies": [],
+  "external_dependencies": ["none in the prototype (inbox is simulated; nothing is sent)"],
+  "telemetry": {"run_started": true, "run_completed": true, "cost_reported": true},
+  "capability_tags": ["outreach", "classification", "escalation"],
+  "instance_naming": "{tenant}.partnership-coordinator",
+  "parent": "facility-acquisition-controller"
+}

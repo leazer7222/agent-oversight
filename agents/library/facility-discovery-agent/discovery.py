@@ -151,15 +151,22 @@ def live_places_transport(api_key: str) -> Callable[[dict], dict]:
         except urllib.error.HTTPError as exc:
             detail = exc.read(400).decode("utf-8", "replace")
             raise DiscoveryError(f"Places API error {exc.code}: {detail}") from exc
+    _call.source = "google_places"   # provenance label written to every row
     return _call
 
 
-def fixture_transport(fixtures: dict) -> Callable[[dict], dict]:
+def fixture_transport(fixtures: dict, label: str = "katy_tx_places.json") -> Callable[[dict], dict]:
     """Replays recorded responses keyed by textQuery. Used by the test suite and
-    by any run without a live API key. Returns an EMPTY result for an unknown
-    query rather than inventing one - that is the behaviour under test."""
+    by an explicitly fixture-driven run. Returns an EMPTY result for an unknown
+    query rather than inventing one - that is the behaviour under test.
+
+    Rows produced through this transport carry source='fixture' and a
+    fixture:// source_url. A recorded result must never be persisted as if it
+    came from Google Places."""
     def _call(body: dict) -> dict:
         return fixtures.get(body.get("textQuery", ""), {"places": []})
+    _call.source = "fixture"
+    _call.label = label
     return _call
 
 
@@ -177,11 +184,17 @@ def _facility_type(place: dict) -> str:
     return "unknown"
 
 
-def normalize_place(place: dict, cfg: SearchConfig) -> Optional[dict]:
+def normalize_place(place: dict, cfg: SearchConfig,
+                    source: str = "google_places",
+                    source_label: str = "") -> Optional[dict]:
     """Turn one Places result into a facility dict, or None if unusable.
 
     Returns None rather than a partial guess when the result lacks a stable id
     or a name. A facility we cannot re-identify later is not a prospect.
+
+    `source` is the provenance label ('google_places' or 'fixture'); it comes
+    from the transport, never from the result, so a recorded response cannot
+    present itself as live research.
     """
     place_id = place.get("id")
     name = ((place.get("displayName") or {}).get("text") or "").strip()
@@ -236,9 +249,11 @@ def normalize_place(place: dict, cfg: SearchConfig) -> Optional[dict]:
         "distance_miles": distance,
         "phone": place.get("nationalPhoneNumber"),
         "website": place.get("websiteUri"),
-        "source": "google_places",
+        "source": source,
         "source_ref": place_id,
-        "source_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}",
+        "source_url": (f"fixture://{source_label or 'recorded'}#{place_id}"
+                       if source == "fixture"
+                       else f"https://www.google.com/maps/place/?q=place_id:{place_id}"),
         "attributes": attributes,
         "attributes_confidence": confidence,
         "unknown_fields": unknown,
@@ -269,6 +284,8 @@ def discover(
             )
         transport = live_places_transport(api_key)
 
+    source = getattr(transport, "source", "google_places")
+    source_label = getattr(transport, "label", "")
     radius_m = min(50000.0, cfg.radius_miles * 1609.344)  # Places caps at 50km
     seen_ids: set = set()
     seen_keys: set = set()
@@ -297,7 +314,7 @@ def discover(
         stats.raw_results += len(places)
 
         for place in places:
-            norm = normalize_place(place, cfg)
+            norm = normalize_place(place, cfg, source=source, source_label=source_label)
             if norm is None:
                 stats.rejected_no_id += 1
                 continue

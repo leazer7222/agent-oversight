@@ -29,7 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-MODEL_VERSION = "qual-v1.0.0"
+MODEL_VERSION = "qual-v1.1.0"
 
 # Confidence of a source claim. Only 'verified' counts at full weight; an
 # inferred value is discounted, because acting on an inference as though it were
@@ -143,9 +143,13 @@ def qualify(
     weights = {**DEFAULT_CONFIG["weights"], **(cfg.get("weights") or {})}
 
     attrs = dict(facility.get("attributes") or {})
-    if facility.get("distance_miles") is not None:
-        attrs.setdefault("distance_miles", facility["distance_miles"])
-    conf = facility.get("attributes_confidence") or {}
+    conf = dict(facility.get("attributes_confidence") or {})
+    if facility.get("distance_miles") is not None and attrs.get("distance_miles") is None:
+        # Distance on the facility column is geometry-derived (Places location vs
+        # the search centre), so it is verified by construction. Without this a
+        # column-sourced distance had no confidence entry and scored 0.0.
+        attrs["distance_miles"] = facility["distance_miles"]
+        conf.setdefault("distance_miles", "verified")
 
     verified, inferred, unknown = [], [], []
     for attr in SCORED_ATTRIBUTES:
@@ -170,11 +174,22 @@ def qualify(
     def contribute(key: str, normalized: float, note: str) -> None:
         nonlocal earned, available
         weight = weights.get(key, 0.0)
-        mult = CONFIDENCE_MULTIPLIER[_confidence_of(_attr_for(key), conf)]
-        if attrs.get(_attr_for(key)) is None:
+        attr = _attr_for(key)
+        confidence = _confidence_of(attr, conf)
+        if attrs.get(attr) is None:
             breakdown[key] = {"status": "unknown", "weight": weight, "earned": 0.0,
                               "note": "not known - excluded from the denominator"}
             return
+        if confidence == "unknown":
+            # Rule 2: a value whose confidence is unstated is UNKNOWN, and unknown
+            # never penalises. Before qual-v1.1.0 this branch fell through, kept the
+            # weight in the denominator at a 0.0 multiplier, and dragged the score
+            # down - the exact failure the module's docstring promises not to have.
+            breakdown[key] = {"status": "unknown", "weight": weight, "earned": 0.0,
+                              "note": "value present but confidence unstated - "
+                                      "excluded from the denominator"}
+            return
+        mult = CONFIDENCE_MULTIPLIER[confidence]
         available += weight
         got = weight * normalized * mult
         earned += got

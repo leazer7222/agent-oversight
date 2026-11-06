@@ -1,18 +1,105 @@
 'use client'
 
-import { X, ArrowUpRight, ArrowDownLeft, AlertTriangle } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { X, ArrowUpRight, ArrowDownLeft, AlertTriangle, Inbox, Send, CheckCircle2 } from 'lucide-react'
 import { cn, formatDateTime } from '@/lib/utils'
-import { type Conversation, intentLabel, actionLabel, excerpt, relTime } from './model'
+import { type Conversation, type Message, intentLabel, actionLabel, excerpt, relTime } from './model'
 import { Pill, SimulatedPill, Empty } from './workspace'
 
-export function ConversationsView({ conversations, selectedId, onSelect, onFacility }: {
-  conversations: Conversation[]; selectedId: string | null; onSelect: (id: string | null) => void; onFacility: (id: string) => void
+const SEND_STATUS: Record<string, { label: string; tone: 'zinc' | 'amber' | 'emerald' | 'rose' | 'sky' }> = {
+  draft: { label: 'Draft - not sent', tone: 'zinc' },
+  approved: { label: 'Approved - not sent yet', tone: 'sky' },
+  sending: { label: 'Sending...', tone: 'amber' },
+  sent: { label: 'Sent', tone: 'emerald' },
+  failed: { label: 'Send failed', tone: 'rose' },
+}
+
+async function post(path: string, body: Record<string, unknown>): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const res = await fetch(path, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return { ok: false, detail: json.error ?? `HTTP ${res.status}` }
+    return { ok: true, detail: json.job_id ? `queued (job ${String(json.job_id).slice(0, 8)})` : 'done' }
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+/** Approve a draft (binds your identity to its exact bytes) and queue it for the
+ *  worker. Nothing is sent from the browser: the worker still has to pass the
+ *  database chokepoint and the recipient allow-list. */
+function DraftActions({ message, company }: { message: Message; company: string }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+  const run = async (label: string, path: string, body: Record<string, unknown>) => {
+    setBusy(label); setNote(null)
+    const r = await post(path, { ...body, company: company || undefined })
+    setNote(r.ok ? `${label}: ${r.detail}` : `${label} failed: ${r.detail}`)
+    setBusy(null)
+    if (r.ok) router.refresh()
+  }
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-zinc-800/80 pt-2 text-xs">
+      {message.status === 'draft' && (
+        <button type="button" disabled={busy !== null}
+          onClick={() => run('Approve', '/api/sourcing/approvals', { subject_type: 'message', subject_id: message.message_id, decision: 'approved' })}
+          className="inline-flex items-center gap-1 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-2 py-1 text-emerald-200 hover:bg-emerald-950/70 disabled:opacity-50">
+          <CheckCircle2 className="size-3.5" /> Approve this draft
+        </button>
+      )}
+      {message.status === 'approved' && (
+        <button type="button" disabled={busy !== null}
+          onClick={() => run('Queue send', '/api/sourcing/jobs', { job_type: 'send_outreach', payload: { message_id: message.message_id } })}
+          className="inline-flex items-center gap-1 rounded-md border border-sky-900/60 bg-sky-950/40 px-2 py-1 text-sky-200 hover:bg-sky-950/70 disabled:opacity-50">
+          <Send className="size-3.5" /> Queue send (test mode: goes to the allow-listed address)
+        </button>
+      )}
+      {busy && <span className="text-zinc-500">{busy}...</span>}
+      {note && <span className={note.includes('failed') ? 'text-rose-300' : 'text-zinc-400'}>{note}</span>}
+    </div>
+  )
+}
+
+function MailboxActions({ company }: { company: string }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const check = async () => {
+    setBusy(true); setNote(null)
+    const a = await post('/api/sourcing/jobs', { job_type: 'poll_inbox', payload: { source: 'gmail' }, company: company || undefined })
+    const b = a.ok ? await post('/api/sourcing/jobs', { job_type: 'classify_reply', payload: {}, company: company || undefined }) : a
+    setNote(a.ok && b.ok ? 'Queued: read the mailbox, then classify new replies. Runs on the worker\'s next pass.' : `Failed: ${a.detail} ${b.detail}`)
+    setBusy(false)
+    if (a.ok) router.refresh()
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <button type="button" onClick={check} disabled={busy}
+        className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-200 hover:bg-zinc-800 disabled:opacity-50">
+        <Inbox className="size-3.5" /> Check mailbox for replies
+      </button>
+      {note && <span className="text-zinc-400">{note}</span>}
+    </div>
+  )
+}
+
+export function ConversationsView({ conversations, selectedId, onSelect, onFacility, company }: {
+  conversations: Conversation[]; selectedId: string | null; onSelect: (id: string | null) => void
+  onFacility: (id: string) => void; company: string
 }) {
   const selected = conversations.find((c) => c.thread.thread_id === selectedId) ?? null
+  const anyReal = conversations.some((c) => c.messages.some((m) => m.direction === 'inbound' && !(m.subject ?? '').startsWith('[SIMULATED]')))
   return (
     <div className={cn('grid gap-4', 'lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]')}>
       <div className="min-w-0 space-y-2">
-        <p className="text-sm text-zinc-400">Every facility we have drafted to, and what came back. <span className="text-amber-300/90">All replies are simulated.</span></p>
+        <p className="text-sm text-zinc-400">Every facility we have drafted to, and what came back.{' '}
+          {anyReal ? <span className="text-zinc-500">Simulated replies are marked.</span> : <span className="text-amber-300/90">All replies are simulated.</span>}
+        </p>
+        <MailboxActions company={company} />
         {conversations.length === 0 ? <Empty>No conversations yet. Drafts appear here once research finds a contact.</Empty> : (
           <ul className="space-y-2">
             {conversations.map((c) => {
@@ -49,7 +136,7 @@ export function ConversationsView({ conversations, selectedId, onSelect, onFacil
         )}
       </div>
 
-      {selected ? <ConversationDetail c={selected} onClose={() => onSelect(null)} onFacility={onFacility} /> : (
+      {selected ? <ConversationDetail c={selected} onClose={() => onSelect(null)} onFacility={onFacility} company={company} /> : (
         <div className="hidden items-center justify-center rounded-lg border border-dashed border-zinc-800 text-sm text-zinc-500 lg:flex">
           Select a conversation to read it in full.
         </div>
@@ -58,7 +145,7 @@ export function ConversationsView({ conversations, selectedId, onSelect, onFacil
   )
 }
 
-function ConversationDetail({ c, onClose, onFacility }: { c: Conversation; onClose: () => void; onFacility: (id: string) => void }) {
+function ConversationDetail({ c, onClose, onFacility, company }: { c: Conversation; onClose: () => void; onFacility: (id: string) => void; company: string }) {
   const cl = c.thread.last_classification ?? null
   const safety = cl?.safety ?? null
   return (
@@ -119,13 +206,16 @@ function ConversationDetail({ c, onClose, onFacility }: { c: Conversation; onClo
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
                 <span className="flex items-center gap-1.5">
                   {inbound ? <ArrowDownLeft className="size-3.5 text-amber-300" /> : <ArrowUpRight className="size-3.5 text-sky-300" />}
-                  {inbound ? 'Their reply' : 'Our draft'}
-                  {inbound ? <SimulatedPill /> : <Pill>{m.status === 'draft' ? 'Not sent' : m.status}</Pill>}
+                  {inbound ? 'Their reply' : m.status === 'sent' ? 'Our email' : 'Our draft'}
+                  {inbound
+                    ? ((m.subject ?? '').startsWith('[SIMULATED]') ? <SimulatedPill /> : <Pill tone="emerald">Real reply</Pill>)
+                    : <Pill tone={(SEND_STATUS[m.status] ?? SEND_STATUS.draft).tone}>{(SEND_STATUS[m.status] ?? SEND_STATUS.draft).label}</Pill>}
                 </span>
                 <span>{formatDateTime(m.received_at ?? m.sent_at ?? m.created_at)}</span>
               </div>
               {m.subject && !inbound && <div className="mt-1 text-sm text-zinc-300">{m.subject}</div>}
               <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-zinc-300">{m.body}</pre>
+              {!inbound && <DraftActions message={m} company={company} />}
             </li>
           )
         })}

@@ -84,6 +84,8 @@ IDENTITY_BY_JOB = {
     "draft_outreach":  "partnership-coordinator",
     "poll_inbox":      "partnership-coordinator",
     "classify_reply":  "partnership-coordinator",
+    "send_outreach":   "partnership-coordinator",
+    "reconcile_sends": "partnership-coordinator",
 }
 # Job types that make a provider call and therefore need the tenant credential.
 LLM_JOBS = {"enrich", "draft_outreach", "classify_reply"}
@@ -428,11 +430,161 @@ def handle_draft_outreach(job: dict, cred, heartbeat, ctx) -> dict:
     return {**counts, "usage": usage}
 
 
-def handle_poll_inbox(job: dict, cred, heartbeat, ctx) -> dict:
-    """PROTOTYPE: polls a SIMULATED inbox - a labelled fixture of scripted replies.
-    Every row written carries a '[SIMULATED]' subject, enforced by the RPC."""
+# ---------------------------------------------------------------------------
+# Real sending - supervised test mode
+# ---------------------------------------------------------------------------
+# Policy lives here, transport lives in agents/lib/mailer.py. Three locks, each
+# independent:
+#   1. SWIM_SEND_ALLOWLIST (env) - the ONLY addresses mail may ever go to. Unset
+#      means sending is disabled: the job is blocked before any provider call.
+#   2. public.swim_authorize_send - the database chokepoint: approval hash,
+#      suppression, one-send-per-thread, daily cap (counted in the DB).
+#   3. Durable attempt state (sending -> sent | reconcile), Message-ID set from
+#      the attempt id, so an ambiguous failure is resolved, never retried blind.
+# In test mode a draft addressed to a facility contact is REDIRECTED to the
+# allow-listed test address with a "[TEST - intended for ...]" subject; the
+# approved BODY is sent byte-for-byte, so the approval hash still binds it.
+
+def _allowlist() -> set:
+    return {a.strip().lower() for a in os.environ.get("SWIM_SEND_ALLOWLIST", "").split(",") if a.strip()}
+
+
+def _mailbox():
+    from agents.lib import mailer as M
+    try:
+        return M.GmailMailbox.from_env(from_name=os.environ.get("SWIM_FROM_NAME", ""))
+    except M.MailerConfigError as exc:
+        raise Blocked(str(exc), "mailer_not_configured")
+
+
+def handle_send_outreach(job: dict, cred, heartbeat, ctx) -> dict:
+    from agents.lib import mailer as M
     company_id = job["company_id"]
     payload = job.get("payload") or {}
+    allow = _allowlist()
+    if not allow:
+        raise Blocked("sending is disabled: SWIM_SEND_ALLOWLIST is not set on this worker", "send_disabled")
+    redirect_to = (payload.get("test_redirect_to") or os.environ.get("SWIM_TEST_REDIRECT_TO")
+                   or sorted(allow)[0]).strip().lower()
+    if redirect_to not in allow:
+        raise Blocked(f"test redirect address {redirect_to} is not in SWIM_SEND_ALLOWLIST", "send_disabled")
+    daily_cap = int(payload.get("daily_cap", os.environ.get("SWIM_DAILY_CAP", "8")))
+    only = payload.get("message_id")
+    mailbox = _mailbox()
+
+    candidates = rpc("swim_list_send_candidates", {"p_company_id": company_id}) or []
+    candidates = [c for c in candidates if c.get("status") == "approved" and (not only or c["message_id"] == only)]
+
+    counts = {"sent": 0, "redirected_test_sends": 0, "denied": 0, "pending_reconciliation": 0,
+              "provider_rejected": 0, "skipped_not_allowlisted": 0, "denials": []}
+    for i, c in enumerate(candidates):
+        intended = (c.get("intended_recipient") or "").strip().lower()
+        recipient, subject_prefix = intended, ""
+        if intended not in allow:
+            recipient = redirect_to
+            subject_prefix = f"[TEST - intended for {intended or 'no address on file'}] "
+        auth = rpc("swim_authorize_send", {"p_company_id": company_id, "p_message_id": c["message_id"],
+                                           "p_recipient": recipient, "p_daily_cap": daily_cap}) or {}
+        if not auth.get("allowed"):
+            counts["denied"] += 1
+            counts["denials"].append({"message_id": c["message_id"], "reasons": auth.get("reasons")})
+            ctx.step("send_denied", payload={"message_id": c["message_id"], "reasons": auth.get("reasons")},
+                     severity="warning")
+            continue
+
+        attempt_id = str(uuid.uuid4())
+        if not rpc("swim_mark_sending", {"p_company_id": company_id, "p_message_id": c["message_id"],
+                                         "p_attempt_id": attempt_id}):
+            counts["denied"] += 1
+            continue
+        try:
+            rec = mailbox.send(to=recipient, subject=subject_prefix + (auth.get("subject") or ""),
+                               body=auth["body"], attempt_id=attempt_id,
+                               extra_headers=({"X-Swim-Test-Intended-Recipient": intended}
+                                              if subject_prefix else None))
+        except M.ProviderAmbiguous as exc:
+            counts["pending_reconciliation"] += 1
+            ctx.step("send_ambiguous", payload={"message_id": c["message_id"], "attempt_id": attempt_id,
+                                                "error": str(exc)[:200]}, severity="warning")
+            continue
+        except M.ProviderRejected as exc:
+            rpc("swim_mark_send_failed", {"p_company_id": company_id, "p_message_id": c["message_id"],
+                                          "p_error": str(exc), "p_retryable": True})
+            counts["provider_rejected"] += 1
+            ctx.step("send_rejected", payload={"message_id": c["message_id"], "error": str(exc)[:200]},
+                     severity="error")
+            continue
+        rpc("swim_mark_sent", {"p_company_id": company_id, "p_message_id": c["message_id"],
+                               "p_provider_message_id": rec["provider_message_id"],
+                               "p_provider_thread_id": rec.get("provider_thread_id")})
+        counts["sent"] += 1
+        if subject_prefix:
+            counts["redirected_test_sends"] += 1
+        ctx.step("sent", payload={"message_id": c["message_id"], "to": recipient,
+                                  "test_redirect": bool(subject_prefix),
+                                  "provider_message_id": rec["provider_message_id"]})
+        if i % 3 == 0:
+            heartbeat()
+    counts["candidates"] = len(candidates)
+    counts["allowlist"] = sorted(allow)
+    return counts
+
+
+def handle_reconcile_sends(job: dict, cred, heartbeat, ctx) -> dict:
+    """Resolve 'sending' rows by asking Gmail whether the Message-ID exists in Sent."""
+    company_id = job["company_id"]
+    mailbox = _mailbox()
+    rows = [c for c in (rpc("swim_list_send_candidates", {"p_company_id": company_id}) or [])
+            if c.get("status") == "sending" and c.get("send_attempt_id")]
+    counts = {"checked": 0, "confirmed_sent": 0, "returned_to_approved": 0}
+    for c in rows:
+        found = mailbox.find_by_attempt_id(c["send_attempt_id"])
+        counts["checked"] += 1
+        if found:
+            rpc("swim_mark_sent", {"p_company_id": company_id, "p_message_id": c["message_id"],
+                                   "p_provider_message_id": found["provider_message_id"],
+                                   "p_provider_thread_id": found.get("provider_thread_id")})
+            counts["confirmed_sent"] += 1
+        else:
+            rpc("swim_mark_send_failed", {"p_company_id": company_id, "p_message_id": c["message_id"],
+                                          "p_error": "provider has no record of the attempt - returned to approved",
+                                          "p_retryable": True})
+            counts["returned_to_approved"] += 1
+        heartbeat()
+    ctx.step("reconcile", payload=counts)
+    return counts
+
+
+def handle_poll_inbox(job: dict, cred, heartbeat, ctx) -> dict:
+    """Two sources, chosen by payload.source:
+      'gmail'     - REAL: read the mailbox over IMAP and ingest only replies that
+                    reference one of OUR Message-IDs (swim_record_inbound_real).
+      default     - PROTOTYPE: a labelled fixture of scripted replies; every row
+                    carries a '[SIMULATED]' subject, enforced by the RPC."""
+    company_id = job["company_id"]
+    payload = job.get("payload") or {}
+    if payload.get("source") == "gmail":
+        mailbox = _mailbox()
+        known_rows = rpc("swim_list_outbound_provider_ids", {"p_company_id": company_id, "p_limit": 2000}) or []
+        known = {r["provider_message_id"] for r in known_rows if r.get("provider_message_id")}
+        replies = mailbox.fetch_replies(known, limit=int(payload.get("limit", 50)),
+                                        unseen_only=not payload.get("include_seen"))
+        counts = {"fetched": len(replies), "matched": 0, "duplicates": 0, "unmatched": 0, "source": "gmail"}
+        for r in replies:
+            res = rpc("swim_record_inbound_real", {"p_company_id": company_id, "p_payload": {
+                "provider_message_id": r["provider_message_id"], "in_reply_to": r["in_reply_to"],
+                "references": r["references"], "from_email": r["from_email"], "subject": r["subject"],
+                "body": r["body"], "received_at": r["received_at"]}}) or {}
+            if res.get("duplicate"):
+                counts["duplicates"] += 1
+            elif res.get("matched"):
+                counts["matched"] += 1
+            else:
+                counts["unmatched"] += 1
+        heartbeat()
+        ctx.step("gmail_inbox", payload=counts)
+        return counts
+
     fx_path = LIB / "partnership-coordinator" / "fixtures" / "replies.json"
     scenarios = json.loads(fx_path.read_text(encoding="utf-8"))["scenarios"]
     limit = int(payload.get("limit", len(scenarios)))
@@ -511,9 +663,12 @@ HANDLERS = {
     "draft_outreach": handle_draft_outreach,
     "poll_inbox": handle_poll_inbox,
     "classify_reply": handle_classify_reply,
+    "send_outreach": handle_send_outreach,
+    "reconcile_sends": handle_reconcile_sends,
 }
-# Deliberately absent: send_outreach, schedule_meeting, reconcile_sends. The
-# prototype has no path that reaches a real mailbox or calendar.
+# send_outreach is inert unless SWIM_SEND_ALLOWLIST is set on the worker AND the
+# message carries an approval whose hash matches its bytes (DB chokepoint).
+# Deliberately absent: schedule_meeting - nothing reaches a calendar.
 
 
 # ---------------------------------------------------------------------------

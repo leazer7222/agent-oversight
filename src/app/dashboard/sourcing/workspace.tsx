@@ -160,7 +160,7 @@ export function SourcingWorkspace({ ops, initialTab, initialFacility, initialThr
         <FacilitiesView facilities={facilities} selectedId={facilityId} onSelect={setFacilityId} onThread={openThread} />
       )}
       {tab === 'conversations' && (
-        <ConversationsView conversations={conversations} selectedId={threadId} onSelect={setThreadId} onFacility={openFacility} />
+        <ConversationsView conversations={conversations} selectedId={threadId} onSelect={setThreadId} onFacility={openFacility} company={company} />
       )}
       {tab === 'decisions' && <DecisionsView decisions={decisions} onThread={openThread} onFacility={openFacility} />}
       {tab === 'activity' && <ActivityView activity={activity} />}

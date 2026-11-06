@@ -1,6 +1,8 @@
 import { apiFetch } from '@/lib/api/fetch'
 import { SourcingWorkspace } from './workspace'
-import type { Ops } from './model'
+import type { Ops, Profile } from './model'
+// The same file the worker reads when it writes a draft: what the emails may say.
+import businessProfile from '../../../../agents/library/partnership-coordinator/business_profile.json'
 
 /**
  * Facility sourcing workspace - server shell.
@@ -14,7 +16,7 @@ import type { Ops } from './model'
 export default async function SourcingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; company?: string; facility?: string; thread?: string }>
+  searchParams: Promise<{ tab?: string; company?: string; facility?: string; thread?: string; filter?: string }>
 }) {
   const sp = await searchParams
   const company = sp.company ?? ''
@@ -43,7 +45,9 @@ export default async function SourcingPage({
       initialTab={sp.tab ?? 'overview'}
       initialFacility={sp.facility ?? null}
       initialThread={sp.thread ?? null}
+      initialFilter={sp.filter ?? 'all'}
       company={company}
+      profile={businessProfile as Profile}
     />
   )
 }

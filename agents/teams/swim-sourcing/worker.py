@@ -403,9 +403,31 @@ def handle_draft_outreach(job: dict, cred, heartbeat, ctx) -> dict:
 
     actions = rpc("swim_next_actions", {"p_company_id": company_id}) or []
     targets = [a for a in actions if a.get("action_type") == "prepare_outreach"][:limit]
+    # redraft=true: also re-compose facilities whose thread is still an UNSENT draft,
+    # so new business copy replaces old drafts. Approved-but-unsent drafts are
+    # re-drafted too (the new text needs a fresh approval); sent ones are left alone.
+    if payload.get("redraft"):
+        try:
+            threads = rpc("swim_list_thread_campaigns", {"p_company_id": company_id}) or []
+        except Exception as exc:  # function missing until migration 056 is applied
+            if "swim_list_thread_campaigns" not in str(exc) and "PGRST202" not in str(exc):
+                raise
+            # New drafts are still written; existing unsent drafts are left as they
+            # are rather than duplicated into new threads. Visible in the run.
+            threads = []
+            ctx.step("redraft_skipped", payload={"reason": "migration 056 (swim_list_thread_campaigns) not applied"},
+                     severity="warning")
+        seen = {a["facility_id"] for a in targets}
+        for t in threads:
+            unsent = (t.get("latest_outbound_status") or "draft") in ("draft", "approved")
+            if unsent and (t.get("inbound_count") or 0) == 0 and t["facility_id"] not in seen:
+                targets.append({"facility_id": t["facility_id"], "facility_name": t["facility_name"],
+                                "campaign_id": t["campaign_id"]})
+                seen.add(t["facility_id"])
 
     usage: dict = {}
-    counts = {"drafted": 0, "refused_by_fabrication_gate": 0, "no_contact": 0, "campaign_id": campaign_id}
+    counts = {"drafted": 0, "refused_by_fabrication_gate": 0, "no_contact": 0, "campaign_id": campaign_id,
+              "profile_version": business.get("profile_version")}
     for i, a in enumerate(targets):
         fac = rpc("swim_facility_attributes", {"p_facility_id": a["facility_id"]}) or {}
         try:
@@ -421,7 +443,7 @@ def handle_draft_outreach(job: dict, cred, heartbeat, ctx) -> dict:
             continue
         rpc("swim_record_draft", {"p_company_id": company_id, "p_payload": {
             "facility_id": a["facility_id"], "contact_id": d.get("contact_id"),
-            "campaign_id": campaign_id, "subject": d["subject"], "body": d["body"],
+            "campaign_id": a.get("campaign_id") or campaign_id, "subject": d["subject"], "body": d["body"],
             "body_sha256": d["body_sha256"]}})
         counts["drafted"] += 1
         if i % 3 == 0:

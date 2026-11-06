@@ -1,0 +1,93 @@
+# Pool partnerships: how to run it (operator guide)
+
+For Cameron and whoever operates the workspace at `/dashboard/sourcing`.
+Plain steps, in the order the screen shows them. Written 2026-11-06 for the
+supervised test phase (every email goes to the allow-listed test address, never
+to a facility).
+
+## The one rule
+
+Nothing is emailed unless a person did two things to that exact draft: pressed
+**Approve this draft**, then pressed **Send it**. The system writes drafts,
+sends what you approved, reads replies and flags what needs you. It never
+decides price, schedule, insurance, exclusivity, contracts or meetings.
+
+## The six steps (the Overview tab shows these with live status)
+
+1. **Check what the emails say about the business.**
+   Every draft is built from `agents/library/partnership-coordinator/business_profile.json`.
+   Anything not in that file cannot appear in an email (a code check refuses the
+   draft). Open "What the emails are allowed to say" on the Overview to read it.
+   Still missing before any real send: the business mailing address (required in
+   the footer of commercial email). Add it to the file, then press
+   **Write or rewrite drafts**. Emails already sent are never changed.
+
+2. **Let the researcher find and vet facilities.** Runs on its own. The
+   Facilities tab shows what was found about each pool, with the sentence from
+   their website that backs each fact, and why it was ranked ready / needs
+   research / not a fit / ruled out.
+
+3. **Read each draft and approve it.** Conversations tab, filter
+   **Needs approval**. Open one, read the email exactly as it will go out, press
+   **Step 1 of 2: Approve this draft**. Approval records your name against those
+   exact words; if the text changes it must be approved again.
+
+4. **Send the approved drafts.** Filter **Approved, not sent**, open one, press
+   **Step 2 of 2: Send it**. The worker sends it on its next pass. In test mode
+   the email is redirected to the allow-listed test address with the intended
+   recipient noted in the subject line; the facility receives nothing. At most
+   8 sends a day.
+
+5. **Check the mailbox for replies.** Replies are not read automatically. Press
+   **Check mailbox for replies** on the Conversations tab after someone replies.
+   The worker reads the partnerships inbox, matches each reply to its
+   conversation (by the email headers, not by guessing) and classifies it.
+
+6. **Decide on anything the system will not.** Decisions tab. Each item says
+   what happened, why it is yours, and a suggested handling. Reply from the
+   partnerships mailbox yourself; the system records the thread. Opt-outs are
+   honoured.
+
+## What each label means
+
+| Label | Meaning | What to do |
+|---|---|---|
+| Needs your approval | A draft exists, nobody has approved it | Read it, press Approve |
+| Approved - not sent yet | Approved, not yet released | Press Send it |
+| Sending | Worker is sending now | Refresh in a moment |
+| Sent - waiting for a reply | Delivered (confirmed in the Sent folder) | Nothing; check mailbox when they reply |
+| Send failed | Provider refused it | Activity tab has the reason; press Send it again |
+| They replied | A reply is recorded and classified | Read it; Decisions tab if flagged |
+| Simulated | Scripted test reply from the prototype | Ignore for real decisions |
+| Real reply | Came from the real mailbox | Treat as real |
+| Replaced by a newer draft | An older version of a draft | Nothing; act on the newest |
+
+## What the worker needs (one-time setup, done by the operator)
+
+In `.env.local` on the machine that runs `python agents/teams/swim-sourcing/worker.py --drain`:
+
+- `SWIM_SMTP_USER` / `SWIM_SMTP_APP_PASSWORD`: the sending mailbox
+  (`partnerships@suitupswim.com`, a Google Workspace app password).
+- `SWIM_SEND_ALLOWLIST`: the only addresses mail may go to. Unset = sending is
+  off. During the test phase this is the operator's own address.
+- `SWIM_IMAP_HOST` / `SWIM_IMAP_USER` / `SWIM_IMAP_PASSWORD` (and optionally
+  `SWIM_IMAP_PORT`, `SWIM_IMAP_INBOX`): where replies to `partnerships@` land.
+  The domain's incoming mail is NOT hosted at Google (its MX records point at a
+  spam-filtering host), so replies never reach the Gmail inbox. Cameron's mail
+  host can supply the IMAP server name, user and password. Nothing about the
+  domain's mail setup needs to change.
+- `ANTHROPIC_API_KEY`: used for one sentence per draft and for reading replies.
+  Replace the platform key with Cameron's own before a real campaign.
+
+Database migration `056_swim_thread_campaigns.sql` must be applied before
+**Write or rewrite drafts** can rewrite existing unsent drafts (until then it
+only writes new ones and says so in the run).
+
+## Before the first real send (not yet done)
+
+- Mailing address in the business profile.
+- Insurance confirmed and documented (only then may a draft mention it; today
+  it cannot).
+- Cameron's own Anthropic key in the vault.
+- Remove the test allow-list restriction deliberately, per facility batch, with
+  the daily cap left on.

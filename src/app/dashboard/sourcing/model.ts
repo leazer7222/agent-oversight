@@ -274,8 +274,8 @@ export function buildDecisions(convs: Conversation[]): Decision[] {
           ? `Suggested reply (not sent): "${excerpt(cl.proposed_reply, 220)}"`
           : 'Review the thread and reply in your own words.'
     const nextStep = action === 'suppress'
-      ? 'Suppression is recorded as a to-do; the do-not-contact write path arrives with real sending.'
-      : 'Nothing is sent from this screen. When sending is enabled, approving here will release a reply under your campaign limits.'
+      ? 'Add them to the do-not-contact list so no further email can go to this facility.'
+      : 'Reply to them yourself from the partnerships mailbox. The system never sends a reply on its own; it only records the conversation.'
 
     out.push({
       id: t.thread_id, title, facility: t.facility_name, facilityId: t.facility_id, threadId: t.thread_id,
@@ -356,8 +356,24 @@ export function buildActivity(ops: Ops): Activity[] {
           }
           break
         case 'poll_inbox':
-          what = `Received ${n('replies_written')} simulated replies`
-          detail = 'Scripted test replies, labelled as such.'
+          if (s.source === 'gmail') {
+            what = n('matched') ? `Checked the mailbox: ${n('matched')} new ${n('matched') === 1 ? 'reply' : 'replies'}` : 'Checked the mailbox: no new replies'
+            detail = `${n('fetched')} message${n('fetched') === 1 ? '' : 's'} referenced our emails${n('duplicates') ? `, ${n('duplicates')} already recorded` : ''}${n('unmatched') ? `, ${n('unmatched')} could not be matched to a conversation` : ''}.`
+          } else {
+            what = `Received ${n('replies_written')} simulated replies`
+            detail = 'Scripted test replies, labelled as such.'
+          }
+          break
+        case 'send_outreach':
+          if (n('sent') === 0 && n('denied') === 0) { what = 'Checked for approved emails to send'; detail = 'Nothing was eligible.' }
+          else {
+            what = n('sent') ? `Sent ${n('sent')} approved ${n('sent') === 1 ? 'email' : 'emails'}` : `Refused to send ${n('denied')} ${n('denied') === 1 ? 'email' : 'emails'}`
+            detail = [
+              n('redirected_test_sends') ? `Test mode: ${n('redirected_test_sends')} redirected to the allow-listed test address instead of the facility.` : null,
+              n('denied') ? `${n('denied')} stopped by the database chokepoint (not approved, suppressed, already sent, or over the daily cap).` : null,
+              n('pending_reconciliation') ? `${n('pending_reconciliation')} awaiting confirmation from the Sent folder.` : null,
+            ].filter(Boolean).join(' ') || null
+          }
           break
         case 'classify_reply':
           what = `Read ${n('classified')} replies`
@@ -406,4 +422,158 @@ export function buildOverview(ops: Ops, convs: Conversation[], decisions: Decisi
     decisions: decisions.length, questions: Number(o.open_questions_total ?? 0),
     fixtures: Number(o.facilities_fixture ?? 0), spend: Number(ops.recent_spend_usd ?? 0),
   }
+}
+
+// ---------------------------------------------------------------------------
+// Where each conversation stands, and what the next click is
+// ---------------------------------------------------------------------------
+
+export type Stage = 'needs_approval' | 'approved' | 'sending' | 'sent' | 'failed' | 'replied' | 'closed'
+export type ConvFilter = 'all' | Stage
+
+export const STAGE: Record<Stage, { label: string; tone: 'zinc' | 'amber' | 'emerald' | 'rose' | 'sky'; next: string }> = {
+  needs_approval: { label: 'Needs your approval', tone: 'amber', next: 'Read the draft. If it is right, press "Approve this draft".' },
+  approved: { label: 'Approved - not sent yet', tone: 'sky', next: 'Press "Send it". The worker sends it on its next pass.' },
+  sending: { label: 'Sending', tone: 'amber', next: 'The worker is sending it now. Refresh in a moment.' },
+  sent: { label: 'Sent - waiting for a reply', tone: 'emerald', next: 'Nothing to do. When they reply, press "Check mailbox for replies".' },
+  failed: { label: 'Send failed', tone: 'rose', next: 'The provider refused it. Open Activity for the reason, then press "Send it" again.' },
+  replied: { label: 'They replied', tone: 'emerald', next: 'Read their reply and the suggested handling below.' },
+  closed: { label: 'Closed', tone: 'zinc', next: 'Nothing to do.' },
+}
+
+export const FILTERS: Array<{ key: ConvFilter; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'needs_approval', label: 'Needs approval' },
+  { key: 'approved', label: 'Approved, not sent' },
+  { key: 'sent', label: 'Sent, awaiting reply' },
+  { key: 'replied', label: 'Replied' },
+]
+
+/** The newest outgoing message in a thread is the only one you act on; older drafts were replaced. */
+export function latestOutbound(messages: Message[]): Message | null {
+  const out = messages.filter((m) => m.direction === 'outbound')
+  return out.length ? out[out.length - 1] : null
+}
+
+export function stageOf(c: Conversation): Stage {
+  if (c.thread.state === 'closed' || c.thread.state === 'opted_out') return 'closed'
+  if (c.thread.inbound_count > 0) return 'replied'
+  const sentAny = c.messages.some((m) => m.direction === 'outbound' && m.status === 'sent')
+  if (sentAny) return 'sent'
+  const m = latestOutbound(c.messages)
+  switch (m?.status) {
+    case 'approved': return 'approved'
+    case 'sending': return 'sending'
+    case 'failed': return 'failed'
+    default: return 'needs_approval'
+  }
+}
+
+export function matchesFilter(c: Conversation, f: ConvFilter): boolean {
+  if (f === 'all') return true
+  const s = stageOf(c)
+  if (f === 'needs_approval') return s === 'needs_approval' || s === 'failed'
+  if (f === 'sent') return s === 'sent' || s === 'sending'
+  return s === f
+}
+
+export function countByFilter(convs: Conversation[]): Record<ConvFilter, number> {
+  const out = { all: convs.length, needs_approval: 0, approved: 0, sending: 0, sent: 0, failed: 0, replied: 0, closed: 0 } as Record<ConvFilter, number>
+  for (const f of FILTERS) if (f.key !== 'all') out[f.key] = convs.filter((c) => matchesFilter(c, f.key)).length
+  return out
+}
+
+// ---------------------------------------------------------------------------
+// Business profile (what the drafts are allowed to say) and the guided checklist
+// ---------------------------------------------------------------------------
+
+export type Profile = Record<string, any>
+
+export function profileGaps(p: Profile | null): string[] {
+  if (!p) return ['No business profile loaded - drafts cannot be written.']
+  const gaps: string[] = []
+  if (!p.postal_address) gaps.push('Mailing address (required in the footer of every commercial email before a real send)')
+  if (!p.reply_email) gaps.push('Reply-to email address')
+  if (!p.business_name || !p.owner_name) gaps.push('Business name and owner name')
+  return gaps
+}
+
+export type ChecklistStep = {
+  key: 'profile' | 'research' | 'approve' | 'send' | 'replies' | 'decide'
+  n: number
+  title: string
+  status: 'done' | 'todo' | 'waiting' | 'attention'
+  summary: string
+  how: string
+  count: number
+  go: { label: string; tab: 'overview' | 'facilities' | 'conversations' | 'decisions' | 'activity'; filter?: ConvFilter } | null
+}
+
+export function buildChecklist(ov: Overview, convs: Conversation[], decisions: Decision[], profile: Profile | null): ChecklistStep[] {
+  const by = countByFilter(convs)
+  const gaps = profileGaps(profile)
+  const sentCount = convs.filter((c) => c.messages.some((m) => m.direction === 'outbound' && m.status === 'sent')).length
+  const realReplies = convs.filter((c) => c.messages.some((m) => m.direction === 'inbound' && !(m.subject ?? '').startsWith('[SIMULATED]'))).length
+  const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
+  return [
+    {
+      key: 'profile', n: 1, title: 'Check what the emails say about the business',
+      status: !profile || gaps.length ? 'attention' : 'done', count: gaps.length,
+      summary: profile
+        ? `Every draft is written for ${profile.business_name} (owner ${profile.owner_name}) from the facts in the business profile, version ${profile.profile_version}. Nothing outside that file can appear in an email.`
+        : 'No profile is loaded.',
+      how: gaps.length
+        ? `Still missing: ${gaps.join('; ')}. Add it to agents/library/partnership-coordinator/business_profile.json, then press "Write or rewrite drafts".`
+        : 'If a fact changes, edit business_profile.json and press "Write or rewrite drafts". Emails already sent are never changed.',
+      go: null,
+    },
+    {
+      key: 'research', n: 2, title: 'Let the researcher find and vet facilities',
+      status: ov.researched === 0 ? 'todo' : ov.ready > 0 ? 'done' : 'waiting', count: ov.ready,
+      summary: `${ov.researched} of ${ov.total} facilities researched; ${ov.ready} ready to contact (a verified email route and no blockers).`,
+      how: 'This runs on its own. Open Facilities to see what was found about each pool and why it was ranked that way.',
+      go: { label: 'See facilities', tab: 'facilities' },
+    },
+    {
+      key: 'approve', n: 3, title: 'Read each draft and approve it',
+      status: by.needs_approval > 0 ? 'attention' : convs.length ? 'done' : 'todo', count: by.needs_approval,
+      summary: by.needs_approval ? `${by.needs_approval} ${plural(by.needs_approval, 'draft is', 'drafts are')} waiting for you to read.` : 'No drafts are waiting.',
+      how: 'Open the conversation, read the email exactly as it will go out, then press "Approve this draft". Approval binds your name to those exact words; if the text changes it must be approved again.',
+      go: by.needs_approval
+        ? { label: `Review ${by.needs_approval} ${plural(by.needs_approval, 'draft', 'drafts')}`, tab: 'conversations', filter: 'needs_approval' }
+        : { label: 'Open conversations', tab: 'conversations' },
+    },
+    {
+      key: 'send', n: 4, title: 'Send the approved drafts',
+      status: by.approved > 0 ? 'attention' : sentCount ? 'done' : 'todo', count: by.approved,
+      summary: by.approved ? `${by.approved} approved and ready to send.` : sentCount ? `${sentCount} sent so far.` : 'Nothing approved yet.',
+      how: 'Press "Send it" on an approved draft. In test mode the worker redirects every email to the allow-listed test address, so no facility receives anything. At most 8 sends a day.',
+      go: by.approved ? { label: `Send ${by.approved}`, tab: 'conversations', filter: 'approved' } : null,
+    },
+    {
+      key: 'replies', n: 5, title: 'Check the mailbox for replies',
+      status: realReplies ? 'done' : sentCount ? 'waiting' : 'todo', count: by.sent,
+      summary: sentCount
+        ? `${by.sent} sent and waiting for a reply; ${realReplies} real ${plural(realReplies, 'reply', 'replies')} received.`
+        : 'Nothing has been sent yet, so there is nothing to wait for.',
+      how: 'Press "Check mailbox for replies" on the Conversations tab. The worker reads the partnerships inbox, matches each reply to its conversation and classifies it. This needs the inbox connection set up on the worker (the SWIM_IMAP settings).',
+      go: sentCount ? { label: 'Open conversations', tab: 'conversations', filter: 'sent' } : null,
+    },
+    {
+      key: 'decide', n: 6, title: 'Decide on anything the system will not',
+      status: decisions.length ? 'attention' : 'done', count: decisions.length,
+      summary: decisions.length ? `${decisions.length} ${plural(decisions.length, 'reply needs', 'replies need')} your call (price, terms, meetings, opt-outs).` : 'Nothing is waiting on you.',
+      how: 'Price, schedule, insurance, exclusivity, contracts and meetings are never answered automatically. Reply from the partnerships mailbox yourself; the system records the thread.',
+      go: decisions.length ? { label: `Decide ${decisions.length}`, tab: 'decisions' } : null,
+    },
+  ]
+}
+
+export function countsForBanner(convs: Conversation[]) {
+  let simulated = 0, real = 0, sent = 0
+  for (const c of convs) for (const m of c.messages) {
+    if (m.direction === 'inbound') { if ((m.subject ?? '').startsWith('[SIMULATED]')) simulated++; else real++ }
+    else if (m.status === 'sent') sent++
+  }
+  return { simulated, real, sent }
 }

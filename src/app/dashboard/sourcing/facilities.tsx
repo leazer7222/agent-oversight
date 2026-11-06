@@ -165,7 +165,7 @@ function FacilityDetail({ f, onClose, onThread, company }: { f: Facility; onClos
   const unknown = (d?.unknown_fields ?? []).filter((k) => !(k in (d?.attributes ?? {})))
   const questions = d?.latest_qualification?.open_questions ?? f.open_questions ?? []
   const reasons: string[] = d?.latest_qualification?.score_breakdown?.triage_reasons ?? []
-  const draftMsg = f.messages.find((m) => m.direction === 'outbound')
+  const draftMsg = [...f.messages].reverse().find((m) => m.direction === 'outbound')  // newest draft; older ones were replaced
   const inbound = f.messages.filter((m) => m.direction === 'inbound')
 
   return (
@@ -278,14 +278,14 @@ function FacilityDetail({ f, onClose, onThread, company }: { f: Facility; onClos
                 </span>
               </div>
               <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap break-words px-3 py-2 font-sans text-sm leading-relaxed text-zinc-300">{draftMsg.body}</pre>
-              <div className="px-3 pb-2"><DraftActions message={draftMsg} company={company} /></div>
+              <div className="px-3 pb-2"><DraftActions message={draftMsg} company={company} to={f.draft?.contact_email ?? null} /></div>
             </div>
           </Section>
         )}
 
         {inbound.length > 0 && (
           <Section title="Conversation">
-            <div className="flex items-center gap-2 text-xs text-zinc-500"><FileText className="size-3.5" />{inbound.length} repl{inbound.length === 1 ? 'y' : 'ies'} <SimulatedPill /></div>
+            <div className="flex items-center gap-2 text-xs text-zinc-500"><FileText className="size-3.5" />{inbound.length} repl{inbound.length === 1 ? 'y' : 'ies'} {inbound.every((m) => (m.subject ?? '').startsWith('[SIMULATED]')) ? <SimulatedPill /> : <Pill tone="emerald">Real reply</Pill>}</div>
             <ul className="mt-2 space-y-2">
               {inbound.map((m) => (
                 <li key={m.message_id} className="rounded-md border border-amber-900/40 bg-amber-950/10 px-3 py-2">

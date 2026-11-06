@@ -3,50 +3,67 @@ Outreach drafting: a fixed template with slots, one LLM-written sentence, and
 the anti-fabrication gate from outreach-agent/safety.py in front of the write.
 
 Why mostly deterministic: a template is reviewable, consistent, cheap, and
-cannot invent a claim. The model contributes exactly one sentence - a specific,
-evidence-grounded reason this facility caught our eye - and that sentence is
-checked twice: by assert_no_fabrication() against the business facts the owner
-actually supplied, and by a simple rule that the sentence must not introduce
-numbers or claims about the swim school itself.
+cannot invent a claim. Every statement about the business comes from
+business_profile.json (facts the owner supplied), rendered by code. The model
+contributes exactly one sentence - a specific, evidence-grounded reason this
+facility caught our eye - and that sentence is checked twice: by
+assert_no_fabrication() against the supplied facts, and by a rule that it may
+not make claims about the swim school at all.
 
-Nothing here sends. The output is a draft row (status='draft', provider='mock').
+Boundaries from the owner's brief are structural here, not prompted: no price,
+schedule, exclusivity, staffing or contract commitment appears in the template;
+insurance is never mentioned; the facility is never called "suitable".
 """
 
 from __future__ import annotations
 
 import sys
 import re
+import json
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
-LIB = Path(__file__).resolve().parents[1]
+HERE = Path(__file__).resolve().parent
+LIB = HERE.parent
 sys.path.insert(0, str(LIB / "outreach-agent"))
 from safety import assert_no_fabrication, body_sha256, FabricationError  # noqa: E402
 
-# Facts the prototype may state. Everything else about the business is a
-# placeholder the owner must confirm - the gate refuses drafts that claim more.
-PROTOTYPE_BUSINESS_FACTS = {
-    "business_name": "Cameron's Swim School (PROTOTYPE - name to be confirmed)",
-    "owner_first_name": "Cameron",
-    "service": "private swimming lessons for children aged eight and under",
-    "city": "Katy, Texas",
-    "postal_address": "[postal address to be confirmed by the owner before any send]",
-    "reply_email": "[reply address to be confirmed]",
-    # Deliberately absent: years_experience, insurance_status, certifications,
-    # budget_usd, signing_authority. Their absence is what makes the gate bite.
-}
+PROFILE_PATH = HERE / "business_profile.json"
+
+
+def load_business_profile(path: Optional[Path] = None) -> dict:
+    p = path or PROFILE_PATH
+    data = json.loads(p.read_text(encoding="utf-8"))
+    return {k: v for k, v in data.items() if not k.startswith("_")}
+
+
+def profile_gaps(facts: dict) -> list:
+    """What the owner still needs to supply before REAL sends. Shown in the UI."""
+    gaps = []
+    if not facts.get("postal_address"):
+        gaps.append("postal_address (required in the footer of commercial email)")
+    if not facts.get("reply_email"):
+        gaps.append("reply_email")
+    if not facts.get("business_name") or not facts.get("owner_name"):
+        gaps.append("business_name / owner_name")
+    return gaps
+
+
+BUSINESS_FACTS = load_business_profile()
+# Kept for the tests and the controller; same object.
+PROTOTYPE_BUSINESS_FACTS = BUSINESS_FACTS
 
 QUESTION_TEXT = {
-    "commercial_instruction_allowed": "whether you permit outside instructors to run paid lessons",
-    "recurring_availability": "whether recurring weekly time slots might be available",
-    "hourly_rate_usd": "what you would charge per hour for recurring lesson use",
-    "depth_ft": "the shallow-end depth (beginners need a shallow area)",
+    "commercial_instruction_allowed": "whether outside swim instructors may run paid lessons at your pool",
+    "recurring_availability": "whether recurring weekly hours could be set aside, and which days or times tend to be quiet",
+    "hourly_rate_usd": "how you would approach pricing - an hourly rate, a share of lesson revenue, or a mix",
+    "depth_ft": "the shallow-end depth and how swimmers enter the water (beginners need a shallow area)",
     "indoor": "whether the pool is indoor or seasonal",
-    "heated": "whether the pool is heated year-round",
-    "insurance_required": "what insurance you would require from an instructor",
-    "lesson_capacity": "roughly how many students could use the pool at once",
-    "pool_length_m": "the pool length and number of lanes",
-    "revenue_share_possible": "whether you would prefer a flat rate or a share of lesson revenue",
+    "heated": "whether the pool is heated and what the water temperature usually is",
+    "insurance_required": "what insurance, lifeguard or vendor requirements you would have for an outside instructor",
+    "lesson_capacity": "roughly how many swimmers could be taught at once alongside your normal guest or member use",
+    "pool_length_m": "the pool size and usable teaching space",
+    "revenue_share_possible": "whether a share of lesson revenue would be of interest instead of a flat rate",
 }
 
 TOOL = {
@@ -57,23 +74,25 @@ TOOL = {
         "additionalProperties": False,
         "properties": {
             "sentence": {"type": "string",
-                         "description": "One sentence, second person, no claims about the swim school, no numbers that are not in the evidence."},
+                         "description": "One sentence, second person, about THEIR facility only. No claims about the swim school, no numbers that are not in the evidence, no judgement that the pool is suitable."},
         },
         "required": ["sentence"],
     },
 }
 
 SYSTEM = (
-    "You write one sentence of a short, polite email from a small children's swim school to a "
-    "facility that has a pool. The sentence explains, specifically and warmly, why this facility "
-    "caught our eye - using ONLY the evidence provided. Do not state anything about the swim "
-    "school itself (no experience, insurance, credentials, awards, guarantees, prices). Do not "
-    "invent facts about the facility. One sentence, under 35 words."
+    "You write one sentence of a short, professional email from a children's and adult swim school "
+    "to a facility that has a pool. The sentence says, specifically and warmly, what about THEIR "
+    "facility caught our eye - using ONLY the evidence provided. Do not state anything about the swim "
+    "school itself (no experience, insurance, credentials, awards, guarantees, prices, student numbers). "
+    "Do not say the pool is suitable or a fit; say what looks promising and why. Do not invent facts. "
+    "One sentence, under 35 words."
 )
 
-# A second, deterministic check on the model sentence: no self-claims.
+# Deterministic check on the model sentence: no self-claims, no suitability verdicts.
 SELF_CLAIM = re.compile(
-    r"\b(we are|we're|our (instructors|team|school) (is|are)|years|certified|insured|award|guarantee|best)\b",
+    r"\b(we are|we're|our (instructors|team|school|students) (is|are)|years|certified|insured|award|"
+    r"guarantee|best|suitable|perfect fit|ideal fit)\b",
     re.I)
 
 
@@ -85,7 +104,7 @@ def pick_contact(fac: dict) -> Optional[dict]:
     return None
 
 
-def open_questions(fac: dict, limit: int = 3) -> list:
+def open_questions(fac: dict, limit: int = 4) -> list:
     q = ((fac.get("latest_qualification") or {}).get("open_questions") or [])
     out = []
     for item in q:
@@ -94,7 +113,12 @@ def open_questions(fac: dict, limit: int = 3) -> list:
             out.append(attr)
         if len(out) >= limit:
             break
-    return out
+    # Always ask the two that decide everything if they are still unknown.
+    for must in ("commercial_instruction_allowed", "recurring_availability"):
+        attrs = fac.get("attributes") or {}
+        if attrs.get(must) is None and must not in out:
+            out.insert(0, must)
+    return out[:limit]
 
 
 def evidence_lines(fac: dict) -> list:
@@ -115,6 +139,41 @@ def evidence_lines(fac: dict) -> list:
     return lines
 
 
+def render(fac: dict, business: dict, contact: dict, sentence: str, questions: list) -> Tuple[str, str]:
+    """Deterministic template. Returns (subject, body)."""
+    first = (contact.get("full_name") or "").split()[0] if contact.get("full_name") else "there"
+    name = business.get("business_name", "")
+    owner = business.get("owner_name", "")
+    programs = business.get("programs") or []
+    program_text = ", ".join(programs[:-1]) + (f", and {programs[-1]}" if len(programs) > 1 else (programs[0] if programs else ""))
+    structures = business.get("partnership_structures") or []
+    structure_text = ", ".join(structures[:-1]) + (f" or {structures[-1]}" if len(structures) > 1 else (structures[0] if structures else ""))
+    creds = " | ".join(business.get("credentials") or [])
+    facility = fac.get("name") or "your facility"
+    qlines = "".join(f"\n  - {QUESTION_TEXT[a]}" for a in questions)
+    address = business.get("postal_address") or "[Mailing address - Cameron to confirm before any real send]"
+    sentence = sentence.strip()
+    if sentence and not sentence.endswith((".", "!", "?")):
+        sentence += "."
+
+    subject = f"Pool partnership inquiry from {name}"
+    body = (
+        f"Hello {first},\n\n"
+        f"I'm {owner}, owner of {name} in {business.get('service_area', '')}. We teach water safety and "
+        f"swimming to {business.get('ages_served', 'children and adults')} - {program_text} - with "
+        f"{business.get('approach', 'water safety first')}. We work with {business.get('students_per_year', 'a growing number of')} students a year.\n\n"
+        f"{sentence}\n\n"
+        f"I'm writing because we are looking for {business.get('ask', 'consistent pool access')}. We are open to "
+        f"{structure_text}, and happy to discuss what would work for your facility. "
+        f"To see whether {facility} might work for recurring lessons, I would want to understand:{qlines}\n\n"
+        f"If someone else handles pool use or partnerships, I would be grateful for an introduction. "
+        f"A short call, or a walkthrough of the pool with me, would be the natural next step.\n\n"
+        f"Kind regards,\n{owner}\nOwner, {name}\n{creds}\n{business.get('reply_email', '')}\n{address}\n"
+        f"If you would rather not hear from us, reply \"unsubscribe\" and we will not contact you again.\n"
+    )
+    return subject, body
+
+
 def compose(fac: dict, business: dict, llm: Callable) -> Tuple[Optional[dict], dict]:
     """Returns (draft or None if no email contact, usage)."""
     contact = pick_contact(fac)
@@ -125,33 +184,17 @@ def compose(fac: dict, business: dict, llm: Callable) -> Tuple[Optional[dict], d
     questions = open_questions(fac)
     user = (
         f"Facility: {fac.get('name')} ({fac.get('facility_type')}), {fac.get('distance_miles')} miles "
-        f"from {business.get('city')}.\nEvidence from their website: "
+        f"from Katy, Texas.\nEvidence from their website: "
         + ("; ".join(evidence) if evidence else "nothing specific beyond that they have a pool")
     )
     proposal, usage = llm(SYSTEM, user, TOOL, 1200)
     sentence = (proposal.get("sentence") or "").strip()
     if not sentence or SELF_CLAIM.search(sentence):
-        raise FabricationError("model sentence made a claim about the business or was empty")
+        raise FabricationError("model sentence made a claim about the business, judged suitability, or was empty")
 
-    first = contact.get("full_name") or "there"
-    greeting = f"Hello {first.split()[0] if first != 'there' else 'there'},"
-    qlines = "".join(f"\n  - {QUESTION_TEXT[a]}" for a in questions)
-    body = (
-        f"{greeting}\n\n"
-        f"My name is {business['owner_first_name']} and I run {business['business_name']}, offering "
-        f"{business['service']} in {business['city']}. {sentence}\n\n"
-        f"I am looking for a pool that could host recurring private lessons, and I wondered whether "
-        f"{fac.get('name')} might be open to that. Shared or exclusive arrangements are both fine. "
-        f"If it is worth a conversation, a few things I would want to understand:{qlines}\n\n"
-        f"If a short call is easier, I am happy to work around your schedule.\n\n"
-        f"Kind regards,\n{business['owner_first_name']}\n{business['business_name']}\n"
-        f"{business['postal_address']}\n"
-        f"Reply with 'unsubscribe' and we will not contact you again.\n"
-        f"\n[PROTOTYPE DRAFT - not sent]"
-    )
+    subject, body = render(fac, business, contact, sentence, questions)
     assert_no_fabrication(body, business)   # raises FabricationError on any unsupported claim
 
-    subject = f"Recurring swim lesson space at {fac.get('name')}"
     return {
         "contact_id": contact.get("contact_id"),
         "to_email": contact.get("email"),
@@ -160,4 +203,5 @@ def compose(fac: dict, business: dict, llm: Callable) -> Tuple[Optional[dict], d
         "body_sha256": body_sha256(body),
         "open_questions_used": questions,
         "sentence": sentence,
+        "profile_version": business.get("profile_version"),
     }, usage

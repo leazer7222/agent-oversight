@@ -30,10 +30,16 @@ sys.path.insert(0, str(LIB / "outreach-agent"))
 from safety import (INTENTS, requires_human_approval, wrap_untrusted,  # noqa: E402
                     can_auto_reply, detect_injection)
 
+# Routine answers drawn from the owner's brief (business_profile.json). Anything
+# about price, schedule, insurance, exclusivity or terms is NOT here on purpose:
+# those always go to Cameron.
 PROTOTYPE_FAQ = {
-    "age_groups": "Lessons are private, for children aged eight and under.",
-    "lesson_length": "Each private lesson runs about 30 minutes.",
-    "group_size": "Lessons are one instructor to one child, so one or two children in the water at a time.",
+    "who_we_are": "Suit Up Water Safety & Swim School, owned by Cameron Balkom, teaching water safety and "
+                  "swimming in Katy and West Houston.",
+    "age_groups": "We teach children from six months old through adults.",
+    "programs": "Private lessons, adaptive aquatics for swimmers with disabilities or sensory, developmental "
+                "or motor differences, small-group stroke development, and adult lessons.",
+    "scheduling": "Cameron confirms days, times and lesson length directly with you once we know what is open.",
 }
 
 ANSWERABLE = ("commercial_instruction_allowed", "recurring_availability", "hourly_rate_usd",

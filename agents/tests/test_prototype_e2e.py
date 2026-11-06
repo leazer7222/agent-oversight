@@ -148,10 +148,24 @@ class TestDraft(unittest.TestCase):
         d, _ = DRAFT.compose(self.FAC, DRAFT.PROTOTYPE_BUSINESS_FACTS,
                              stub_llm({"sentence": "Your indoor, heated pool looks like a wonderful place for young beginners."}))
         self.assertIsNotNone(d)
-        self.assertIn("outside instructors", d["body"])
-        self.assertIn("charge per hour", d["body"])
-        self.assertIn("[PROTOTYPE DRAFT - not sent]", d["body"])
+        self.assertIn("outside swim instructors", d["body"])
+        self.assertIn("pricing", d["body"])
+        self.assertIn("Suit Up Water Safety & Swim School", d["body"])
+        self.assertIn("unsubscribe", d["body"])
+        self.assertIn("Cameron Balkom", d["body"])
+        # Boundaries are structural: no commitment words in the template itself.
+        for banned in ("we guarantee", "fully insured", "exclusive", "we can offer $"):
+            self.assertNotIn(banned, d["body"].lower())
         self.assertEqual(d["body_sha256"], DRAFT.body_sha256(d["body"]))
+
+    def test_sentence_that_calls_the_pool_suitable_is_refused(self):
+        with self.assertRaises(DRAFT.FabricationError):
+            DRAFT.compose(self.FAC, DRAFT.PROTOTYPE_BUSINESS_FACTS,
+                          stub_llm({"sentence": "Your pool is a perfect fit for our lessons."}))
+
+    def test_profile_gaps_name_the_missing_postal_address(self):
+        gaps = DRAFT.profile_gaps(DRAFT.BUSINESS_FACTS)
+        self.assertTrue(any("postal_address" in g for g in gaps))
 
     def test_sentence_claiming_experience_is_refused(self):
         with self.assertRaises(DRAFT.FabricationError):

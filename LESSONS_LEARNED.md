@@ -639,3 +639,28 @@ Add new lessons at the end of each session.
 - Uses `SUPABASE_DB_URL` (psycopg, simple-query protocol so the file's own BEGIN/COMMIT delimits the
   transaction) and inserts into `supabase_migrations.schema_migrations` after success. `apply_sql.py` does
   not record anything, which is how 024-046 went missing. Verify afterwards with `to_regprocedure`.
+
+---
+
+## Pool Acquisition MVP 2 (2026-11-06)
+
+### Git Bash rewrites leading-slash arguments into Windows paths
+- `python script.py --next /dashboard/sourcing` arrives in Python as `C:/Program Files/Git/dashboard/sourcing`
+  (MSYS path conversion). Any CLI that takes a URL path or a POSIX-looking string is affected.
+- Prefix the call with `MSYS_NO_PATHCONV=1`, or pass the value without a leading slash and add it in code.
+
+### Next.js can import a repo JSON file from outside `src/` (resolveJsonModule)
+- `src/app/dashboard/sourcing/page.tsx` imports `agents/library/partnership-coordinator/business_profile.json`
+  directly, so the UI shows exactly the facts the worker drafts from. One file, no API, no drift. Only do
+  this for small, non-secret, committed files; it is bundled at build time.
+
+### Threads are unique on (facility_id, campaign_id) - a redraft must reuse the thread's campaign
+- `swim_record_draft` upserts the thread on that pair. Redrafting with a fresh campaign id silently opens a
+  second conversation per facility. `swim_list_threads` does not expose campaign_id, hence migration 056
+  (`swim_list_thread_campaigns`). Only threads with no inbound mail and an unsent latest draft are redrafted;
+  sent emails are immutable.
+
+### Outreach copy comes from a facts file, never from the prompt
+- `business_profile.json` is the single source of what an email may say. Fields left `null` (postal
+  address, insurance, years, budget, authority) make the fabrication gate refuse the claim. When the owner
+  supplies a new fact, add it there and re-run drafting; do not edit the template or the model prompt.

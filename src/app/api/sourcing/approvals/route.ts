@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server'
-import { createHash } from 'node:crypto'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import {
   requireTenant, requireRole, authErrorResponse, logPrivilegedAction,
@@ -9,22 +8,20 @@ export const runtime = 'nodejs'
 
 /**
  * POST /api/sourcing/approvals
- * Body: { subject_type, subject_id, decision, note? }
+ * Body: { subject_type, subject_id, decision, note?, company? }
  *
- * The approval gate for outbound email. Two properties make it meaningful,
- * neither of which the previous gate-a pattern had:
+ * The approval gate for outbound email. Two properties make it meaningful:
  *
- *  1. The approver identity comes from the SESSION. The old pattern took
- *     `ratified_by` as a free-text body field, so anyone who could reach the URL
- *     could approve as anyone.
- *  2. The decision is bound to a CONTENT HASH of the exact message body. Editing
- *     an approved draft changes the hash and voids the approval, so an injected
- *     instruction cannot append terms to something already approved.
+ *  1. The approver identity comes from the SESSION (requireTenant), never from
+ *     the request body.
+ *  2. For a message, the decision is bound to a CONTENT HASH of the body as it
+ *     stands in the database at approval time. The hash is computed inside
+ *     public.swim_record_approval, and public.swim_authorize_send compares it
+ *     again at send time - so editing an approved draft voids the approval.
+ *
+ * Goes through a public RPC because PostgREST does not expose swim_sourcing
+ * (a direct .schema('swim_sourcing') call returns PGRST106).
  */
-function sha256(text: string): string {
-  return createHash('sha256').update(text.replace(/\r\n/g, '\n').trim()).digest('hex')
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
@@ -41,50 +38,20 @@ export async function POST(request: NextRequest) {
     }
 
     const sb = createServiceRoleClient()
-
-    // For a message approval, hash the CURRENT body so the approval binds bytes.
-    let approvedSha: string | null = null
-    if (subject_type === 'message') {
-      const { data: msg, error } = await sb
-        .schema('swim_sourcing')
-        .from('outreach_messages')
-        .select('id, body, company_id, status')
-        .eq('id', subject_id)
-        .single()
-      if (error || !msg) {
-        return Response.json({ error: 'message not found' }, { status: 404 })
-      }
-      if (msg.company_id !== ctx.companyId) {
-        // Belt and braces: the RPC path already scopes by tenant, but an
-        // approval is exactly where a cross-tenant mistake would matter most.
-        return Response.json({ error: 'Forbidden' }, { status: 403 })
-      }
-      approvedSha = sha256(msg.body as string)
-    }
-
-    const { data: approval, error: insErr } = await sb
-      .schema('swim_sourcing')
-      .from('approvals')
-      .insert({
-        company_id: ctx.companyId,
-        subject_type,
-        subject_id,
-        decision,
-        approved_sha256: approvedSha,
+    const { data, error } = await sb.rpc('swim_record_approval', {
+      p_company_id: ctx.companyId,
+      p_payload: {
+        subject_type, subject_id, decision,
         approver_user_id: ctx.userId,
         approver_label: ctx.email ?? ctx.userId,
         note: note ?? null,
-      })
-      .select('id, created_at')
-      .single()
-
-    if (insErr) return Response.json({ error: insErr.message }, { status: 500 })
-
-    if (decision === 'approved' && subject_type === 'message') {
-      await sb.schema('swim_sourcing').from('outreach_messages')
-        .update({ status: 'approved', approved_by: ctx.userId, approved_at: new Date().toISOString() })
-        .eq('id', subject_id)
+      },
+    })
+    if (error) {
+      const notFound = /not found/i.test(error.message)
+      return Response.json({ error: error.message }, { status: notFound ? 404 : 500 })
     }
+    const result = (data ?? {}) as { approval_id?: string; approved_sha256?: string | null }
 
     await logPrivilegedAction({
       actorUserId: ctx.userId,
@@ -92,13 +59,13 @@ export async function POST(request: NextRequest) {
       action: `approval_${decision}`,
       companyId: ctx.companyId,
       target: `${subject_type}:${subject_id}`,
-      detail: { approved_sha256: approvedSha },
+      detail: { approved_sha256: result.approved_sha256 ?? null },
     })
 
     return Response.json({
       ok: true,
-      approval_id: approval?.id,
-      approved_sha256: approvedSha,
+      approval_id: result.approval_id,
+      approved_sha256: result.approved_sha256 ?? null,
       approver: ctx.email ?? ctx.userId,
     })
   } catch (err) {

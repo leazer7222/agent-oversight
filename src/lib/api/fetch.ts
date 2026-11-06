@@ -1,13 +1,40 @@
 /**
  * Server-side fetch helper for internal API calls.
- * Uses NEXT_PUBLIC_SITE_URL in production; falls back to localhost
- * using PORT env var (set in .env.local for dev) or 3000.
+ *
+ * The API base is derived from the INCOMING request (x-forwarded-host / host),
+ * so a page always calls the same deployment that served it. NEXT_PUBLIC_SITE_URL
+ * is only a fallback for contexts with no request (build-time prerender), and
+ * localhost:PORT after that.
+ *
+ * Why: on 2026-11-06 production pages rendered empty / "could not load" while
+ * the API answered correctly when called directly. The env-var base pointed at
+ * a different host (the retired Netlify deployment still serves an old build),
+ * so the server-to-server hop fetched from the wrong app entirely - no sourcing
+ * routes there (404 -> null), admin-only routes elsewhere (403 -> null). Deriving
+ * the base from the request also makes preview deployments work unchanged.
  */
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
-const BASE =
+const ENV_BASE =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
   `http://localhost:${process.env.PORT ?? 3000}`
+
+async function requestBase(): Promise<string> {
+  try {
+    const h = await headers()
+    const forwarded = h.get('x-forwarded-host')?.split(',')[0]?.trim()
+    const host = forwarded || h.get('host')
+    if (host) {
+      const proto =
+        h.get('x-forwarded-proto')?.split(',')[0]?.trim() ||
+        (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host) ? 'http' : 'https')
+      return `${proto}://${host}`
+    }
+  } catch {
+    // headers() throws outside a request scope (build-time prerender).
+  }
+  return ENV_BASE
+}
 
 /**
  * Forward the caller's session cookie on the server-to-server hop.
@@ -66,6 +93,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 export async function apiFetch<T = any>(path: string): Promise<T | null> {
   let lastDetail = 'unknown'
   const headers = await sessionCookieHeader()
+  const BASE = await requestBase()
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
@@ -75,7 +103,7 @@ export async function apiFetch<T = any>(path: string): Promise<T | null> {
       lastDetail = `HTTP ${res.status}`
       if (res.status === 401 || res.status === 403) {
         console.error(
-          `[apiFetch] ${path} returned ${res.status}. The session cookie was ` +
+          `[apiFetch] ${BASE}${path} returned ${res.status}. The session cookie was ` +
           `${headers.cookie ? 'forwarded' : 'NOT forwarded'}; an authenticated ` +
           `page should not see this.`
         )

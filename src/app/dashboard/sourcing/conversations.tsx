@@ -31,7 +31,7 @@ async function post(path: string, body: Record<string, unknown>): Promise<{ ok: 
 /** Approve a draft (binds your identity to its exact bytes) and queue it for the
  *  worker. Nothing is sent from the browser: the worker still has to pass the
  *  database chokepoint and the recipient allow-list. */
-function DraftActions({ message, company }: { message: Message; company: string }) {
+export function DraftActions({ message, company }: { message: Message; company: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -47,17 +47,18 @@ function DraftActions({ message, company }: { message: Message; company: string 
       {message.status === 'draft' && (
         <button type="button" disabled={busy !== null}
           onClick={() => run('Approve', '/api/sourcing/approvals', { subject_type: 'message', subject_id: message.message_id, decision: 'approved' })}
-          className="inline-flex items-center gap-1 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-2 py-1 text-emerald-200 hover:bg-emerald-950/70 disabled:opacity-50">
-          <CheckCircle2 className="size-3.5" /> Approve this draft
+          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50">
+          <CheckCircle2 className="size-4" /> Step 1: Approve this draft
         </button>
       )}
       {message.status === 'approved' && (
         <button type="button" disabled={busy !== null}
           onClick={() => run('Queue send', '/api/sourcing/jobs', { job_type: 'send_outreach', payload: { message_id: message.message_id } })}
-          className="inline-flex items-center gap-1 rounded-md border border-sky-900/60 bg-sky-950/40 px-2 py-1 text-sky-200 hover:bg-sky-950/70 disabled:opacity-50">
-          <Send className="size-3.5" /> Queue send (test mode: goes to the allow-listed address)
+          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50">
+          <Send className="size-4" /> Step 2: Send it (test mode - goes to the allow-listed address)
         </button>
       )}
+      {message.status === 'sent' && <span className="text-emerald-300">Sent. Reply from your inbox, then use "Check mailbox for replies".</span>}
       {busy && <span className="text-zinc-500">{busy}...</span>}
       {note && <span className={note.includes('failed') ? 'text-rose-300' : 'text-zinc-400'}>{note}</span>}
     </div>

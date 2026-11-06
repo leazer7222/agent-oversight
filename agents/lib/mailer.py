@@ -104,10 +104,21 @@ def strip_quoted_reply(text: str) -> str:
 
 @dataclass
 class GmailMailbox:
+    """Sends through Gmail SMTP. Reconciles against Gmail's Sent folder. Reads
+    INBOUND replies from whichever IMAP mailbox actually receives mail for the
+    domain - by default the same Gmail account, but when the domain's MX points
+    elsewhere (suitupswim.com's does), SWIM_IMAP_* selects that host instead.
+    Nothing about the domain's own mail setup is changed by this code."""
     user: str
     app_password: str
     from_name: str = ""
     reply_to: Optional[str] = None
+    # Inbound mailbox (defaults to the Gmail account itself)
+    imap_host: str = IMAP_HOST
+    imap_port: int = 993
+    imap_user: Optional[str] = None
+    imap_password: Optional[str] = None
+    inbox_folder: str = "INBOX"
 
     @classmethod
     def from_env(cls, from_name: str = "") -> "GmailMailbox":
@@ -117,8 +128,23 @@ class GmailMailbox:
             raise MailerConfigError(
                 "SWIM_SMTP_USER and SWIM_SMTP_APP_PASSWORD are required (a Gmail App Password, "
                 "not the account password)")
+        imap_host = os.environ.get("SWIM_IMAP_HOST", "").strip() or IMAP_HOST
+        imap_user = os.environ.get("SWIM_IMAP_USER", "").strip() or None
+        imap_pw = os.environ.get("SWIM_IMAP_PASSWORD", "").strip() or None
+        if imap_host != IMAP_HOST and not (imap_user and imap_pw):
+            raise MailerConfigError(
+                "SWIM_IMAP_HOST is set to a non-Gmail host, so SWIM_IMAP_USER and "
+                "SWIM_IMAP_PASSWORD for that mailbox are required too")
         return cls(user=user, app_password=pw, from_name=from_name,
-                   reply_to=os.environ.get("SWIM_REPLY_TO") or None)
+                   reply_to=os.environ.get("SWIM_REPLY_TO") or None,
+                   imap_host=imap_host,
+                   imap_port=int(os.environ.get("SWIM_IMAP_PORT", "993") or 993),
+                   imap_user=imap_user, imap_password=imap_pw,
+                   inbox_folder=os.environ.get("SWIM_IMAP_INBOX", "INBOX") or "INBOX")
+
+    @property
+    def inbound_is_gmail(self) -> bool:
+        return self.imap_host == IMAP_HOST and not self.imap_user
 
     @property
     def domain(self) -> str:
@@ -172,8 +198,17 @@ class GmailMailbox:
     # -- reconciliation -------------------------------------------------------
 
     def _imap(self) -> imaplib.IMAP4_SSL:
+        """The SENDING account's mailbox (Gmail): used for reconciliation only."""
         conn = imaplib.IMAP4_SSL(IMAP_HOST)
         conn.login(self.user, self.app_password)
+        return conn
+
+    def _imap_inbound(self) -> imaplib.IMAP4_SSL:
+        """The mailbox that RECEIVES mail for the domain (may be a different host)."""
+        if self.inbound_is_gmail:
+            return self._imap()
+        conn = imaplib.IMAP4_SSL(self.imap_host, self.imap_port)
+        conn.login(self.imap_user or self.user, self.imap_password or self.app_password)
         return conn
 
     def find_by_attempt_id(self, attempt_id: str) -> Optional[dict]:
@@ -201,10 +236,10 @@ class GmailMailbox:
         subject, body (quoted text stripped), raw_body, received_at. Mail that
         does not reference a known id is left alone (and unseen).
         """
-        conn = self._imap()
+        conn = self._imap_inbound()
         out: list = []
         try:
-            conn.select("INBOX")
+            conn.select(self.inbox_folder)
             typ, data = conn.search(None, "UNSEEN" if unseen_only else "ALL")
             if typ != "OK" or not data or not data[0]:
                 return out

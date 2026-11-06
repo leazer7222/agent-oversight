@@ -84,5 +84,42 @@ class TestFailClosedConfig(unittest.TestCase):
             os.environ.pop("SWIM_SMTP_APP_PASSWORD", None)
 
 
+
+class TestInboundHostOverride(unittest.TestCase):
+    def _clear(self):
+        for k in ("SWIM_IMAP_HOST", "SWIM_IMAP_USER", "SWIM_IMAP_PASSWORD", "SWIM_IMAP_PORT", "SWIM_IMAP_INBOX"):
+            os.environ.pop(k, None)
+
+    def setUp(self):
+        os.environ["SWIM_SMTP_USER"] = "partnerships@example.test"
+        os.environ["SWIM_SMTP_APP_PASSWORD"] = "abcdabcdabcdabcd"
+        self._clear()
+
+    def tearDown(self):
+        self._clear()
+        os.environ.pop("SWIM_SMTP_USER", None)
+        os.environ.pop("SWIM_SMTP_APP_PASSWORD", None)
+
+    def test_defaults_to_reading_inbound_from_gmail(self):
+        box = M.GmailMailbox.from_env()
+        self.assertTrue(box.inbound_is_gmail)
+        self.assertEqual(box.imap_host, M.IMAP_HOST)
+
+    def test_non_gmail_inbound_host_requires_its_own_credentials(self):
+        os.environ["SWIM_IMAP_HOST"] = "mail.example.test"
+        with self.assertRaises(M.MailerConfigError):
+            M.GmailMailbox.from_env()
+
+    def test_non_gmail_inbound_host_is_used_for_replies_only(self):
+        os.environ["SWIM_IMAP_HOST"] = "mail.example.test"
+        os.environ["SWIM_IMAP_USER"] = "partnerships@example.test"
+        os.environ["SWIM_IMAP_PASSWORD"] = "secret"
+        os.environ["SWIM_IMAP_PORT"] = "993"
+        box = M.GmailMailbox.from_env()
+        self.assertFalse(box.inbound_is_gmail)
+        self.assertEqual(box.imap_host, "mail.example.test")
+        # Sending identity is untouched: still the Gmail account.
+        self.assertEqual(box.user, "partnerships@example.test")
+
 if __name__ == "__main__":
     unittest.main()

@@ -697,3 +697,14 @@ Add new lessons at the end of each session.
 ### Facilities' own websites are readable enough for evidence-bound research
 - 22 of 40 real Katy facilities yielded quoted facts/contacts from homepage + 3 pool pages; 12 had no
   website in Places, 6 refused the fetch. Expect roughly half of a Places batch to need a phone call.
+
+### Email hunting on real websites: scan the markup, but not all of it
+- Raw-HTML scanning finds the inboxes that matter (mailto links, JSON-LD, location config in scripts) and
+  also font-licence comments, analytics vendors, escaped JSON (`>...`) and URL-encoded `%20` prefixes.
+  Rule that worked: strip comments/styles/scripts before scanning, but recover addresses on the site's OWN
+  domain from scripts; drop a denylist of corporate inboxes (customercare, commissions, accessibility, press)
+  and vendor domains; cap at 6 per site; prefer purpose over everything, then the location token.
+- Name tokens are not place tokens: "Villa Sport" made "villa" boost a spa inbox over the aquatics inbox.
+  Keep purpose ranking ahead of the location hint.
+- `swim_record_contact` never changes `is_primary` on an existing row, so a ranking change needs the hunt's
+  rows deleted and re-run; delete by the job's `started_at`, never by hand-picked ids.

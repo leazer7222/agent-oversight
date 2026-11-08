@@ -514,9 +514,11 @@ def find_emails(sections: list, site_url: Optional[str] = None, cap: int = 6, hi
             domain = re.sub(r"\s+", "", domain)
             add(f"{m.group(1)}@{domain}", url, _context(text, m.group(0)) or m.group(0), None, None, "obfuscated")
 
-    # This location's own inbox first (katyinfo@ on a franchise site), then purpose,
-    # then own domain, then pool words nearby, then a named person.
-    out = sorted(found.values(), key=lambda c: (-c["_local"], -rank_email(c["email"]), -c["_ondomain"],
+    # Purpose first (an aquatics inbox beats everything), then this location's own
+    # inbox among equals (katyinfo@ on a franchise site), then own domain, then pool
+    # words nearby, then a named person. Purpose stays ahead of the location hint
+    # because name tokens can be brand words ("villa" matched a spa inbox once).
+    out = sorted(found.values(), key=lambda c: (-rank_email(c["email"]), -c["_local"], -c["_ondomain"],
                                                  -c["_relevant"], not c.get("full_name"), c["email"].lower()))[:cap]
     for i, c in enumerate(out):
         c["is_primary"] = (i == 0)

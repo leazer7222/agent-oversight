@@ -231,6 +231,12 @@ class TestLocationPreference(unittest.TestCase):
         self.assertIn("katytx@aqua-tots.com", emails)                # on-domain script config recovered
         self.assertNotIn("ops@vendor.test", emails)                  # off-domain script junk ignored
 
+    def test_purpose_beats_a_brand_word_in_the_name(self):
+        text = "CRContactFormVillaSpaDepartment@x.test CRContactFormAquaticsDepartment@x.test"
+        secs = [{"url": "https://villasport.test/cinco-ranch/", "text": text, "html": ""}]
+        out = F.find_emails(secs, site_url="https://villasport.test", hints=F.hint_tokens("Villa Sport Athletic Club", "/cinco-ranch/"))
+        self.assertEqual(out[0]["email"], "CRContactFormAquaticsDepartment@x.test")
+
     def test_commission_desks_are_junk(self):
         secs = [{"url": "https://w.test", "text": "central.commissions@w.test frontdesk@w.test", "html": ""}]
         self.assertEqual([c["email"] for c in F.find_emails(secs, site_url="https://w.test")], ["frontdesk@w.test"])

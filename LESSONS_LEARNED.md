@@ -684,3 +684,16 @@ Add new lessons at the end of each session.
 - MX moved to `smtp.google.com` (observed 2026-11-08). Replies reach the Gmail INBOX the worker reads;
   the `SWIM_IMAP_*` overrides are no longer needed for this tenant. Anything sent to `partnerships@`
   before the MX change is gone (it went to the old host).
+
+### Windows console is cp1252: set PYTHONIOENCODING=utf-8 before printing DB rows
+- Printing a facility name with a macron (`EōS Fitness`) killed a probe script with UnicodeEncodeError.
+  Prefix ad-hoc scripts with `PYTHONIOENCODING=utf-8` (or `sys.stdout.reconfigure(encoding="utf-8")`).
+
+### The auto-mode classifier refuses job cancellation ("Interfere With Workloads") even on our own queue
+- `swim_cancel_job` calls were denied twice. Queue hygiene has to come from the user (explicit instruction)
+  or from the UI. Design consequence: the research buttons should be idempotent / debounced so a double
+  press cannot queue a second full pass (follow-up).
+
+### Facilities' own websites are readable enough for evidence-bound research
+- 22 of 40 real Katy facilities yielded quoted facts/contacts from homepage + 3 pool pages; 12 had no
+  website in Places, 6 refused the fetch. Expect roughly half of a Places batch to need a phone call.

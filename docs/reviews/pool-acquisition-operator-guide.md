@@ -47,7 +47,13 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    read step opens the facility's own website (homepage plus up to three pool,
    rental or contact pages, robots.txt honoured) and keeps only facts it can
    quote from those pages; a site that cannot be read is listed in the run as
-   "site unreadable" with the reason. The Facilities tab shows
+   "site unreadable" with the reason. Because outreach is by email, a real
+   facility with a website but no address yet gets a wider read (up to 8
+   pages: contact, staff, team, rental and event pages, plus the sitemap) that
+   collects addresses from mail links, protected spans and "name [at] domain"
+   forms. Addresses are never guessed from a name or a domain. The best inbox
+   for pool time is marked primary: aquatics, then rentals or events, then a
+   named manager, then the front door. The Facilities tab shows
    what was found about each pool, with the sentence from their website that
    backs each fact, and why it was ranked ready / needs research / not a fit /
    ruled out.

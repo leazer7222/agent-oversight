@@ -664,6 +664,7 @@ Add new lessons at the end of each session.
 - `business_profile.json` is the single source of what an email may say. Fields left `null` (postal
   address, insurance, years, budget, authority) make the fabrication gate refuse the claim. When the owner
   supplies a new fact, add it there and re-run drafting; do not edit the template or the model prompt.
+<<<<<<< HEAD
 
 ---
 
@@ -684,3 +685,5 @@ Add new lessons at the end of each session.
 - MX moved to `smtp.google.com` (observed 2026-11-08). Replies reach the Gmail INBOX the worker reads;
   the `SWIM_IMAP_*` overrides are no longer needed for this tenant. Anything sent to `partnerships@`
   before the MX change is gone (it went to the old host).
+=======
+>>>>>>> origin/main

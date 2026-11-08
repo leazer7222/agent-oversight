@@ -63,11 +63,11 @@ export function ResearchActions({ company, compact = false }: { company: string;
           Use recorded test facilities
         </label>
       </div>
-      <p className={cn('text-xs', note ? (note.startsWith('Failed') ? 'text-rose-300' : 'text-zinc-400') : 'text-zinc-500', compact && 'text-right')}>
+      {(note || !compact) && <p className={cn('max-w-xl text-xs', note ? (note.startsWith('Failed') ? 'text-rose-300' : 'text-zinc-400') : 'text-zinc-500', compact && 'max-w-sm text-right')}>
         {note ?? (fixtures
           ? 'Find: the recorded Katy test set. Read: each website, keeping only facts quoted from the page. Rank: ready / needs research / not a fit / ruled out. The worker does the work on its next pass.'
           : 'Live search needs GOOGLE_PLACES_API_KEY on the worker; without it the find step is refused and nothing is written. Up to 8 Places requests, 15 miles around Katy.')}
-      </p>
+      </p>}
     </div>
   )
 }

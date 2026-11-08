@@ -322,26 +322,47 @@ def handle_enrich(job: dict, cred, heartbeat, ctx) -> dict:
     """Evidence-bound enrichment: an LLM extracts facts and contacts from a page,
     and NOTHING is written unless its verbatim snippet is found in that page."""
     enrich = _load_module(LIB / "facility-researcher" / "enrich.py", "enrich")
+    sitefetch = _load_module(LIB / "facility-researcher" / "fetch.py", "sitefetch")
     company_id = job["company_id"]
     payload = job.get("payload") or {}
     limit = int(payload.get("limit", 40))
+    # payload.sources narrows the pass (e.g. ["google_places"] = real facilities only);
+    # payload.live=false disables website reading (fixture pages only).
+    sources = set(payload.get("sources") or ("fixture", "google_places"))
+    live = bool(payload.get("live", True))
     llm = _llm_for(cred, MODEL_BY_JOB["enrich"])
     pages = enrich.load_fixture_pages()
 
     rows = rpc("swim_list_research", {"p_company_id": company_id, "p_limit": 500}) or []
-    todo = [r for r in rows if (r.get("known_count") or 0) <= 1 and r.get("source") in ("fixture", "google_places")]
+    todo = [r for r in rows if (r.get("known_count") or 0) <= 1 and r.get("source") in sources]
     todo = todo[:limit]
 
     usage: dict = {}
-    counts = {"enriched": 0, "no_page": 0, "facts_written": 0, "contacts_written": 0,
-              "evidence_rejected": 0, "skipped": len(rows) - len(todo)}
+    counts = {"enriched": 0, "no_page": 0, "no_page_reasons": {}, "live_sites_read": 0, "pages_fetched": 0,
+              "facts_written": 0, "contacts_written": 0, "evidence_rejected": 0, "skipped": len(rows) - len(todo)}
     for i, r in enumerate(todo):
         fac = rpc("swim_facility_attributes", {"p_facility_id": r["facility_id"]}) or {}
         page = enrich.page_for(fac, pages)
+        max_chars = 12000
+        if page is None and live and r.get("source") == "google_places":
+            # Real facility: read its own website (robots honoured, bounded pages/bytes).
+            page, reason = sitefetch.fetch_site(fac.get("website") or r.get("website"))
+            heartbeat()
+            if page is None:
+                counts["no_page"] += 1
+                counts["no_page_reasons"][reason] = counts["no_page_reasons"].get(reason, 0) + 1
+                ctx.step("site_unreadable", payload={"facility_id": r["facility_id"], "name": r.get("name"),
+                                                     "website": fac.get("website"), "reason": reason},
+                         severity="warning")
+                continue
+            counts["live_sites_read"] += 1
+            counts["pages_fetched"] += page.get("pages_fetched", 1)
+            max_chars = sitefetch.TOTAL_CHARS
         if page is None:
             counts["no_page"] += 1
+            counts["no_page_reasons"]["no_recorded_page"] = counts["no_page_reasons"].get("no_recorded_page", 0) + 1
             continue
-        result, u = enrich.extract(fac, page, llm)
+        result, u = enrich.extract(fac, page, llm, max_chars=max_chars)
         _merge_usage(usage, u)
         counts["evidence_rejected"] += result["evidence_rejected"]
         if result["attributes"]:

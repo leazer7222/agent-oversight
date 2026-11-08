@@ -211,11 +211,14 @@ def validate(proposal: dict, page_text: str) -> dict:
             "notes": (proposal.get("notes") or "")[:400]}
 
 
-def extract(fac: dict, page: dict, llm: Callable) -> Tuple[dict, dict]:
-    """Run the model over one page and validate. Returns (result, usage)."""
+def extract(fac: dict, page: dict, llm: Callable, max_chars: int = 12000) -> Tuple[dict, dict]:
+    """Run the model over one page and validate. Returns (result, usage).
+
+    `page` may carry `sections` (url + text per fetched page, from fetch.py);
+    a contact's source_url then points at the section that names them."""
     text = page["text"]
-    if len(text) > 12000:
-        text = text[:12000]
+    if len(text) > max_chars:
+        text = text[:max_chars]
     user = (
         f"Facility: {fac.get('name')} (type: {fac.get('facility_type')}).\n"
         f"Page URL: {page['url']}\n\n"
@@ -225,7 +228,9 @@ def extract(fac: dict, page: dict, llm: Callable) -> Tuple[dict, dict]:
     )
     proposal, usage = llm(SYSTEM, user, TOOL)
     result = validate(proposal, page["text"])
+    sections = [(sec.get("url") or page["url"], normalize(sec.get("text") or "")) for sec in page.get("sections") or []]
     for c in result["contacts"]:
-        c["source_url"] = page["url"]
+        snippet = normalize(c.get("evidence_snippet", ""))
+        c["source_url"] = next((u for u, t in sections if snippet and snippet in t), page["url"])
     result["source_url"] = page["url"]
     return result, usage

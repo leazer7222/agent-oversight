@@ -43,7 +43,11 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    the page, rank them. **Re-vet known facilities** skips the find step. The
    worker does the work on its next pass. "Use recorded test facilities" stays
    ticked until a Google Places key is on the worker; unticked without a key,
-   the find step is refused and nothing is written. The Facilities tab shows
+   the find step is refused and nothing is written. For real facilities the
+   read step opens the facility's own website (homepage plus up to three pool,
+   rental or contact pages, robots.txt honoured) and keeps only facts it can
+   quote from those pages; a site that cannot be read is listed in the run as
+   "site unreadable" with the reason. The Facilities tab shows
    what was found about each pool, with the sentence from their website that
    backs each fact, and why it was ranked ready / needs research / not a fit /
    ruled out.
@@ -91,6 +95,9 @@ In `.env.local` on the machine that runs `python agents/teams/swim-sourcing/work
   (`partnerships@suitupswim.com`, a Google Workspace app password).
 - `SWIM_SEND_ALLOWLIST`: the only addresses mail may go to. Unset = sending is
   off. During the test phase this is the operator's own address.
+- `GOOGLE_PLACES_API_KEY`: a Google Cloud API key with "Places API (New)"
+  enabled, for finding real facilities. Without it, only the recorded test set
+  can be used. One research run makes at most 8 Places requests.
 - Replies: since 2026-11-08 the domain's incoming mail (MX) points at Google, so
   replies to `partnerships@` land in the same Gmail mailbox the worker sends
   from and no extra settings are needed. `SWIM_IMAP_HOST` / `SWIM_IMAP_USER` /

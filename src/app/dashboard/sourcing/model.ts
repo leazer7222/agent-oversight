@@ -531,7 +531,7 @@ export function buildChecklist(ov: Overview, convs: Conversation[], decisions: D
       key: 'research', n: 2, title: 'Let the researcher find and vet facilities',
       status: ov.researched === 0 ? 'todo' : ov.ready > 0 ? 'done' : 'waiting', count: ov.ready,
       summary: `${ov.researched} of ${ov.total} facilities researched; ${ov.ready} ready to contact (a verified email route and no blockers).`,
-      how: 'This runs on its own. Open Facilities to see what was found about each pool and why it was ranked that way.',
+      how: 'Press "Run the researcher" to find facilities, read their websites and rank them (the worker does it on its next pass). Open Facilities to see what was found about each pool and why it was ranked that way.',
       go: { label: 'See facilities', tab: 'facilities' },
     },
     {

@@ -22,10 +22,16 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    the footer of commercial email). Add it to the file, then press
    **Write or rewrite drafts**. Emails already sent are never changed.
 
-2. **Let the researcher find and vet facilities.** Runs on its own. The
-   Facilities tab shows what was found about each pool, with the sentence from
-   their website that backs each fact, and why it was ranked ready / needs
-   research / not a fit / ruled out.
+2. **Let the researcher find and vet facilities.** Press **Run the researcher**
+   (Overview step 2, or the top of the Facilities tab). It queues three steps
+   in order: find facilities, read each website keeping only facts quoted from
+   the page, rank them. **Re-vet known facilities** skips the find step. The
+   worker does the work on its next pass. "Use recorded test facilities" stays
+   ticked until a Google Places key is on the worker; unticked without a key,
+   the find step is refused and nothing is written. The Facilities tab shows
+   what was found about each pool, with the sentence from their website that
+   backs each fact, and why it was ranked ready / needs research / not a fit /
+   ruled out.
 
 3. **Read each draft and approve it.** Conversations tab, filter
    **Needs approval**. Open one, read the email exactly as it will go out, press

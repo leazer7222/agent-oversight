@@ -1,14 +1,76 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, X, Mail, Phone, FileText, ExternalLink, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, X, Mail, Phone, FileText, ExternalLink, ChevronRight, Radar, RefreshCw } from 'lucide-react'
 import { cn, formatDateTime } from '@/lib/utils'
 import {
   type Facility, STATE, stateOf, channelLabel, typeLabel, actionLabel,
   attrLabel, attrValue, CONFIDENCE, excerpt,
 } from './model'
 import { Panel, Pill, SimulatedPill, Empty } from './workspace'
-import { DraftActions } from './conversations'
+import { DraftActions, postJob } from './conversations'
+
+/** Manual trigger for the Facility Researcher. Queues the research stages in
+ *  order (find -> read websites -> rank); the worker runs them on its next pass.
+ *  Nothing here calls Google or a model from the browser: it only enqueues.
+ *  Discovery uses the recorded test facilities unless the box is unticked, in
+ *  which case the worker needs GOOGLE_PLACES_API_KEY or it refuses the job. */
+export function ResearchActions({ company, compact = false }: { company: string; compact?: boolean }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState<'full' | 'revet' | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+  const [fixtures, setFixtures] = useState(true)
+  const co = company || undefined
+
+  const queue = async (stages: Array<{ job_type: string; payload: Record<string, unknown> }>, kind: 'full' | 'revet') => {
+    setBusy(kind); setNote(null)
+    const results: string[] = []
+    for (const s of stages) {
+      const r = await postJob({ job_type: s.job_type, payload: s.payload, company: co })
+      if (!r.ok) { setNote(`Failed at ${s.job_type}: ${r.detail}`); setBusy(null); return }
+      results.push(s.job_type)
+    }
+    setNote(kind === 'full'
+      ? `Queued ${results.length} steps: find facilities${fixtures ? ' (recorded test data)' : ' (live Google Places)'}, read their websites, rank them. The worker runs them in that order on its next pass; refresh in a few minutes.`
+      : 'Queued: re-read websites for facilities with no facts yet, then re-rank every facility. Refresh in a few minutes.')
+    setBusy(null)
+    router.refresh()
+  }
+  const full = () => queue([
+    { job_type: 'discover', payload: { use_fixtures: fixtures, radius_miles: 15, max_requests: 8 } },
+    { job_type: 'enrich', payload: { limit: 40 } },
+    { job_type: 'qualify', payload: {} },
+  ], 'full')
+  const revet = () => queue([
+    { job_type: 'enrich', payload: { limit: 40 } },
+    { job_type: 'qualify', payload: {} },
+  ], 'revet')
+
+  return (
+    <div className={cn('flex flex-col gap-2', compact ? 'items-end' : '')}>
+      <div className={cn('flex flex-wrap items-center gap-2', compact && 'justify-end')}>
+        <button type="button" onClick={full} disabled={busy !== null}
+          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-50">
+          <Radar className={cn('size-4', busy === 'full' && 'animate-pulse')} /> Run the researcher
+        </button>
+        <button type="button" onClick={revet} disabled={busy !== null}
+          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800 disabled:opacity-50">
+          <RefreshCw className={cn('size-4', busy === 'revet' && 'animate-spin')} /> Re-vet known facilities
+        </button>
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-zinc-400">
+          <input type="checkbox" checked={fixtures} onChange={(e) => setFixtures(e.target.checked)} className="size-3.5 accent-sky-500" />
+          Use recorded test facilities
+        </label>
+      </div>
+      <p className={cn('text-xs', note ? (note.startsWith('Failed') ? 'text-rose-300' : 'text-zinc-400') : 'text-zinc-500', compact && 'text-right')}>
+        {note ?? (fixtures
+          ? 'Find: the recorded Katy test set. Read: each website, keeping only facts quoted from the page. Rank: ready / needs research / not a fit / ruled out. The worker does the work on its next pass.'
+          : 'Live search needs GOOGLE_PLACES_API_KEY on the worker; without it the find step is refused and nothing is written. Up to 8 Places requests, 15 miles around Katy.')}
+      </p>
+    </div>
+  )
+}
 
 const STATE_FILTERS = [
   { key: '', label: 'All' },
@@ -43,6 +105,7 @@ export function FacilitiesView({ facilities, selectedId, onSelect, onThread, com
   return (
     <div className={cn('grid gap-4', selected ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]' : '')}>
       <div className="min-w-0 space-y-3">
+        <ResearchActions company={company} />
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="relative flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-zinc-500" />

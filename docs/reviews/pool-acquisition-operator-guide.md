@@ -5,6 +5,21 @@ Plain steps, in the order the screen shows them. Written 2026-11-06 for the
 supervised test phase (every email goes to the allow-listed test address, never
 to a facility).
 
+## Signing in
+
+Go to `https://agent-oversight.vercel.app/login`. Two ways in:
+
+- **Email and password.** The operator mailbox `partnerships@suitupswim.com`
+  has a password (set by the platform admin on 2026-11-08; it is an owner of
+  the Cameron Swim School company). Change it after the first sign-in if it was
+  handed over in writing: the platform admin can set a new one.
+- **Sign-in link.** Enter your email, press "Send sign-in link to my email",
+  open the link. No password involved. Works for any address that the platform
+  admin has made a member of the company.
+
+Neither path creates an account. An address that is not a member sees a
+"not a member" page after signing in.
+
 ## The one rule
 
 Nothing is emailed unless a person did two things to that exact draft: pressed

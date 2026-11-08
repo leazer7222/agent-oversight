@@ -13,7 +13,7 @@ import {
   buildFacilities, buildConversations, buildDecisions, buildActivity, buildOverview, buildChecklist, countsForBanner,
   actionLabel, relTime, ACTION, FILTERS,
 } from './model'
-import { FacilitiesView } from './facilities'
+import { FacilitiesView, ResearchActions } from './facilities'
 import { ConversationsView, postJob } from './conversations'
 
 export type Tab = 'overview' | 'facilities' | 'conversations' | 'decisions' | 'activity'
@@ -272,6 +272,7 @@ function Checklist({ steps, profile, company, onGo }: {
                     </button>
                   )}
                   {s.key === 'profile' && <RedraftButton company={company} />}
+                  {s.key === 'research' && <ResearchActions company={company} compact />}
                 </div>
               </div>
             </li>

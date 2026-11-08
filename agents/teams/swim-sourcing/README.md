@@ -47,7 +47,10 @@ python agents/teams/swim-sourcing/worker.py --reap     # return expired-lease jo
 
 **Do NOT set `ANTHROPIC_API_KEY` on the worker host.** The worker scrubs
 inherited provider keys at startup and resolves each tenant's key from
-`platform.tenant_provider_credentials`.
+`platform.tenant_provider_credentials`. Store or rotate a tenant's key with
+`python scripts/set_tenant_credential.py --company-slug <slug> --from-env <VAR>`
+(reads the key from an env var set in `.env.local`, validates it with the
+provider, encrypts it, revokes the previous active row; prints last4 only).
 
 ## Preflight, which fails closed
 

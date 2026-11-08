@@ -158,7 +158,10 @@ def classify(inbound_text: str, thread: dict, faq: dict, llm: Callable) -> Tuple
         "injection_matches": detect_injection(inbound_text),
         "answered_questions": answered,
         "recommended_followup_at": followup,
-        "simulated_input": True,
+        # The worker sets thread["simulated_input"] from the inbound subject
+        # ("[SIMULATED]" prefix, enforced by swim_record_inbound). Default True so
+        # a caller that does not say is never mistaken for a real reply.
+        "simulated_input": bool(thread.get("simulated_input", True)),
         "classifier": "classify-v0.1-prototype",
     }
     return result, usage

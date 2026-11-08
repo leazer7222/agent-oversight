@@ -645,6 +645,20 @@ def handle_classify_reply(job: dict, cred, heartbeat, ctx) -> dict:
 
     threads = rpc("swim_list_threads", {"p_company_id": company_id, "p_limit": 500}) or []
     todo = [t for t in threads if (t.get("inbound_count") or 0) > 0 and not t.get("last_classification")]
+    # Real or simulated? Decided by the newest inbound subject: simulated replies
+    # always carry "[SIMULATED]" (enforced in swim_record_inbound); real ones never do.
+    if todo:
+        msgs = rpc("swim_thread_messages", {"p_company_id": company_id, "p_limit": 5000}) or []
+        latest_inbound: dict = {}
+        for m in msgs:
+            if m.get("direction") != "inbound":
+                continue
+            key = (m.get("received_at") or m.get("created_at") or "")
+            cur = latest_inbound.get(m["thread_id"])
+            if cur is None or key >= cur[0]:
+                latest_inbound[m["thread_id"]] = (key, (m.get("subject") or "").startswith("[SIMULATED]"))
+        for t in todo:
+            t["simulated_input"] = latest_inbound.get(t["thread_id"], ("", True))[1]
 
     usage: dict = {}
     counts = {"classified": 0, "escalated": 0, "auto_reply_candidates": 0, "opt_outs": 0,

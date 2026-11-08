@@ -5,6 +5,21 @@ Plain steps, in the order the screen shows them. Written 2026-11-06 for the
 supervised test phase (every email goes to the allow-listed test address, never
 to a facility).
 
+## Signing in
+
+Go to `https://agent-oversight.vercel.app/login`. Two ways in:
+
+- **Email and password.** The operator mailbox `partnerships@suitupswim.com`
+  has a password (set by the platform admin on 2026-11-08; it is an owner of
+  the Cameron Swim School company). Change it after the first sign-in if it was
+  handed over in writing: the platform admin can set a new one.
+- **Sign-in link.** Enter your email, press "Send sign-in link to my email",
+  open the link. No password involved. Works for any address that the platform
+  admin has made a member of the company.
+
+Neither path creates an account. An address that is not a member sees a
+"not a member" page after signing in.
+
 ## The one rule
 
 Nothing is emailed unless a person did two things to that exact draft: pressed
@@ -22,10 +37,16 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    the footer of commercial email). Add it to the file, then press
    **Write or rewrite drafts**. Emails already sent are never changed.
 
-2. **Let the researcher find and vet facilities.** Runs on its own. The
-   Facilities tab shows what was found about each pool, with the sentence from
-   their website that backs each fact, and why it was ranked ready / needs
-   research / not a fit / ruled out.
+2. **Let the researcher find and vet facilities.** Press **Run the researcher**
+   (Overview step 2, or the top of the Facilities tab). It queues three steps
+   in order: find facilities, read each website keeping only facts quoted from
+   the page, rank them. **Re-vet known facilities** skips the find step. The
+   worker does the work on its next pass. "Use recorded test facilities" stays
+   ticked until a Google Places key is on the worker; unticked without a key,
+   the find step is refused and nothing is written. The Facilities tab shows
+   what was found about each pool, with the sentence from their website that
+   backs each fact, and why it was ranked ready / needs research / not a fit /
+   ruled out.
 
 3. **Read each draft and approve it.** Conversations tab, filter
    **Needs approval**. Open one, read the email exactly as it will go out, press
@@ -70,14 +91,23 @@ In `.env.local` on the machine that runs `python agents/teams/swim-sourcing/work
   (`partnerships@suitupswim.com`, a Google Workspace app password).
 - `SWIM_SEND_ALLOWLIST`: the only addresses mail may go to. Unset = sending is
   off. During the test phase this is the operator's own address.
-- `SWIM_IMAP_HOST` / `SWIM_IMAP_USER` / `SWIM_IMAP_PASSWORD` (and optionally
-  `SWIM_IMAP_PORT`, `SWIM_IMAP_INBOX`): where replies to `partnerships@` land.
-  The domain's incoming mail is NOT hosted at Google (its MX records point at a
-  spam-filtering host), so replies never reach the Gmail inbox. Cameron's mail
-  host can supply the IMAP server name, user and password. Nothing about the
-  domain's mail setup needs to change.
-- `ANTHROPIC_API_KEY`: used for one sentence per draft and for reading replies.
-  Replace the platform key with Cameron's own before a real campaign.
+- Replies: since 2026-11-08 the domain's incoming mail (MX) points at Google, so
+  replies to `partnerships@` land in the same Gmail mailbox the worker sends
+  from and no extra settings are needed. `SWIM_IMAP_HOST` / `SWIM_IMAP_USER` /
+  `SWIM_IMAP_PASSWORD` (and optionally `SWIM_IMAP_PORT`, `SWIM_IMAP_INBOX`) exist
+  only for the case where incoming mail is hosted somewhere other than Google.
+- The business's own Anthropic key. The worker never reads `ANTHROPIC_API_KEY`
+  from the machine (it scrubs it on start); each company's key lives encrypted
+  in the credential vault and the worker decrypts it per job. To store or
+  replace Cameron's key without it ever appearing in a chat or a shell history:
+  1. Add one line to `.env.local`: `NEW_ANTHROPIC_API_KEY=sk-ant-...`
+  2. Run `python scripts/set_tenant_credential.py --company-slug cameron-swim-school-prototype --from-env NEW_ANTHROPIC_API_KEY --label "Suit Up - Cameron's Anthropic key"`
+     It checks the key with the provider (free call), encrypts it, stores it as
+     the active key and marks the old one revoked. It prints only the last four
+     characters.
+  3. Delete that line from `.env.local` again.
+  Until this is done the vault holds the platform key (last four `XQAA`) and
+  prototype usage bills to the platform, not to the business.
 
 Database migration `056_swim_thread_campaigns.sql` must be applied before
 **Write or rewrite drafts** can rewrite existing unsent drafts (until then it
@@ -88,6 +118,14 @@ only writes new ones and says so in the run).
 - Mailing address in the business profile.
 - Insurance confirmed and documented (only then may a draft mention it; today
   it cannot).
-- Cameron's own Anthropic key in the vault.
+- Cameron's own Anthropic key in the vault (`scripts/set_tenant_credential.py`,
+  above).
 - Remove the test allow-list restriction deliberately, per facility batch, with
   the daily cap left on.
+
+## Test record
+
+| Date | What | Result |
+|---|---|---|
+| 2026-11-06 | First supervised send (old draft copy), FIXTURE Facility 012, redirected to the test address | Sent, confirmed in the Sent folder |
+| 2026-11-08 | Suit Up profile draft for FIXTURE Facility 003, approved by charles@reform-ai.com, redirected to the test address | Sent, confirmed in the Sent folder; reply path now reaches Gmail (MX moved to Google) |

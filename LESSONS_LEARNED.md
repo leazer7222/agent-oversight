@@ -664,3 +664,23 @@ Add new lessons at the end of each session.
 - `business_profile.json` is the single source of what an email may say. Fields left `null` (postal
   address, insurance, years, budget, authority) make the fabrication gate refuse the claim. When the owner
   supplies a new fact, add it there and re-run drafting; do not edit the template or the model prompt.
+
+---
+
+## Pool Acquisition test 2 (2026-11-08)
+
+### Never name a scratch script after a stdlib module
+- A probe saved as `inspect.py` in the scratchpad broke `import psycopg` with a circular-import error,
+  because `typing_extensions` does `import inspect` and Python found the script first (script dir is
+  first on `sys.path`). Name throwaway scripts `probe_*.py` / `check_*.py`, never `inspect`, `email`,
+  `json`, `types`, `test`, etc.
+
+### `swim_list_send_candidates` lists approved/sending only
+- A freshly drafted message is NOT in it. To approve a draft from a script, take the message id from
+  the DB (`swim_sourcing.outreach_messages` where status = 'draft') or the UI, then call
+  `swim_record_approval`; the message appears in the candidates list only after approval.
+
+### Inbound for suitupswim.com now lands at Google
+- MX moved to `smtp.google.com` (observed 2026-11-08). Replies reach the Gmail INBOX the worker reads;
+  the `SWIM_IMAP_*` overrides are no longer needed for this tenant. Anything sent to `partnerships@`
+  before the MX change is gone (it went to the old host).

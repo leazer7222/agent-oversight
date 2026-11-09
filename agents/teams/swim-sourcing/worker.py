@@ -476,7 +476,8 @@ def handle_draft_outreach(job: dict, cred, heartbeat, ctx) -> dict:
                      severity="warning")
         seen = {a["facility_id"] for a in targets}
         for t in threads:
-            unsent = (t.get("latest_outbound_status") or "draft") in ("draft", "approved")
+            # rejected = the owner turned the text down; the next pass writes a new one
+            unsent = (t.get("latest_outbound_status") or "draft") in ("draft", "approved", "rejected")
             if unsent and (t.get("inbound_count") or 0) == 0 and t["facility_id"] not in seen:
                 targets.append({"facility_id": t["facility_id"], "facility_name": t["facility_name"],
                                 "campaign_id": t["campaign_id"]})
@@ -895,6 +896,54 @@ def drain(max_jobs: int = 500) -> int:
     return n
 
 
+def maybe_auto_inbox(every_minutes: int) -> int:
+    """Queue a real mailbox check (poll_inbox source=gmail) and a classification
+    pass for every company that has an active partnership coordinator, at most
+    once per `every_minutes` across worker invocations (a stamp file throttles
+    it, since the scheduled task starts a fresh process each tick). Returns the
+    number of jobs queued. Does nothing when no sending mailbox is configured."""
+    if every_minutes <= 0 or not os.environ.get("SWIM_SMTP_USER"):
+        return 0
+    stamp = REPO_ROOT / ".claude" / "swim-inbox-last"
+    try:
+        age = time.time() - stamp.stat().st_mtime
+    except FileNotFoundError:
+        age = float("inf")
+    if age < every_minutes * 60:
+        return 0
+    rows = rest_get("agents", {"name": f"eq.{TENANT_PREFIX}.partnership-coordinator",
+                               "status": "eq.active", "select": "company_id"})
+    queued = 0
+    for row in rows:
+        cid = row.get("company_id")
+        if not cid:
+            continue
+        # Skip if a poll is already waiting: a slow tick must not pile them up.
+        pending = rest_get_rpc_count(cid)
+        if pending:
+            continue
+        rpc("swim_enqueue_job", {"p_company_id": cid, "p_job_type": "poll_inbox",
+                                 "p_payload": {"source": "gmail", "auto": True}})
+        rpc("swim_enqueue_job", {"p_company_id": cid, "p_job_type": "classify_reply",
+                                 "p_payload": {"auto": True}})
+        queued += 2
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    stamp.touch()
+    if queued:
+        print(f"[worker] auto-inbox: queued {queued} job(s) (mailbox check + classify)")
+    return queued
+
+
+def rest_get_rpc_count(company_id: str) -> int:
+    """Number of queued/running poll_inbox jobs for a company, via the public
+    jobs RPC the worker already uses for claiming (swim_sourcing is not exposed)."""
+    try:
+        rows = rpc("swim_list_pending_jobs", {"p_company_id": company_id, "p_job_type": "poll_inbox"}) or []
+        return len(rows)
+    except Exception:
+        return 0
+
+
 def reap() -> int:
     rows = rpc("swim_reap_expired_jobs", {}) or []
     if rows:
@@ -907,6 +956,8 @@ def main() -> int:
     ap.add_argument("--once", action="store_true", help="process one job then exit")
     ap.add_argument("--drain", action="store_true", help="process jobs until the queue is empty")
     ap.add_argument("--reap", action="store_true", help="run the reaper only")
+    ap.add_argument("--auto-inbox", type=int, default=int(os.environ.get("SWIM_AUTO_INBOX_MINUTES", "0") or 0),
+                    metavar="MINUTES", help="queue a real mailbox check + classification at most every N minutes (0 = off)")
     args = ap.parse_args()
 
     print(f"[worker] id={WORKER_ID} lease={LEASE_SECONDS}s poll={POLL_SECONDS}s "
@@ -934,6 +985,7 @@ def main() -> int:
         return 0
     if args.drain:
         reap()
+        maybe_auto_inbox(args.auto_inbox)
         n = drain()
         print(f"[worker] drained {n} job(s)")
         return 0

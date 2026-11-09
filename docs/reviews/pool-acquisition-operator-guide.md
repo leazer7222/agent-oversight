@@ -58,10 +58,16 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    backs each fact, and why it was ranked ready / needs research / not a fit /
    ruled out.
 
-3. **Read each draft and approve it.** Conversations tab, filter
-   **Needs approval**. Open one, read the email exactly as it will go out, press
-   **Step 1 of 2: Approve this draft**. Approval records your name against those
-   exact words; if the text changes it must be approved again.
+3. **Read each draft; approve, edit or reject it.** Conversations tab, filter
+   **Needs approval**. Open one and read the email exactly as it will go out.
+   - **Approve** records your name against those exact words.
+   - **Edit** opens the subject and body for changes. Saving keeps the old text
+     in a revision history and puts the draft back to "needs approval", so what
+     you send is always what you approved. The unsubscribe line must stay.
+   - **Reject** parks the draft; nothing is sent. The next "Write or rewrite
+     drafts" run replaces it. Tick **Do not contact ... again** to put the
+     address on the do-not-contact list instead: sending to it becomes
+     impossible and it is never redrafted.
 
 4. **Send the approved drafts.** Filter **Approved, not sent**, open one, press
    **Step 2 of 2: Send it**. The worker sends it on its next pass. In test mode
@@ -69,10 +75,10 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    recipient noted in the subject line; the facility receives nothing. At most
    8 sends a day.
 
-5. **Check the mailbox for replies.** Replies are not read automatically. Press
-   **Check mailbox for replies** on the Conversations tab after someone replies.
-   The worker reads the partnerships inbox, matches each reply to its
-   conversation (by the email headers, not by guessing) and classifies it.
+5. **Replies arrive on their own.** While the worker task runs, it checks the
+   partnerships inbox every 10 minutes, matches each reply to its conversation
+   (by the email headers, not by guessing) and classifies it. **Check mailbox
+   for replies** on the Conversations tab does the same immediately.
 
 6. **Decide on anything the system will not.** Decisions tab. Each item says
    what happened, why it is yours, and a suggested handling. Reply from the
@@ -92,6 +98,7 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
 | Simulated | Scripted test reply from the prototype | Ignore for real decisions |
 | Real reply | Came from the real mailbox | Treat as real |
 | Replaced by a newer draft | An older version of a draft | Nothing; act on the newest |
+| Rejected - not sent | You turned the draft down | Edit it, or wait for the next rewrite; nothing is sent |
 
 ## The worker: the part that actually does things
 

@@ -5,7 +5,7 @@
 #   powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -RunNow
 #   powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -Uninstall
 #
-# What it does: every 2 minutes, runs `python agents/teams/swim-sourcing/worker.py --drain`
+# What it does: every 2 minutes, runs `python agents/teams/swim-sourcing/worker.py --drain --auto-inbox 10`
 # from this repository (the checkout this script lives in), appending output to
 # .claude/swim-worker.log. --drain exits as soon as the queue is empty, so an idle
 # tick costs one query. Overlapping ticks are ignored (one worker at a time).
@@ -74,7 +74,9 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 $python = Get-PythonExe
 # cmd.exe wrapper so stdout/stderr land in the log with a timestamp per tick.
-$inner = "echo [%DATE% %TIME%] tick >> `"$Log`" && `"$python`" `"$Worker`" --drain >> `"$Log`" 2>&1"
+# --auto-inbox: every 10 minutes the worker also queues a real mailbox check and
+# a classification pass, so replies are read without anyone pressing a button.
+$inner = "echo [%DATE% %TIME%] tick >> `"$Log`" && `"$python`" `"$Worker`" --drain --auto-inbox 10 >> `"$Log`" 2>&1"
 $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c $inner" -WorkingDirectory $RepoRoot
 
 # [TimeSpan]::MaxValue is rejected by the task scheduler on this Windows build

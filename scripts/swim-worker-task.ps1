@@ -85,12 +85,12 @@ $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew `
     -ExecutionTimeLimit (New-TimeSpan -Minutes 30) `
     -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden
 
-$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+$principal = New-ScheduledTaskPrincipal -UserId ${env}:USERNAME -LogonType Interactive -RunLevel Limited
 
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal `
     -Description "Runs the Agent Oversight swim-sourcing worker (--drain) every $EveryMinutes minutes from $RepoRoot" | Out-Null
 
-Write-Host "[task] installed $TaskName: every $EveryMinutes min, python=$python, repo=$RepoRoot"
+Write-Host "[task] installed ${TaskName}: every $EveryMinutes min, python=$python, repo=$RepoRoot"
 Write-Host "[task] log: $Log"
 Show-Status

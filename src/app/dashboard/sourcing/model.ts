@@ -428,15 +428,16 @@ export function buildOverview(ops: Ops, convs: Conversation[], decisions: Decisi
 // Where each conversation stands, and what the next click is
 // ---------------------------------------------------------------------------
 
-export type Stage = 'needs_approval' | 'approved' | 'sending' | 'sent' | 'failed' | 'replied' | 'closed'
+export type Stage = 'needs_approval' | 'approved' | 'sending' | 'sent' | 'failed' | 'rejected' | 'replied' | 'closed'
 export type ConvFilter = 'all' | Stage
 
 export const STAGE: Record<Stage, { label: string; tone: 'zinc' | 'amber' | 'emerald' | 'rose' | 'sky'; next: string }> = {
   needs_approval: { label: 'Needs your approval', tone: 'amber', next: 'Read the draft. If it is right, press "Approve this draft".' },
   approved: { label: 'Approved - not sent yet', tone: 'sky', next: 'Press "Send it". The worker sends it on its next pass.' },
   sending: { label: 'Sending', tone: 'amber', next: 'The worker is sending it now. Refresh in a moment.' },
-  sent: { label: 'Sent - waiting for a reply', tone: 'emerald', next: 'Nothing to do. When they reply, press "Check mailbox for replies".' },
+  sent: { label: 'Sent - waiting for a reply', tone: 'emerald', next: 'Nothing to do. Replies are picked up automatically every few minutes; "Check mailbox for replies" fetches them right now.' },
   failed: { label: 'Send failed', tone: 'rose', next: 'The provider refused it. Open Activity for the reason, then press "Send it" again.' },
+  rejected: { label: 'Rejected', tone: 'zinc', next: 'You turned this draft down. Edit it and approve, or press "Write or rewrite drafts" on the Overview to get a fresh one. Nothing is sent.' },
   replied: { label: 'They replied', tone: 'emerald', next: 'Read their reply and the suggested handling below.' },
   closed: { label: 'Closed', tone: 'zinc', next: 'Nothing to do.' },
 }
@@ -447,6 +448,7 @@ export const FILTERS: Array<{ key: ConvFilter; label: string }> = [
   { key: 'approved', label: 'Approved, not sent' },
   { key: 'sent', label: 'Sent, awaiting reply' },
   { key: 'replied', label: 'Replied' },
+  { key: 'rejected', label: 'Rejected' },
 ]
 
 /** The newest outgoing message in a thread is the only one you act on; older drafts were replaced. */
@@ -465,6 +467,7 @@ export function stageOf(c: Conversation): Stage {
     case 'approved': return 'approved'
     case 'sending': return 'sending'
     case 'failed': return 'failed'
+    case 'rejected': return 'rejected'
     default: return 'needs_approval'
   }
 }
@@ -478,7 +481,7 @@ export function matchesFilter(c: Conversation, f: ConvFilter): boolean {
 }
 
 export function countByFilter(convs: Conversation[]): Record<ConvFilter, number> {
-  const out = { all: convs.length, needs_approval: 0, approved: 0, sending: 0, sent: 0, failed: 0, replied: 0, closed: 0 } as Record<ConvFilter, number>
+  const out = { all: convs.length, needs_approval: 0, approved: 0, sending: 0, sent: 0, failed: 0, rejected: 0, replied: 0, closed: 0 } as Record<ConvFilter, number>
   for (const f of FILTERS) if (f.key !== 'all') out[f.key] = convs.filter((c) => matchesFilter(c, f.key)).length
   return out
 }
@@ -556,7 +559,7 @@ export function buildChecklist(ov: Overview, convs: Conversation[], decisions: D
       summary: sentCount
         ? `${by.sent} sent and waiting for a reply; ${realReplies} real ${plural(realReplies, 'reply', 'replies')} received.`
         : 'Nothing has been sent yet, so there is nothing to wait for.',
-      how: 'Press "Check mailbox for replies" on the Conversations tab. The worker reads the partnerships inbox, matches each reply to its conversation and classifies it. This needs the inbox connection set up on the worker (the SWIM_IMAP settings).',
+      how: 'Automatic: the worker checks the partnerships inbox every few minutes, matches each reply to its conversation by its email headers and classifies it. "Check mailbox for replies" on the Conversations tab does the same right now.',
       go: sentCount ? { label: 'Open conversations', tab: 'conversations', filter: 'sent' } : null,
     },
     {

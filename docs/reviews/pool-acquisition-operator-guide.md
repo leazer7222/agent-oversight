@@ -117,28 +117,11 @@ powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -RunNow
 ```
 
 It runs only while that Windows user is logged on. Work queued while the PC is
-off waits and runs on the next tick. Its log is `.claude/swim-worker.log`. For
-use with the PC off, the same worker has to run on an always-on machine; that
-is a deliberate later step because it means copying the secrets there.
-
-## The worker: the part that actually does things
-
-Every button on the screen only queues work. A separate program, the worker,
-picks the queue up, calls the model, reads websites, sends and reads mail. If
-no worker is running, buttons appear to do nothing and the jobs simply wait.
-
-The worker runs on the operator's PC as a Windows Scheduled Task that fires
-every 2 minutes (`AgentOversight-SwimSourcingWorker`). Manage it from the
-repository folder:
-
-```
-powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -Status
-powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -Install
-powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -RunNow
-```
-
-It runs only while that Windows user is logged on. Work queued while the PC is
-off waits and runs on the next tick. Its log is `.claude/swim-worker.log`. For
+off waits and runs on the next tick. Its log is `.claude/swim-worker.log`.
+Nothing appears on screen: the task starts a small generated launcher
+(`.claude/swim-worker-tick.vbs`) that runs the worker with its window hidden.
+If a black command window ever does pop up every two minutes, the task was
+installed by an older version of the script; run `-Install` again. For
 use with the PC off, the same worker has to run on an always-on machine; that
 is a deliberate later step because it means copying the secrets there.
 

@@ -100,8 +100,28 @@ def pick_contact(fac: dict) -> Optional[dict]:
     contacts = fac.get("contacts") or []
     with_email = [c for c in contacts if c.get("email")]
     if with_email:
-        return sorted(with_email, key=lambda c: (not c.get("is_primary"), c.get("full_name") or ""))[0]
+        # Primary first; then the inbox most likely to own pool time (aquatics >
+        # rentals/events > a named manager > the front door); then a named person.
+        return sorted(with_email, key=lambda c: (not c.get("is_primary"), -_email_rank(c["email"]),
+                                                 not c.get("full_name"), c.get("full_name") or ""))[0]
     return None
+
+
+_EMAIL_RANK = (
+    (re.compile(r"aquatic|pool|swim|natator", re.I), 5),
+    (re.compile(r"rental|rentals|event|events|booking|bookings|facilit|venue|part(y|ies)|lifestyle|program", re.I), 4),
+    (re.compile(r"manager|director|gm\b|operations|ops|membership|recreation|coordinator|request|inquir|enquir", re.I), 3),
+    (re.compile(r"^(info|contact|hello|office|frontdesk|front\.desk|admin|mail|reception|general|team|hi|ask)$", re.I), 2),
+)
+
+
+def _email_rank(email: str) -> int:
+    """Mirror of facility-researcher/fetch.py rank_email (kept in step by test)."""
+    local = (email or "").split("@")[0]
+    for rx, w in _EMAIL_RANK:
+        if rx.search(local):
+            return w
+    return 1
 
 
 def open_questions(fac: dict, limit: int = 4) -> list:

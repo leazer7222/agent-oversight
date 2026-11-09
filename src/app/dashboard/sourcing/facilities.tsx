@@ -33,7 +33,7 @@ export function ResearchActions({ company, compact = false }: { company: string;
     }
     setNote(kind === 'full'
       ? `Queued ${results.length} steps: find facilities${fixtures ? ' (recorded test data)' : ' (live Google Places)'}, read their websites, rank them. The worker runs them in that order on its next pass; refresh in a few minutes.`
-      : 'Queued: re-read websites for facilities with no facts yet, then re-rank every facility. Refresh in a few minutes.')
+      : 'Queued: re-read websites for facilities with no facts or no email address yet (contact, staff and rental pages included), then re-rank every facility. Refresh in a few minutes.')
     setBusy(null)
     router.refresh()
   }

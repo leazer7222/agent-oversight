@@ -43,7 +43,17 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
    the page, rank them. **Re-vet known facilities** skips the find step. The
    worker does the work on its next pass. "Use recorded test facilities" stays
    ticked until a Google Places key is on the worker; unticked without a key,
-   the find step is refused and nothing is written. The Facilities tab shows
+   the find step is refused and nothing is written. For real facilities the
+   read step opens the facility's own website (homepage plus up to three pool,
+   rental or contact pages, robots.txt honoured) and keeps only facts it can
+   quote from those pages; a site that cannot be read is listed in the run as
+   "site unreadable" with the reason. Because outreach is by email, a real
+   facility with a website but no address yet gets a wider read (up to 8
+   pages: contact, staff, team, rental and event pages, plus the sitemap) that
+   collects addresses from mail links, protected spans and "name [at] domain"
+   forms. Addresses are never guessed from a name or a domain. The best inbox
+   for pool time is marked primary: aquatics, then rentals or events, then a
+   named manager, then the front door. The Facilities tab shows
    what was found about each pool, with the sentence from their website that
    backs each fact, and why it was ranked ready / needs research / not a fit /
    ruled out.
@@ -83,6 +93,27 @@ decides price, schedule, insurance, exclusivity, contracts or meetings.
 | Real reply | Came from the real mailbox | Treat as real |
 | Replaced by a newer draft | An older version of a draft | Nothing; act on the newest |
 
+## The worker: the part that actually does things
+
+Every button on the screen only queues work. A separate program, the worker,
+picks the queue up, calls the model, reads websites, sends and reads mail. If
+no worker is running, buttons appear to do nothing and the jobs simply wait.
+
+The worker runs on the operator's PC as a Windows Scheduled Task that fires
+every 2 minutes (`AgentOversight-SwimSourcingWorker`). Manage it from the
+repository folder:
+
+```
+powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -Status
+powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -Install
+powershell -ExecutionPolicy Bypass -File scripts/swim-worker-task.ps1 -RunNow
+```
+
+It runs only while that Windows user is logged on. Work queued while the PC is
+off waits and runs on the next tick. Its log is `.claude/swim-worker.log`. For
+use with the PC off, the same worker has to run on an always-on machine; that
+is a deliberate later step because it means copying the secrets there.
+
 ## What the worker needs (one-time setup, done by the operator)
 
 In `.env.local` on the machine that runs `python agents/teams/swim-sourcing/worker.py --drain`:
@@ -91,6 +122,9 @@ In `.env.local` on the machine that runs `python agents/teams/swim-sourcing/work
   (`partnerships@suitupswim.com`, a Google Workspace app password).
 - `SWIM_SEND_ALLOWLIST`: the only addresses mail may go to. Unset = sending is
   off. During the test phase this is the operator's own address.
+- `GOOGLE_PLACES_API_KEY`: a Google Cloud API key with "Places API (New)"
+  enabled, for finding real facilities. Without it, only the recorded test set
+  can be used. One research run makes at most 8 Places requests.
 - Replies: since 2026-11-08 the domain's incoming mail (MX) points at Google, so
   replies to `partnerships@` land in the same Gmail mailbox the worker sends
   from and no extra settings are needed. `SWIM_IMAP_HOST` / `SWIM_IMAP_USER` /

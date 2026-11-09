@@ -322,26 +322,83 @@ def handle_enrich(job: dict, cred, heartbeat, ctx) -> dict:
     """Evidence-bound enrichment: an LLM extracts facts and contacts from a page,
     and NOTHING is written unless its verbatim snippet is found in that page."""
     enrich = _load_module(LIB / "facility-researcher" / "enrich.py", "enrich")
+    sitefetch = _load_module(LIB / "facility-researcher" / "fetch.py", "sitefetch")
     company_id = job["company_id"]
     payload = job.get("payload") or {}
     limit = int(payload.get("limit", 40))
+    # payload.sources narrows the pass (e.g. ["google_places"] = real facilities only);
+    # payload.live=false disables website reading (fixture pages only).
+    sources = set(payload.get("sources") or ("fixture", "google_places"))
+    live = bool(payload.get("live", True))
     llm = _llm_for(cred, MODEL_BY_JOB["enrich"])
     pages = enrich.load_fixture_pages()
 
     rows = rpc("swim_list_research", {"p_company_id": company_id, "p_limit": 500}) or []
-    todo = [r for r in rows if (r.get("known_count") or 0) <= 1 and r.get("source") in ("fixture", "google_places")]
-    todo = todo[:limit]
+    # Two reasons to visit a facility: it has no extracted facts yet, or it is a
+    # real facility with a website and still no email address. Outreach is by
+    # email, so a site is re-read (hunt mode) until an inbox is found or the
+    # site is shown to have none.
+    hunt = bool(payload.get("find_emails", True)) and live
+    def _needs_visit(r):
+        if r.get("source") not in sources:
+            return False
+        if (r.get("known_count") or 0) <= 1:
+            return True
+        return hunt and r.get("source") == "google_places" and bool(r.get("website"))
+    todo = [r for r in rows if _needs_visit(r)][:limit]
 
     usage: dict = {}
-    counts = {"enriched": 0, "no_page": 0, "facts_written": 0, "contacts_written": 0,
-              "evidence_rejected": 0, "skipped": len(rows) - len(todo)}
+    counts = {"enriched": 0, "no_page": 0, "no_page_reasons": {}, "live_sites_read": 0, "pages_fetched": 0,
+              "facts_written": 0, "contacts_written": 0, "emails_found": 0, "facilities_gained_email": 0,
+              "email_hunts": 0, "evidence_rejected": 0, "skipped": len(rows) - len(todo)}
     for i, r in enumerate(todo):
         fac = rpc("swim_facility_attributes", {"p_facility_id": r["facility_id"]}) or {}
+        has_email = any((c.get("email") or "").strip() for c in (fac.get("contacts") or []))
+        needs_facts = (r.get("known_count") or 0) <= 1
+        if not needs_facts and has_email:
+            continue                      # nothing left to learn here
         page = enrich.page_for(fac, pages)
+        max_chars = 12000
+        if page is None and live and r.get("source") == "google_places":
+            # Real facility: read its own website (robots honoured, bounded pages/bytes).
+            page, reason = sitefetch.fetch_site(fac.get("website") or r.get("website"),
+                                                hunt_emails=hunt and not has_email)
+            heartbeat()
+            if page is None:
+                counts["no_page"] += 1
+                counts["no_page_reasons"][reason] = counts["no_page_reasons"].get(reason, 0) + 1
+                ctx.step("site_unreadable", payload={"facility_id": r["facility_id"], "name": r.get("name"),
+                                                     "website": fac.get("website"), "reason": reason},
+                         severity="warning")
+                continue
+            counts["live_sites_read"] += 1
+            counts["pages_fetched"] += page.get("pages_fetched", 1)
+            max_chars = sitefetch.TOTAL_CHARS
+            if hunt and not has_email:
+                counts["email_hunts"] += 1
+                hints = sitefetch.hint_tokens(r.get("name") or fac.get("name") or "",
+                                              urllib.parse.urlsplit(page.get("url") or "").path)
+                emails = sitefetch.find_emails(page.get("sections") or [], site_url=page.get("url"), hints=hints)
+                for c in emails:
+                    rpc("swim_record_contact", {"p_company_id": company_id,
+                                                "p_payload": {**c, "facility_id": r["facility_id"]}})
+                    counts["contacts_written"] += 1
+                    counts["emails_found"] += 1
+                if emails:
+                    counts["facilities_gained_email"] += 1
+                    has_email = True
+                ctx.step("email_hunt", payload={"facility_id": r["facility_id"], "name": r.get("name"),
+                                                "pages": page.get("pages_fetched", 1), "emails": len(emails),
+                                                "best": emails[0]["email"] if emails else None})
+            if not needs_facts:
+                if i % 5 == 0:
+                    heartbeat()
+                continue                  # facts already extracted on an earlier pass
         if page is None:
             counts["no_page"] += 1
+            counts["no_page_reasons"]["no_recorded_page"] = counts["no_page_reasons"].get("no_recorded_page", 0) + 1
             continue
-        result, u = enrich.extract(fac, page, llm)
+        result, u = enrich.extract(fac, page, llm, max_chars=max_chars)
         _merge_usage(usage, u)
         counts["evidence_rejected"] += result["evidence_rejected"]
         if result["attributes"]:

@@ -708,3 +708,13 @@ Add new lessons at the end of each session.
   Keep purpose ranking ahead of the location hint.
 - `swim_record_contact` never changes `is_primary` on an existing row, so a ranking change needs the hunt's
   rows deleted and re-run; delete by the job's `started_at`, never by hand-picked ids.
+
+### A scheduled task under an interactive logon shows every console it starts
+- `New-ScheduledTaskPrincipal -LogonType Interactive` runs in the user's desktop session, so an action of
+  `cmd.exe /c ...` (or `powershell -WindowStyle Hidden`, which still flashes) opens a visible console every
+  tick. The `-Hidden` task setting only hides the task in the Task Scheduler list; it has nothing to do
+  with windows.
+- Fix that works without a stored password: start `wscript.exe //B //Nologo launcher.vbs`, where the
+  launcher does `WScript.Shell.Run(cmd, 0, True)`. Window style 0 = no window; `True` waits, so the task
+  stays "running" for the duration and `-MultipleInstances IgnoreNew` / `-ExecutionTimeLimit` still work.
+  Generate the .vbs at install time (quote by doubling `"`), gitignore it, keep the real command in one place.
